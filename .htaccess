@@ -35,10 +35,18 @@ Options -MultiViews
   Allow from localhost
 </Files>
 
+<Files "test_cron.php">
+  Order Deny,Allow
+  Deny from all
+  Allow from 127.0.0.1
+  Allow from ::1
+  Allow from localhost
+</Files>
+
 # ── Rewrite: route everything through index.php ───────────────────────────────
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /kensue2/
+  RewriteBase /altas/
 
   # Allow direct access to real files and directories (assets, uploads)
   RewriteCond %{REQUEST_FILENAME} !-f
@@ -50,6 +58,7 @@ Options -MultiViews
 <IfModule mod_rewrite.c>
   # Skip the block for midnight_reset.php so the <Files> allow above takes effect
   RewriteCond %{REQUEST_URI} !midnight_reset\.php$
+  RewriteCond %{REQUEST_URI} !test_cron\.php$
   RewriteRule ^(config|core|models|controllers|cron|logs)/ - [F,L]
 </IfModule>
 
