@@ -18,14 +18,77 @@
               <div class="mb-3"><label class="form-label">Contact Email</label><input type="email" name="contact_email" class="form-control" value="<?= e(setting('contact_email')) ?>"></div>
               <div class="mb-3">
                 <label class="form-label">Minimum Payout (₱)</label>
-                <input type="number" name="min_payout" class="form-control" min="0" step="0.01" value="<?= e(setting('min_payout','500')) ?>">
+                <input type="number" name="min_payout" class="form-control" min="0" step="0.01" value="<?= e(setting('min_payout', '500')) ?>">
                 <div class="form-text">Members cannot request below this amount</div>
+              </div>
+
+              <hr class="my-3">
+              <p class="fw-bold mb-2" style="font-size:.82rem;">💸 Payout Service Fees</p>
+              <div class="form-text mb-3">Deducted from the requested amount before sending. Set to 0 to disable for any method.</div>
+
+              <!-- Payout Method Toggles -->
+              <div class="mb-3">
+                <label class="form-label fw-bold" style="font-size:.82rem;">🏦 Available Payout Methods</label>
+                <div class="form-text mb-2">Disable methods to hide them from members. USDT is always enabled.</div>
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" name="gcash_enabled" id="gcashEnabled" value="1" <?= setting('gcash_enabled', '1') === '1' ? 'checked' : '' ?>>
+                      <label class="form-check-label" for="gcashEnabled" style="color:#0070d8;font-weight:600;font-size:.8rem;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/GCash_logo.svg/16px-GCash_logo.svg.png" alt="" style="height:14px;vertical-align:middle;margin-right:.25rem;">GCash
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" name="maya_enabled" id="mayaEnabled" value="1" <?= setting('maya_enabled', '1') === '1' ? 'checked' : '' ?>>
+                      <label class="form-check-label" for="mayaEnabled" style="color:#48b0db;font-weight:600;font-size:.8rem;">
+                        <span style="color:#48b0db;margin-right:.25rem;">●</span>Maya
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div class="alert alert-info py-2" style="font-size:.75rem;">
+                  <strong>ℹ Note:</strong> Disabling a method hides it from members entirely — they cannot select it for payouts or edit saved account details.
+                </div>
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-4">
+                  <label class="form-label" style="color:#0070d8;font-weight:700;font-size:.75rem;">GCash %</label>
+                  <div class="input-group input-group-sm">
+                    <input type="number" name="service_fee_gcash" class="form-control" min="0" max="100" step="0.01" value="<?= e(setting('service_fee_gcash', '0')) ?>">
+                    <span class="input-group-text">%</span>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <label class="form-label" style="color:#48b0db;font-weight:700;font-size:.75rem;">Maya %</label>
+                  <div class="input-group input-group-sm">
+                    <input type="number" name="service_fee_maya" class="form-control" min="0" max="100" step="0.01" value="<?= e(setting('service_fee_maya', '0')) ?>">
+                    <span class="input-group-text">%</span>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <label class="form-label" style="color:#26a17b;font-weight:700;font-size:.75rem;">USDT %</label>
+                  <div class="input-group input-group-sm">
+                    <input type="number" name="service_fee_usdt" class="form-control" min="0" max="100" step="0.01" value="<?= e(setting('service_fee_usdt', '5')) ?>">
+                    <span class="input-group-text">%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" style="color:#26a17b;font-weight:700;font-size:.8rem;">₮ USDT TRC20 Network Gas Fee</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">USDT</span>
+                  <input type="number" name="usdt_gas_fee" class="form-control font-mono" min="0" step="0.0001" value="<?= e(setting('usdt_gas_fee', '2.50')) ?>">
+                </div>
+                <div class="form-text">Fixed TRC20 network fee deducted from USDT payout (typically 1–3 USDT)</div>
               </div>
               <div class="mb-3">
                 <label class="form-label">Maintenance Mode</label>
                 <select name="maintenance_mode" class="form-select">
-                  <option value="0" <?= setting('maintenance_mode')==='0'?'selected':'' ?>>Off — Site is live</option>
-                  <option value="1" <?= setting('maintenance_mode')==='1'?'selected':'' ?>>On — Members see maintenance page</option>
+                  <option value="0" <?= setting('maintenance_mode') === '0' ? 'selected' : '' ?>>Off — Site is live</option>
+                  <option value="1" <?= setting('maintenance_mode') === '1' ? 'selected' : '' ?>>On — Members see maintenance page</option>
                 </select>
               </div>
               <button type="submit" class="btn btn-primary w-100">💾 Save Settings</button>
@@ -62,7 +125,7 @@
               <div class="fw-600 font-mono" style="font-size:.875rem;"><?= setting('last_reset') ? fmt_datetime(setting('last_reset')) : 'Never run' ?></div>
             </div>
             <div class="rounded p-3 mb-3 font-mono" style="background:#f4f6fb;font-size:.75rem;color:var(--muted);">
-              Crontab:<br><strong style="color:#111;">0 0 * * * php /path/to/kensue/cron/midnight_reset.php</strong>
+              Crontab:<br><strong style="color:#111;">0 0 * * * php /path/to/site/cron/midnight_reset.php</strong>
             </div>
             <form method="POST" action="<?= APP_URL ?>/?page=admin_manual_reset" class="m-0">
               <?= csrf_field() ?>
@@ -79,11 +142,26 @@
           <div class="card-header"><span class="card-title">ℹ System Info</span></div>
           <div class="card-body">
             <table class="info-table">
-              <tr><td>PHP Version</td><td class="font-mono"><?= PHP_VERSION ?></td></tr>
-              <tr><td>MySQL Version</td><td class="font-mono"><?= db()->query('SELECT VERSION()')->fetchColumn() ?></td></tr>
-              <tr><td>Server Time</td><td class="font-mono"><?= date('Y-m-d H:i:s') ?></td></tr>
-              <tr><td>App URL</td><td class="font-mono" style="font-size:.72rem;word-break:break-all;"><?= APP_URL ?></td></tr>
-              <tr><td>Environment</td><td><span class="badge <?= APP_ENV==='production'?'bg-success-subtle text-success':'bg-warning-subtle text-warning' ?>"><?= APP_ENV ?></span></td></tr>
+              <tr>
+                <td>PHP Version</td>
+                <td class="font-mono"><?= PHP_VERSION ?></td>
+              </tr>
+              <tr>
+                <td>MySQL Version</td>
+                <td class="font-mono"><?= db()->query('SELECT VERSION()')->fetchColumn() ?></td>
+              </tr>
+              <tr>
+                <td>Server Time</td>
+                <td class="font-mono"><?= date('Y-m-d H:i:s') ?></td>
+              </tr>
+              <tr>
+                <td>App URL</td>
+                <td class="font-mono" style="font-size:.72rem;word-break:break-all;"><?= APP_URL ?></td>
+              </tr>
+              <tr>
+                <td>Environment</td>
+                <td><span class="badge <?= APP_ENV === 'production' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' ?>"><?= APP_ENV ?></span></td>
+              </tr>
             </table>
           </div>
         </div>

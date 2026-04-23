@@ -1,10 +1,10 @@
 -- ============================================================
 --  MLM BINARY SYSTEM — FULL SCHEMA + SEED DATA
---  Run once: mysql -u root -p kensue2_db < install.sql
+--  Run once: mysql -u root -p kensue_db < install.sql
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS kensue2_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE kensue2_db;
+CREATE DATABASE IF NOT EXISTS kensue_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE kensue_db;
 
 -- ─── PACKAGES ────────────────────────────────────────────────
 CREATE TABLE packages (
@@ -54,6 +54,8 @@ CREATE TABLE users (
   email             VARCHAR(120) NULL,
   mobile            VARCHAR(20)  NULL,
   gcash_number      VARCHAR(20)  NULL,
+  maya_number       VARCHAR(20)  NULL,
+  usdt_address      VARCHAR(100) NULL,
   address           TEXT         NULL,
   photo             VARCHAR(200) NULL,
 
@@ -122,7 +124,13 @@ CREATE TABLE payout_requests (
   id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id       INT UNSIGNED  NOT NULL,
   amount        DECIMAL(12,2) NOT NULL,
-  gcash_number  VARCHAR(20)   NOT NULL,
+  payout_method  ENUM('gcash','maya','usdt') NOT NULL DEFAULT 'gcash',
+  payout_account VARCHAR(100) NOT NULL DEFAULT '',
+  service_fee_pct    DECIMAL(5,2)  NOT NULL DEFAULT 0.00,
+  service_fee_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  usdt_rate          DECIMAL(12,4) NOT NULL DEFAULT 0.00,
+  usdt_gas_fee       DECIMAL(10,4) NOT NULL DEFAULT 0.00,
+  usdt_amount        DECIMAL(12,4) NOT NULL DEFAULT 0.00,
   status        ENUM('pending','approved','rejected','completed') NOT NULL DEFAULT 'pending',
   admin_note    TEXT          NULL,
   processed_by  INT UNSIGNED  NULL,
@@ -161,7 +169,7 @@ VALUES (
   'admin',
   'active',
   'System Administrator',
-  'admin@altasfarm.com'
+  'admin@mlm.local'
 );
 
 -- Default starter package
@@ -183,14 +191,20 @@ INSERT INTO package_indirect_levels (package_id, level, bonus) VALUES
 
 -- System settings
 INSERT INTO settings (key_name, value) VALUES
-  ('site_name',         'Altas Farm'),
+  ('site_name',         'NetPro MLM'),
   ('site_tagline',      'Build Your Network. Grow Your Income.'),
   ('min_payout',        '500'),
   ('last_reset',        ''),
   ('maintenance_mode',  '0'),
-  ('contact_email',     'contact@altasfarm.com');
+  ('contact_email',     'support@mlm.local'),
+  ('service_fee_gcash', '0'),
+  ('service_fee_maya',  '0'),
+  ('service_fee_usdt',  '5'),
+  ('usdt_gas_fee',      '2.50'),
+  ('gcash_enabled',     '1'),
+  ('maya_enabled',      '1');
 
--- Demo registration code (package 1, price 10000)
+-- Demo registration code (package 1, price 10500)
 -- Will be linked to admin (id=1) as created_by after admin is inserted
 INSERT INTO reg_codes (code, package_id, price, created_by)
-VALUES ('DEMO-STAR-TKIT', 1, 10000.00, 1);
+VALUES ('DEMO-STAR-TKIT', 1, 10500.00, 1);

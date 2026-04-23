@@ -31,6 +31,8 @@ class MemberController
             'email'        => trim($_POST['email']        ?? ''),
             'mobile'       => trim($_POST['mobile']       ?? ''),
             'gcash_number' => trim($_POST['gcash_number'] ?? ''),
+            'maya_number'  => trim($_POST['maya_number']  ?? ''),
+            'usdt_address' => trim($_POST['usdt_address'] ?? ''),
             'address'      => trim($_POST['address']      ?? ''),
         ];
 
@@ -45,8 +47,8 @@ class MemberController
                 flash('error', 'Photo must be JPEG, PNG, or WebP.');
                 redirect('/?page=profile');
             }
-            if ($file['size'] > 2 * 1024 * 1024) { // 2 MB — phone photos can be large
-                flash('error', 'Photo must be under 2MB.');
+            if ($file['size'] > 5 * 1024 * 1024) { // 5 MB — phone photos can be large
+                flash('error', 'Photo must be under 5MB.');
                 redirect('/?page=profile');
             }
 
@@ -180,15 +182,23 @@ class MemberController
         Auth::guard('member');
         csrf_verify();
 
-        $amount = (float)($_POST['amount'] ?? 0);
-        $gcash  = trim($_POST['gcash_number'] ?? '');
+        $amount   = (float)($_POST['amount']         ?? 0);
+        $method   = trim($_POST['payout_method']     ?? 'gcash');
+        $account  = trim($_POST['payout_account']    ?? '');
+        $usdtRate = (float)($_POST['usdt_rate']      ?? 0);
 
-        if (!$gcash) {
-            flash('error', 'Please enter your GCash number.');
+        $allowed = ['gcash', 'maya', 'usdt'];
+        if (!in_array($method, $allowed)) {
+            flash('error', 'Invalid payout method.');
             redirect('/?page=payout');
         }
 
-        $result = Payout::request(Auth::id(), $amount, $gcash);
+        if (!$account) {
+            flash('error', 'Please enter your payout account details.');
+            redirect('/?page=payout');
+        }
+
+        $result = Payout::request(Auth::id(), $amount, $method, $account, $usdtRate);
         if ($result['ok']) {
             flash('success', 'Payout request submitted. Admin will process it shortly.');
         } else {

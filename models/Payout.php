@@ -2,7 +2,7 @@
 
 class Payout
 {
-    public static function request(int $userId, float $amount, string $gcash): array
+    public static function request(int $userId, float $amount, string $method = 'gcash', string $account = '', float $usdtRate = 0): array
     {
         $minPayout = (float)setting('min_payout', '500');
         $balance   = Ewallet::balance($userId);
@@ -23,10 +23,37 @@ class Payout
             return ['ok' => false, 'error' => 'You already have a pending payout request.'];
         }
 
+        // Calculate service fee for this method
+        $feePct    = (float)setting('service_fee_' . $method, '0');
+        $feeAmount = round($amount * $feePct / 100, 2);
+        $netAmount = $amount - $feeAmount;
+
+        // Calculate USDT amount for USDT payouts
+        $gasFeeUsdt = 0.0;
+        $usdtAmount = 0.0;
+        if ($method === 'usdt' && $usdtRate > 0) {
+            $gasFeeUsdt = (float)setting('usdt_gas_fee', '2.50');
+            $netPhp     = $netAmount - ($gasFeeUsdt * $usdtRate);
+            $usdtAmount = $netPhp > 0 ? round($netPhp / $usdtRate, 4) : 0;
+        }
+
         db()->prepare("
-            INSERT INTO payout_requests (user_id, amount, gcash_number)
-            VALUES (?, ?, ?)
-        ")->execute([$userId, $amount, $gcash]);
+            INSERT INTO payout_requests
+              (user_id, amount, payout_method, payout_account,
+               service_fee_pct, service_fee_amount,
+               usdt_rate, usdt_gas_fee, usdt_amount)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ")->execute([
+            $userId,
+            $amount,
+            $method,
+            $account,
+            $feePct,
+            $feeAmount,
+            $usdtRate,
+            $gasFeeUsdt,
+            $usdtAmount,
+        ]);
 
         return ['ok' => true, 'id' => (int)db()->lastInsertId()];
     }
@@ -77,7 +104,7 @@ class Payout
                 (float)$req['amount'],
                 $payoutId,
                 'payout',
-                'Payout via GCash ' . $req['gcash_number']
+                'Payout via ' . strtoupper($req['payout_method'] ?? 'GCash') . ' ' . $req['payout_account']
             );
             if (!$ok) throw new RuntimeException('Insufficient e-wallet balance.');
 
@@ -89,7 +116,6 @@ class Payout
 
             $pdo->commit();
             return ['ok' => true];
-
         } catch (\Exception $e) {
             $pdo->rollBack();
             return ['ok' => false, 'error' => $e->getMessage()];
@@ -99,7 +125,7 @@ class Payout
     public static function find(int $id): ?array
     {
         $st = db()->prepare("
-            SELECT pr.*, u.username, u.full_name, u.gcash_number AS profile_gcash,
+            SELECT pr.*, u.username, u.full_name,
                    a.username AS admin_username
             FROM   payout_requests pr
             JOIN   users u ON u.id = pr.user_id
@@ -114,7 +140,9 @@ class Payout
     {
         return paginate(
             "SELECT * FROM payout_requests WHERE user_id = ? ORDER BY requested_at DESC",
-            [$userId], $page, 20
+            [$userId],
+            $page,
+            20
         );
     }
 
@@ -122,7 +150,10 @@ class Payout
     {
         $where  = '1=1';
         $params = [];
-        if ($status) { $where .= ' AND pr.status = ?'; $params[] = $status; }
+        if ($status) {
+            $where .= ' AND pr.status = ?';
+            $params[] = $status;
+        }
 
         return paginate(
             "SELECT pr.*, u.username, u.full_name, a.username AS admin_username
@@ -131,7 +162,9 @@ class Payout
              LEFT JOIN users a ON a.id = pr.processed_by
              WHERE  {$where}
              ORDER BY pr.requested_at DESC",
-            $params, $page, 25
+            $params,
+            $page,
+            25
         );
     }
 

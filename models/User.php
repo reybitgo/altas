@@ -45,7 +45,6 @@ class User
             ")->execute([$newId, $data['reg_code_id']]);
 
             $pdo->commit();
-
         } catch (\Exception $e) {
             $pdo->rollBack();
             throw $e;
@@ -106,7 +105,7 @@ class User
 
     public static function updateProfile(int $id, array $data): bool
     {
-        $allowed = ['full_name', 'email', 'mobile', 'gcash_number', 'address', 'photo'];
+        $allowed = ['full_name', 'email', 'mobile', 'gcash_number', 'maya_number', 'usdt_address', 'address', 'photo'];
         $fields  = [];
         $values  = [];
 
@@ -203,7 +202,9 @@ class User
              LEFT JOIN packages p ON p.id = u.package_id
              WHERE  {$where}
              ORDER BY u.joined_at DESC",
-            $params, $page, 25
+            $params,
+            $page,
+            25
         );
     }
 
@@ -233,7 +234,9 @@ class User
              LEFT JOIN packages p ON p.id = u.package_id
              WHERE  u.sponsor_id = ? AND u.role = 'member'
              ORDER BY u.joined_at DESC",
-            [$userId], $page, 20
+            [$userId],
+            $page,
+            20
         );
     }
 

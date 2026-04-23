@@ -4,6 +4,17 @@
 // ── User Helper Functions ────────────────────────────────────────────────────
 
 /**
+ * Mask a payout account for display (e.g. 0917****3210, or T***...***xYZ).
+ */
+function mask_account(string $account): string
+{
+    $len = strlen($account);
+    if ($len <= 6) return $account;
+    // Show first 4 and last 4
+    return substr($account, 0, 4) . str_repeat('*', max(2, $len - 8)) . substr($account, -4);
+}
+
+/**
  * Get a user by ID.
  * Returns the full user row as associative array, or null if not found.
  */
@@ -240,7 +251,9 @@ function setting(string $key, string $default = ''): string
     if (!array_key_exists($key, $cache)) {
         $st = db()->prepare('SELECT value FROM settings WHERE key_name = ?');
         $st->execute([$key]);
-        $cache[$key] = $st->fetchColumn() ?: $default;
+        $value = $st->fetchColumn();
+        // fetchColumn() returns false on no row; ?? only checks null, so convert false to null
+        $cache[$key] = ($value === false ? null : $value) ?? $default;
     }
     return $cache[$key];
 }

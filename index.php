@@ -1,4 +1,5 @@
 <?php
+
 /**
  * MLM BINARY SYSTEM — Front Controller
  * All HTTP requests route through here.
@@ -41,7 +42,7 @@ $routes = [
     'do_login'           => ['AuthController',   'doLogin',         'guest'],
     'register'           => ['AuthController',   'showRegister',    'any'],
     'do_register'        => ['AuthController',   'doRegister',      'any'],
-    'validate_code'      => ['AuthController',   'ajaxValidateCode','any'],
+    'validate_code'      => ['AuthController',   'ajaxValidateCode', 'any'],
     'check_username'     => ['AuthController',   'ajaxCheckUser',   'any'],
     'check_upline'       => ['AuthController',   'ajaxCheckUpline', 'any'],
     'logout'             => ['AuthController',   'logout',          'any'],
@@ -55,6 +56,7 @@ $routes = [
     'api_binary_tree'    => ['MemberController', 'apiBinaryTree',   'member'],
     'payout'             => ['MemberController', 'payout',          'member'],
     'request_payout'     => ['MemberController', 'requestPayout',   'member'],
+    'update_usdt_gas'    => ['AdminController',  'updateUsdtGas',   'member'],
 
     // ── Admin ─────────────────────────────────────────
     'admin'              => ['AdminController',  'dashboard',       'admin'],
@@ -67,9 +69,9 @@ $routes = [
     'admin_gen_codes'    => ['AdminController',  'generateCodes',   'admin'],
     'admin_export_codes' => ['AdminController',  'exportCodes',     'admin'],
     'admin_payouts'      => ['AdminController',  'payouts',         'admin'],
-    'admin_payout_action'=> ['AdminController',  'payoutAction',    'admin'],
+    'admin_payout_action' => ['AdminController',  'payoutAction',    'admin'],
     'admin_settings'     => ['AdminController',  'settings',        'admin'],
-    'admin_save_settings'=> ['AdminController',  'saveSettings',    'admin'],
+    'admin_save_settings' => ['AdminController',  'saveSettings',    'admin'],
     'admin_manual_reset' => ['AdminController',  'manualReset',     'admin'],
 ];
 

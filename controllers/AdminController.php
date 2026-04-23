@@ -95,7 +95,34 @@ class AdminController
         redirect('/?page=admin_users');
     }
 
-    // ── Packages ──────────────────────────────────────────────────────────────
+    /**
+     * Called from payout.php JS when live TRC20 gas fee differs from DB value.
+     * Updates the setting only if the rounded value actually changed (max 2 decimals).
+     * Accessible to logged-in members so the payout page can call it without admin session.
+     */
+    public function updateUsdtGas(): void
+    {
+        // Require JSON POST
+        $raw  = file_get_contents('php://input');
+        $body = json_decode($raw, true);
+        $fee  = isset($body['fee']) ? round((float)$body['fee'], 4) : null;
+
+        if ($fee === null || $fee <= 0 || $fee > 50) {
+            json_response(['ok' => false, 'error' => 'Invalid fee value.'], 400);
+        }
+
+        $current = round((float)setting('usdt_gas_fee', '2.50'), 4);
+
+        // Only write if value actually changed (avoid unnecessary DB writes)
+        if (abs($fee - $current) < 0.0001) {
+            json_response(['ok' => true, 'updated' => false, 'fee' => $fee]);
+        }
+
+        db()->prepare("UPDATE settings SET value = ? WHERE key_name = 'usdt_gas_fee'")
+            ->execute([(string)$fee]);
+
+        json_response(['ok' => true, 'updated' => true, 'fee' => $fee, 'previous' => $current]);
+    }
 
     public function packages(): void
     {
@@ -236,12 +263,29 @@ class AdminController
         Auth::guard('admin');
         csrf_verify();
 
-        $allowed = ['site_name', 'site_tagline', 'min_payout', 'contact_email', 'maintenance_mode'];
+        $allowed = [
+            'site_name',
+            'site_tagline',
+            'min_payout',
+            'contact_email',
+            'maintenance_mode',
+            'service_fee_gcash',
+            'service_fee_maya',
+            'service_fee_usdt',
+            'usdt_gas_fee',
+            'gcash_enabled',
+            'maya_enabled',
+        ];
         $pdo = db();
         $st  = $pdo->prepare('UPDATE settings SET value = ? WHERE key_name = ?');
 
         foreach ($allowed as $key) {
-            if (isset($_POST[$key])) {
+            // Checkbox toggles: when unchecked the field is absent from POST,
+            // so we explicitly save '0' for these keys when not present.
+            if (in_array($key, ['gcash_enabled', 'maya_enabled'], true)) {
+                $value = isset($_POST[$key]) && $_POST[$key] === '1' ? '1' : '0';
+                $st->execute([$value, $key]);
+            } elseif (isset($_POST[$key])) {
                 $st->execute([trim($_POST[$key]), $key]);
             }
         }
