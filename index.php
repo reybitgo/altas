@@ -1,6 +1,13 @@
 <?php
 
 /**
+ * @file   index.php
+ * @brief  Front Controller for MLM Binary System
+ */
+?>
+<?php
+
+/**
  * MLM BINARY SYSTEM — Front Controller
  * All HTTP requests route through here.
  */

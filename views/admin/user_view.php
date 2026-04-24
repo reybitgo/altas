@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @file   views/admin/user_view.php
+ * @brief  User view UI
+ */
+?>
 <?php $pageTitle = 'Member: @' . $user['username']; ?>
 <?php require 'views/partials/head.php'; ?>
 <?php require 'views/partials/sidebar_admin.php'; ?>

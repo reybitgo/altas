@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @file   views/admin/codes.php
+ * @brief  Registration codes management UI
+ */
+?>
 <?php $pageTitle = 'Registration Codes'; ?>
 <?php require 'views/partials/head.php'; ?>
 <?php require 'views/partials/sidebar_admin.php'; ?>
@@ -8,21 +15,23 @@
 
     <!-- Stats -->
     <div class="row g-3 mb-3">
-      <?php foreach ([
-        ['Total Codes',  $stats['total'],  'primary','primary'],
-        ['Unused',       $stats['unused'], 'success','success'],
-        ['Used / Sold',  $stats['used'],   'orange', 'warning'],
-        ['Revenue',      fmt_money($stats['revenue']), 'purple','purple'],
-      ] as [$label,$val,$accent,$color]): ?>
-      <div class="col-6 col-xl-3">
-        <div class="card stat-card">
-          <div class="stat-accent stat-accent-<?= $accent ?>"></div>
-          <div class="card-body pt-4">
-            <div class="stat-label"><?= $label ?></div>
-            <div class="stat-value text-<?= $color === 'purple' ? 'primary' : $color ?>"><?= is_numeric($val) ? number_format($val) : $val ?></div>
+      <?php foreach (
+        [
+          ['Total Codes',  $stats['total'],  'primary', 'primary'],
+          ['Unused',       $stats['unused'], 'success', 'success'],
+          ['Used / Sold',  $stats['used'],   'orange', 'warning'],
+          ['Revenue',      fmt_money($stats['revenue']), 'purple', 'purple'],
+        ] as [$label, $val, $accent, $color]
+      ): ?>
+        <div class="col-6 col-xl-3">
+          <div class="card stat-card">
+            <div class="stat-accent stat-accent-<?= $accent ?>"></div>
+            <div class="card-body pt-4">
+              <div class="stat-label"><?= $label ?></div>
+              <div class="stat-value text-<?= $color === 'purple' ? 'primary' : $color ?>"><?= is_numeric($val) ? number_format($val) : $val ?></div>
+            </div>
           </div>
         </div>
-      </div>
       <?php endforeach; ?>
     </div>
 
@@ -39,7 +48,7 @@
                 <select name="package_id" class="form-select" required onchange="autoPrice(this)" id="genPkgSelect">
                   <option value="">— Select package —</option>
                   <?php foreach ($packages as $pkg): ?>
-                  <option value="<?= $pkg['id'] ?>" data-entry="<?= $pkg['entry_fee'] ?>"><?= e($pkg['name']) ?> (entry: <?= fmt_money($pkg['entry_fee']) ?>)</option>
+                    <option value="<?= $pkg['id'] ?>" data-entry="<?= $pkg['entry_fee'] ?>"><?= e($pkg['name']) ?> (entry: <?= fmt_money($pkg['entry_fee']) ?>)</option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -57,7 +66,7 @@
               </div>
               <div class="mb-3">
                 <label class="form-label">Expiry Date <span class="text-muted">(optional)</span></label>
-                <input type="date" name="expires_at" class="form-control" min="<?= date('Y-m-d',strtotime('+1 day')) ?>">
+                <input type="date" name="expires_at" class="form-control" min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
               </div>
               <!-- Trigger modal confirm INSTEAD of direct submit -->
               <button type="button" class="btn btn-primary w-100" onclick="confirmGenerate()">
@@ -79,8 +88,8 @@
                 <label class="form-label">Status</label>
                 <select name="status" class="form-select" onchange="this.form.submit()">
                   <option value="">All Statuses</option>
-                  <?php foreach (['unused','used','expired'] as $s): ?>
-                  <option value="<?= $s ?>" <?= ($status??'')===$s?'selected':'' ?>><?= ucfirst($s) ?></option>
+                  <?php foreach (['unused', 'used', 'expired'] as $s): ?>
+                    <option value="<?= $s ?>" <?= ($status ?? '') === $s ? 'selected' : '' ?>><?= ucfirst($s) ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -89,15 +98,15 @@
                 <select name="pkg" class="form-select" onchange="this.form.submit()">
                   <option value="">All Packages</option>
                   <?php foreach ($packages as $pkg): ?>
-                  <option value="<?= $pkg['id'] ?>" <?= ($pkgId??0)==$pkg['id']?'selected':'' ?>><?= e($pkg['name']) ?></option>
+                    <option value="<?= $pkg['id'] ?>" <?= ($pkgId ?? 0) == $pkg['id'] ? 'selected' : '' ?>><?= e($pkg['name']) ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
             </form>
             <hr>
             <div class="d-flex flex-column gap-2">
-              <a href="<?= APP_URL ?>/?page=admin_export_codes&status=<?= urlencode($status??'') ?>&pkg=<?= $pkgId??0 ?>"
-                 class="btn btn-outline-primary w-100">📥 Export to CSV / Excel</a>
+              <a href="<?= APP_URL ?>/?page=admin_export_codes&status=<?= urlencode($status ?? '') ?>&pkg=<?= $pkgId ?? 0 ?>"
+                class="btn btn-outline-primary w-100">📥 Export to CSV / Excel</a>
               <button class="btn btn-outline-secondary w-100" onclick="printCodes()">🖨️ Print / PDF</button>
             </div>
           </div>
@@ -116,52 +125,70 @@
       <div class="table-responsive">
         <table class="table table-hover mb-0">
           <thead>
-            <tr><th>#</th><th>Code</th><th>Package</th><th>Price</th><th>Status</th><th>Used By</th><th>Created</th><th>Expires</th></tr>
+            <tr>
+              <th>#</th>
+              <th>Code</th>
+              <th>Package</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Used By</th>
+              <th>Created</th>
+              <th>Expires</th>
+            </tr>
           </thead>
           <tbody>
-          <?php if (empty($codes['data'])): ?>
-            <tr><td colspan="8" class="text-center py-5 text-muted">No codes found.</td></tr>
-          <?php else: foreach ($codes['data'] as $i => $c): ?>
-          <tr>
-            <td class="td-muted" style="font-size:.72rem;"><?= ($codes['page']-1)*25 + $i + 1 ?></td>
-            <td>
-              <div class="d-flex align-items-center gap-2">
-                <span class="reg-code"><?= e($c['code']) ?></span>
-                <button type="button"
-                  class="btn btn-sm btn-link p-0 text-muted"
-                  onclick="copyText('<?= e($c['code']) ?>')"
-                  title="Copy code"
-                  style="font-size:.85rem;line-height:1;text-decoration:none;">
-                  📋
-                </button>
-              </div>
-            </td>
-            <td><span class="badge bg-primary-subtle text-primary"><?= e($c['package_name']) ?></span></td>
-            <td class="font-mono fw-bold"><?= fmt_money($c['price']) ?></td>
-            <td><?php $b=match($c['status']){'unused'=>'bg-success-subtle text-success','used'=>'bg-secondary-subtle text-secondary','expired'=>'bg-danger-subtle text-danger',default=>'bg-secondary-subtle'}; ?>
-              <span class="badge <?= $b ?>"><?= ucfirst($c['status']) ?></span></td>
-            <td class="td-muted"><?= $c['used_by_username'] ? '@'.e($c['used_by_username']) : '—' ?></td>
-            <td class="td-muted" style="font-size:.72rem;"><?= fmt_date($c['created_at']) ?></td>
-            <td class="td-muted" style="font-size:.72rem;"><?= $c['expires_at'] ? fmt_date($c['expires_at']) : '—' ?></td>
-          </tr>
-          <?php endforeach; endif; ?>
+            <?php if (empty($codes['data'])): ?>
+              <tr>
+                <td colspan="8" class="text-center py-5 text-muted">No codes found.</td>
+              </tr>
+              <?php else: foreach ($codes['data'] as $i => $c): ?>
+                <tr>
+                  <td class="td-muted" style="font-size:.72rem;"><?= ($codes['page'] - 1) * 25 + $i + 1 ?></td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="reg-code"><?= e($c['code']) ?></span>
+                      <button type="button"
+                        class="btn btn-sm btn-link p-0 text-muted"
+                        onclick="copyText('<?= e($c['code']) ?>')"
+                        title="Copy code"
+                        style="font-size:.85rem;line-height:1;text-decoration:none;">
+                        📋
+                      </button>
+                    </div>
+                  </td>
+                  <td><span class="badge bg-primary-subtle text-primary"><?= e($c['package_name']) ?></span></td>
+                  <td class="font-mono fw-bold"><?= fmt_money($c['price']) ?></td>
+                  <td><?php $b = match ($c['status']) {
+                        'unused' => 'bg-success-subtle text-success',
+                        'used' => 'bg-secondary-subtle text-secondary',
+                        'expired' => 'bg-danger-subtle text-danger',
+                        default => 'bg-secondary-subtle'
+                      }; ?>
+                    <span class="badge <?= $b ?>"><?= ucfirst($c['status']) ?></span>
+                  </td>
+                  <td class="td-muted"><?= $c['used_by_username'] ? '@' . e($c['used_by_username']) : '—' ?></td>
+                  <td class="td-muted" style="font-size:.72rem;"><?= fmt_date($c['created_at']) ?></td>
+                  <td class="td-muted" style="font-size:.72rem;"><?= $c['expires_at'] ? fmt_date($c['expires_at']) : '—' ?></td>
+                </tr>
+            <?php endforeach;
+            endif; ?>
           </tbody>
         </table>
       </div>
       <?php if ($codes['total_pages'] > 1): ?>
-      <div class="card-footer"><?= pagination_links($codes, APP_URL.'/?page=admin_codes&status='.urlencode($status??'').'&pkg='.($pkgId??0)) ?></div>
+        <div class="card-footer"><?= pagination_links($codes, APP_URL . '/?page=admin_codes&status=' . urlencode($status ?? '') . '&pkg=' . ($pkgId ?? 0)) ?></div>
       <?php endif; ?>
     </div>
 
     <!-- Print grid (hidden until print) -->
     <div class="print-grid" id="printGrid">
-      <?php foreach ($codes['data'] as $c): if ($c['status']!=='unused') continue; ?>
-      <div class="print-code-card">
-        <div style="font-size:9px;color:#666;text-transform:uppercase;letter-spacing:1px;"><?= e(setting('site_name',APP_NAME)) ?></div>
-        <div style="font-size:8px;color:#999;margin-bottom:5px;"><?= e($c['package_name']) ?> · <?= fmt_money($c['price']) ?></div>
-        <div style="font-family:monospace;font-size:15px;font-weight:700;letter-spacing:2px;"><?= e($c['code']) ?></div>
-        <div style="font-size:8px;color:#bbb;margin-top:3px;"><?= $c['expires_at'] ? 'Expires '.fmt_date($c['expires_at']) : 'No expiry' ?></div>
-      </div>
+      <?php foreach ($codes['data'] as $c): if ($c['status'] !== 'unused') continue; ?>
+        <div class="print-code-card">
+          <div style="font-size:9px;color:#666;text-transform:uppercase;letter-spacing:1px;"><?= e(setting('site_name', APP_NAME)) ?></div>
+          <div style="font-size:8px;color:#999;margin-bottom:5px;"><?= e($c['package_name']) ?> · <?= fmt_money($c['price']) ?></div>
+          <div style="font-family:monospace;font-size:15px;font-weight:700;letter-spacing:2px;"><?= e($c['code']) ?></div>
+          <div style="font-size:8px;color:#bbb;margin-top:3px;"><?= $c['expires_at'] ? 'Expires ' . fmt_date($c['expires_at']) : 'No expiry' ?></div>
+        </div>
       <?php endforeach; ?>
     </div>
   </div>
@@ -190,38 +217,40 @@
 </div>
 
 <script>
-function autoPrice(select) {
-  const opt = select.options[select.selectedIndex];
-  if (opt.dataset.entry) document.getElementById('genPrice').value = (parseFloat(opt.dataset.entry) + 500).toFixed(2);
-}
-
-function confirmGenerate() {
-  const pkg  = document.getElementById('genPkgSelect');
-  const qty  = document.getElementById('genQty').value;
-  const price= document.getElementById('genPrice').value;
-  const pkgName = pkg.options[pkg.selectedIndex]?.text?.split(' (')[0] || '—';
-
-  if (!pkg.value || !qty || !price) {
-    showToast('Please fill in Package, Quantity and Price.','danger');
-    return;
+  function autoPrice(select) {
+    const opt = select.options[select.selectedIndex];
+    if (opt.dataset.entry) document.getElementById('genPrice').value = (parseFloat(opt.dataset.entry) + 500).toFixed(2);
   }
 
-  document.getElementById('genSummary').innerHTML =
-    `Generate <strong>${qty}</strong> code(s) for package <strong>${pkgName}</strong> at <strong>₱${parseFloat(price).toLocaleString('en-PH',{minimumFractionDigits:2})}</strong> each.<br>
+  function confirmGenerate() {
+    const pkg = document.getElementById('genPkgSelect');
+    const qty = document.getElementById('genQty').value;
+    const price = document.getElementById('genPrice').value;
+    const pkgName = pkg.options[pkg.selectedIndex]?.text?.split(' (')[0] || '—';
+
+    if (!pkg.value || !qty || !price) {
+      showToast('Please fill in Package, Quantity and Price.', 'danger');
+      return;
+    }
+
+    document.getElementById('genSummary').innerHTML =
+      `Generate <strong>${qty}</strong> code(s) for package <strong>${pkgName}</strong> at <strong>₱${parseFloat(price).toLocaleString('en-PH',{minimumFractionDigits:2})}</strong> each.<br>
      <span class="text-muted" style="font-size:.8rem;">Total value: ₱${(qty * parseFloat(price)).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>`;
 
-  const modal = new bootstrap.Modal(document.getElementById('genConfirmModal'));
-  document.getElementById('genConfirmBtn').onclick = () => {
-    modal.hide();
-    document.getElementById('genCodesForm').submit();
-  };
-  modal.show();
-}
+    const modal = new bootstrap.Modal(document.getElementById('genConfirmModal'));
+    document.getElementById('genConfirmBtn').onclick = () => {
+      modal.hide();
+      document.getElementById('genCodesForm').submit();
+    };
+    modal.show();
+  }
 
-function printCodes() {
-  document.getElementById('printGrid').style.display='grid';
-  window.print();
-  setTimeout(() => { document.getElementById('printGrid').style.display='none'; }, 500);
-}
+  function printCodes() {
+    document.getElementById('printGrid').style.display = 'grid';
+    window.print();
+    setTimeout(() => {
+      document.getElementById('printGrid').style.display = 'none';
+    }, 500);
+  }
 </script>
 <?php require 'views/partials/footer.php'; ?>

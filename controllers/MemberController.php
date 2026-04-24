@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @file   controllers/MemberController.php
+ * @brief  Member controller for handling member-specific actions
+ */
 class MemberController
 {
     public function dashboard(): void

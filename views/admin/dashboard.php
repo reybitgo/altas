@@ -1,4 +1,11 @@
 <?php
+
+/**
+ * @file   views/admin/dashboard.php
+ * @brief  Admin Dashboard UI
+ */
+?>
+<?php
 $pageTitle = 'Admin Dashboard';
 $totalCommissions = (float)db()->query("SELECT COALESCE(SUM(amount),0) FROM commissions WHERE status='credited'")->fetchColumn();
 $totalEwallets    = (float)db()->query("SELECT COALESCE(SUM(ewallet_balance),0) FROM users WHERE role='member'")->fetchColumn();

@@ -1,4 +1,11 @@
 <?php
+
+/**
+ * @file   views/member/payout.php
+ * @brief  Member payout UI
+ */
+?>
+<?php
 $pageTitle        = 'Payouts';
 $minPayout        = (float)setting('min_payout', '500');
 $availableBalance = (float)$user['ewallet_balance'];

@@ -1,4 +1,10 @@
 <?php
+
+/**
+ * @file   config/db.php
+ * @brief  Database configuration
+ */
+
 // ── Database Configuration ──────────────────────────────────────────────────
 // Copy this file and fill in your real credentials.
 // Never commit real credentials to version control.

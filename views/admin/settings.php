@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @file   views/admin/settings.php
+ * @brief  System settings UI
+ */
+?>
 <?php $pageTitle = 'System Settings'; ?>
 <?php require 'views/partials/head.php'; ?>
 <?php require 'views/partials/sidebar_admin.php'; ?>

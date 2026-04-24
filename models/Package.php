@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @file   models/Package.php
+ * @brief  Package management model
+ */
 class Package
 {
     public static function find(int $id): ?array

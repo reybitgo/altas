@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @file   views/admin/payouts.php
+ * @brief  Payout management UI
+ */
+?>
 <?php $pageTitle = 'Payout Requests'; ?>
 <?php require 'views/partials/head.php'; ?>
 <?php require 'views/partials/sidebar_admin.php'; ?>

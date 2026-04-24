@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @file   models/Code.php
+ * @brief  Registration codes management model
+ */
 class Code
 {
     /**
@@ -85,8 +89,14 @@ class Code
     {
         $where  = '1=1';
         $params = [];
-        if ($status) { $where .= ' AND r.status = ?'; $params[] = $status; }
-        if ($pkgId)  { $where .= ' AND r.package_id = ?'; $params[] = $pkgId; }
+        if ($status) {
+            $where .= ' AND r.status = ?';
+            $params[] = $status;
+        }
+        if ($pkgId) {
+            $where .= ' AND r.package_id = ?';
+            $params[] = $pkgId;
+        }
 
         return paginate(
             "SELECT r.*, p.name AS package_name,
@@ -96,7 +106,9 @@ class Code
              LEFT JOIN users  u ON u.id = r.used_by
              WHERE  {$where}
              ORDER BY r.created_at DESC",
-            $params, $page, 25
+            $params,
+            $page,
+            25
         );
     }
 
@@ -107,8 +119,14 @@ class Code
     {
         $where  = '1=1';
         $params = [];
-        if ($status) { $where .= ' AND r.status = ?'; $params[] = $status; }
-        if ($pkgId)  { $where .= ' AND r.package_id = ?'; $params[] = $pkgId; }
+        if ($status) {
+            $where .= ' AND r.status = ?';
+            $params[] = $status;
+        }
+        if ($pkgId) {
+            $where .= ' AND r.package_id = ?';
+            $params[] = $pkgId;
+        }
 
         $st = db()->prepare("
             SELECT r.code, p.name AS package, r.price,

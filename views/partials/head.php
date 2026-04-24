@@ -1,5 +1,13 @@
+<?php
+
+/**
+ * @file   views/partials/head.php
+ * @brief  Head for member pages
+ */
+?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,4 +24,5 @@
   <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/main.css">
   <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/layout.css">
 </head>
+
 <body>

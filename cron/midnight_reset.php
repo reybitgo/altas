@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * @file   cron/midnight_reset.php
+ * @brief  Midnight reset cron job
+ */
+
+/**
  * MIDNIGHT RESET CRON
  * Crontab: 0 0 * * * /usr/bin/php /var/www/html/altasfarm/cron/midnight_reset.php
  *
@@ -33,10 +38,22 @@ function log_line(string $level, string $message, string $logFile): void
     echo $line;
 }
 
-function log_info(string $m, string $f): void  { log_line('INFO ', $m, $f); }
-function log_ok(string $m,   string $f): void  { log_line('OK   ', $m, $f); }
-function log_warn(string $m, string $f): void  { log_line('WARN ', $m, $f); }
-function log_error(string $m,string $f): void  { log_line('ERROR', $m, $f); }
+function log_info(string $m, string $f): void
+{
+    log_line('INFO ', $m, $f);
+}
+function log_ok(string $m,   string $f): void
+{
+    log_line('OK   ', $m, $f);
+}
+function log_warn(string $m, string $f): void
+{
+    log_line('WARN ', $m, $f);
+}
+function log_error(string $m, string $f): void
+{
+    log_line('ERROR', $m, $f);
+}
 
 // ── Run ───────────────────────────────────────────────────────────────────────
 $startTime = microtime(true);
@@ -94,7 +111,6 @@ try {
     log_info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", $logFile);
 
     exit(0);
-
 } catch (\Exception $e) {
     $elapsed = round((microtime(true) - $startTime) * 1000, 2);
     log_error("Reset FAILED after {$elapsed}ms", $logFile);

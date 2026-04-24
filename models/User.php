@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @file   models/User.php
+ * @brief  User management model
+ */
 class User
 {
     // ── Registration ──────────────────────────────────────────────────────────

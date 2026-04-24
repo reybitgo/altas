@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * @file   cron/test_cron.php
+ * @brief  Test cron job
+ */
+
+/**
  * TEST CRON — Every Minute
  * Crontab: * * * * * /usr/bin/php /var/www/html/altasfarm/cron/test_cron.php
  *

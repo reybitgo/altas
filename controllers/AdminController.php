@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @file   controllers/AdminController.php
+ * @brief  Admin controller for handling admin-specific actions
+ */
 class AdminController
 {
     public function dashboard(): void

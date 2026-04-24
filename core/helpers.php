@@ -1,4 +1,10 @@
 <?php
+
+/**
+ * @file   core/helpers.php
+ * @brief  Helper functions for the application
+ */
+
 // ── Output / Escaping ────────────────────────────────────────────────────────
 
 // ── User Helper Functions ────────────────────────────────────────────────────

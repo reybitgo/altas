@@ -1,4 +1,11 @@
 <?php
+
+/**
+ * @file   views/partials/topbar.php
+ * @brief  Topbar for member and admin pages
+ */
+?>
+<?php
 // === Load the correct user based on ?id= (for admin view) ===
 if (isset($_GET['page']) && $_GET['page'] === 'admin_user_view' && !empty($_GET['id']) && Auth::isAdmin()) {
   $user = getUserById((int)$_GET['id']);

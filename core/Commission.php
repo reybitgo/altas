@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @file   core/Commission.php
+ * @brief  Commission management class
+ */
 class Commission
 {
     // ══════════════════════════════════════════════════════════════════════════

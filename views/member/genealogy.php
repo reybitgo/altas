@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @file   views/member/genealogy.php
+ * @brief  Member genealogy UI
+ */
+?>
 <?php $pageTitle = $view === 'referral' ? 'Referral Network' : 'Binary Tree'; ?>
 <?php require 'views/partials/head.php'; ?>
 <?php require 'views/partials/sidebar_member.php'; ?>

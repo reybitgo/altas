@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @file   controllers/AuthController.php
+ * @brief  Authentication controller for handling login and registration
+ */
 class AuthController
 {
     // ── Login ─────────────────────────────────────────────────────────────────
@@ -144,7 +148,6 @@ class AuthController
                 flash('success', 'Welcome! Your account has been created successfully.');
                 redirect('/?page=dashboard');
             }
-
         } catch (\Exception $e) {
             flash('error', $e->getMessage());
             redirect('/?page=register' . ($wasLoggedIn ? '&sponsor=' . urlencode($sponsorU) : ''));
@@ -167,7 +170,7 @@ class AuthController
             'valid'        => true,
             'package_name' => $row['package_name'],
             'entry_fee'    => fmt_money((float)$row['entry_fee']),
-            'pairing_bonus'=> fmt_money((float)$row['pairing_bonus']),
+            'pairing_bonus' => fmt_money((float)$row['pairing_bonus']),
             'daily_cap'    => $row['daily_pair_cap'],
         ]);
     }

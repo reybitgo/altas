@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @file   views/member/profile.php
+ * @brief  Member profile UI
+ */
+?>
 <?php $pageTitle = 'Profile & Settings'; ?>
 <?php require 'views/partials/head.php'; ?>
 <?php require 'views/partials/sidebar_member.php'; ?>

@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @file   models/Payout.php
+ * @brief  Payout management model
+ */
 class Payout
 {
     public static function request(int $userId, float $amount, string $method = 'gcash', string $account = '', float $usdtRate = 0): array

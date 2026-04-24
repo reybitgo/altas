@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @file   views/admin/users.php
+ * @brief  User management UI
+ */
+?>
 <?php $pageTitle = 'Members'; ?>
 <?php require 'views/partials/head.php'; ?>
 <?php require 'views/partials/sidebar_admin.php'; ?>

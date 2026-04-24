@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @file   models/Ewallet.php
+ * @brief  E-wallet management model
+ */
 class Ewallet
 {
     /**
@@ -17,7 +21,7 @@ class Ewallet
             ->execute([$amount, $userId]);
 
         $bal = (float) $pdo->query("SELECT ewallet_balance FROM users WHERE id = {$userId}")
-                           ->fetchColumn();
+            ->fetchColumn();
 
         $pdo->prepare("
             INSERT INTO ewallet_ledger
@@ -67,7 +71,9 @@ class Ewallet
     {
         return paginate(
             "SELECT * FROM ewallet_ledger WHERE user_id = ? ORDER BY created_at DESC",
-            [$userId], $page, $perPage
+            [$userId],
+            $page,
+            $perPage
         );
     }
 
