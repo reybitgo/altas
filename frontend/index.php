@@ -1,3 +1,8 @@
+<?php
+require_once __DIR__ . '/../config/db.php';
+$base     = rtrim(APP_URL, '/');           // e.g. http://localhost/altas
+$frontend = $base . '/frontend';           // e.g. http://localhost/altas/frontend
+?>
 <!DOCTYPE html>
 <html lang="en" itemscope itemtype="https://schema.org/Organization">
 
@@ -11,31 +16,31 @@
   <meta name="keywords" content="AltasFarm, Philippine poultry network, binary MLM Philippines, USDT payout, farm investment Philippines, poultry farming community, bayanihan network">
   <meta name="robots" content="index, follow">
   <meta name="author" content="AltasFarm">
-  <link rel="canonical" href="https://altasfarm.com/">
+  <link rel="canonical" href="<?= $base ?>/">
 
   <!-- ── Open Graph (ScamAdviser reads this) ── -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="AltasFarm — Closed 1,000-Member Philippine Poultry Network">
   <meta property="og:description" content="A closed community of 1,000 farmers and networkers backed by real Philippine poultry operations. One entry. One payout in USDT.">
-  <meta property="og:url" content="https://altasfarm.com/">
+  <meta property="og:url" content="<?= $base ?>/">
   <meta property="og:site_name" content="AltasFarm">
   <meta property="og:locale" content="en_PH">
-  <meta property="og:image" content="https://altasfarm.com/hero-bg.jpg">
+  <meta property="og:image" content="<?= $base ?>/hero-bg.jpg">
 
   <!-- ── Twitter Card ── -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="AltasFarm — Closed 1,000-Member Poultry Network">
   <meta name="twitter:description" content="1,000 seats. Real farms. USDT payouts. Binary referral structure. Philippines.">
-  <meta name="twitter:image" content="https://altasfarm.com/hero-bg.jpg">
+  <meta name="twitter:image" content="<?= $base ?>/hero-bg.jpg">
 
   <!-- ── PWA ── -->
   <meta name="theme-color" content="#1a3a1e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AltasFarm">
-  <link rel="icon" type="image/png" href="/altas/frontend/favicon.png">
-  <link rel="apple-touch-icon" href="/altas/frontend/favicon.png">
-  <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"AltasFarm","short_name":"AltasFarm","start_url":".","display":"standalone","background_color":"#faf7f0","theme_color":"#1a3a1e","icons":[{"src":"/altas/frontend/favicon.png","sizes":"192x192","type":"image/png"},{"src":"/altas/frontend/favicon.png","sizes":"512x512","type":"image/png"}]}'>
+  <link rel="icon" type="image/png" href="<?= $frontend ?>/favicon.png">
+  <link rel="apple-touch-icon" href="<?= $frontend ?>/favicon.png">
+  <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"AltasFarm","short_name":"AltasFarm","start_url":".","display":"standalone","background_color":"#faf7f0","theme_color":"#1a3a1e","icons":[{"src":"<?= $frontend ?>/favicon.png","sizes":"192x192","type":"image/png"},{"src":"<?= $frontend ?>/favicon.png","sizes":"512x512","type":"image/png"}]}'>
 
   <!-- ── Schema.org Organization (machine-readable trust signal) ── -->
   <script type="application/ld+json">
@@ -43,8 +48,8 @@
       "@context": "https://schema.org",
       "@type": "Organization",
       "name": "AltasFarm",
-      "url": "https://altasfarm.com",
-      "logo": "https://altasfarm.com/logo.png",
+      "url": "<?= $base ?>",
+      "logo": "<?= $base ?>/logo.png",
       "description": "A closed 1,000-member Philippine poultry network connecting real farm investment with community-powered binary income, paying out exclusively in USDT TRC20.",
       "foundingDate": "2024",
       "foundingLocation": {
@@ -87,10 +92,10 @@
       "@context": "https://schema.org",
       "@type": "WebSite",
       "name": "AltasFarm",
-      "url": "https://altasfarm.com",
+      "url": "<?= $base ?>",
       "potentialAction": {
         "@type": "SearchAction",
-        "target": "https://altasfarm.com/?s={search_term_string}",
+        "target": "<?= $base ?>/?s={search_term_string}",
         "query-input": "required name=search_term_string"
       }
     }
@@ -133,7 +138,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/altas/frontend/style.css">
+  <link rel="stylesheet" href="<?= $frontend ?>/style.css">
 </head>
 
 <body>
@@ -464,7 +469,7 @@
   <nav>
     <div class="nav-inner">
       <a href="#" class="nav-logo">
-        <img src="/altas/frontend/logo.png" alt="AltasFarm logo" width="36" height="36" onerror="this.style.display='none'">
+        <img src="<?= $frontend ?>/logo.png" alt="AltasFarm logo" width="36" height="36" onerror="this.style.display='none'">
         <span class="nav-logo-text">AltasFarm</span>
       </a>
       <ul class="nav-links">
@@ -475,8 +480,8 @@
         <li><a href="#why">Why Us</a></li>
       </ul>
       <div class="nav-cta">
-        <a href="/?page=login" class="nav-btn-login">Login</a>
-        <a href="/?page=register" class="nav-btn-register">Join Now</a>
+        <a href="<?= $base ?>/?page=login" class="nav-btn-login">Login</a>
+        <a href="<?= $base ?>/?page=register" class="nav-btn-register">Join Now</a>
       </div>
       <button class="nav-mobile-toggle" aria-label="Toggle Menu" onclick="toggleMobileMenu()">☰</button>
     </div>
@@ -494,8 +499,8 @@
     <a href="#packages" onclick="toggleMobileMenu()">Packages</a>
     <a href="#why" onclick="toggleMobileMenu()">Why Us</a>
     <div style="margin-top:2rem;display:flex;flex-direction:column;gap:1rem;">
-      <a href="/?page=login" style="color:var(--gold);text-align:center;">Sign In</a>
-      <a href="/?page=register" class="btn-gold" style="text-align:center;">Join Now</a>
+      <a href="<?= $base ?>/?page=login" style="color:var(--gold);text-align:center;">Sign In</a>
+      <a href="<?= $base ?>/?page=register" class="btn-gold" style="text-align:center;">Join Now</a>
     </div>
   </div>
 
@@ -513,7 +518,7 @@
         AltasFarm ties a real poultry operation to a binary referral network. You invest in a farm package, bring in your team, and earn commissions as your network grows — all tracked in real time on your dashboard.
       </p>
       <div class="hero-actions">
-        <a href="/?page=register" class="btn-gold">🌱 Get Started</a>
+        <a href="<?= $base ?>/?page=register" class="btn-gold">🌱 Get Started</a>
         <a href="#how" class="btn-outline" style="color:#fff;border-color:rgba(255,255,255,.6);">Learn How It Works</a>
       </div>
       <div class="hero-stats">
@@ -611,7 +616,7 @@
       <div class="about-grid">
         <div class="about-img-wrap fade-up">
           <div class="about-img">
-            <img src="/altas/frontend/about.jpg" alt="Rhode Island Red and Australorp chickens on the AltasFarm partner farm" loading="lazy">
+            <img src="<?= $frontend ?>/about.jpg" alt="Rhode Island Red and Australorp chickens on the AltasFarm partner farm" loading="lazy">
           </div>
           <div class="about-chip">1,000<small>Seats Total</small></div>
         </div>
@@ -630,7 +635,7 @@
             <li>Full audit trail: every commission logged and traceable</li>
           </ul>
           <div style="margin-top:2rem;">
-            <a href="/?page=register" class="btn-primary">Secure Your Place →</a>
+            <a href="<?= $base ?>/?page=register" class="btn-primary">Secure Your Place →</a>
           </div>
         </div>
       </div>
@@ -744,7 +749,7 @@
       <div class="pkg-single-wrap">
         <div class="pkg-single fade-up">
           <div class="pkg-img">
-            <img src="/altas/frontend/pkg-starter.jpg" alt="Broiler Starter Package — Day-old chicks on AltasFarm partner farm" loading="lazy">
+            <img src="<?= $frontend ?>/pkg-starter.jpg" alt="Broiler Starter Package — Day-old chicks on AltasFarm partner farm" loading="lazy">
           </div>
           <div class="pkg-body">
             <div class="pkg-badge">🐣 Broiler Starter</div>
@@ -760,7 +765,7 @@
             </ul>
             <div class="usdt-badge">₮ USDT TRC20 — Sole Payout Method</div>
             <div class="pkg-price">₱10,000 <small>one-time entry fee</small></div>
-            <a href="/?page=register" class="btn-primary" style="width:100%;font-size:.95rem;">Claim Your Seat →</a>
+            <a href="<?= $base ?>/?page=register" class="btn-primary" style="width:100%;font-size:.95rem;">Claim Your Seat →</a>
           </div>
         </div>
       </div>
@@ -775,7 +780,7 @@
     <div class="container">
       <div class="why-grid">
         <div class="why-img fade-up">
-          <img src="/altas/frontend/why.jpg" alt="Farmer collecting eggs from free-range chickens at AltasFarm partner operation" loading="lazy">
+          <img src="<?= $frontend ?>/why.jpg" alt="Farmer collecting eggs from free-range chickens at AltasFarm partner operation" loading="lazy">
         </div>
         <div class="fade-up">
           <div class="tag">Why AltasFarm</div>
@@ -872,9 +877,9 @@
       <h2>1,000 Seats. Not One More.</h2>
       <p>The network closes the moment the last seat is taken. There is no second wave, no waitlist, and no appeal. If you are reading this, seats are still open — but that changes with every registration that comes in before yours.</p>
       <div class="cta-buttons">
-        <a href="/?page=register" class="btn-gold" style="font-size:1rem;padding:1rem 2.5rem;">🌱 Claim Your Seat Now</a>
+        <a href="<?= $base ?>/?page=register" class="btn-gold" style="font-size:1rem;padding:1rem 2.5rem;">🌱 Claim Your Seat Now</a>
       </div>
-      <a href="/?page=login" class="cta-login">Already a member? Sign in →</a>
+      <a href="<?= $base ?>/?page=login" class="cta-login">Already a member? Sign in →</a>
     </div>
   </section>
 
@@ -912,8 +917,8 @@
         <div>
           <div class="footer-col-title">Platform</div>
           <ul class="footer-links">
-            <li><a href="/?page=login">Member Login</a></li>
-            <li><a href="/?page=register">Claim a Seat</a></li>
+            <li><a href="<?= $base ?>/?page=login">Member Login</a></li>
+            <li><a href="<?= $base ?>/?page=register">Claim a Seat</a></li>
             <li><a href="#how">How It Works</a></li>
             <li><a href="#plan">Earn Plan</a></li>
           </ul>
@@ -967,7 +972,7 @@
   <!-- ════════════════════════════════════════════════════════════
      SCRIPTS
 ════════════════════════════════════════════════════════════ -->
-  <script src="/altas/frontend/script.js"></script>
+  <script src="<?= $frontend ?>/script.js"></script>
 </body>
 
 </html>
