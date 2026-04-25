@@ -59,6 +59,9 @@ function renderAdminNav($cp, $user, $initial, $pendingPayouts, $pendingMembers)
     <a href="<?= APP_URL ?>/?page=dashboard" class="nav-item-link">
       <span class="nav-icon">👤</span> Member View
     </a>
+    <a href="<?= APP_URL ?>/" class="nav-item-link" target="_blank" rel="noopener">
+      <span class="nav-icon">🌐</span> View Frontend
+    </a>
   </nav>
 
   <div class="sidebar-footer">

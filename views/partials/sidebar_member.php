@@ -31,6 +31,9 @@ if (Auth::isAdmin()) {
   $nav[] = ['page' => 'admin', 'icon' => '📊', 'label' => 'Admin View', 'pages' => []];
 }
 
+$nav[] = 'SEPARATOR:Site';
+$nav[] = ['page' => '__frontend__', 'icon' => '🌐', 'label' => 'View Frontend', 'pages' => []];
+
 function memberNavActive($item, $cp, $view)
 {
   if (!isset($item['pages'])) return false;
@@ -58,9 +61,12 @@ function renderSidebarNav($nav, $cp, $user, $view, $initial, $name)
         continue;
       }
       $active = memberNavActive($item, $cp, $view);
-      $href   = APP_URL . '/?page=' . $item['page'];
+      $href   = $item['page'] === '__frontend__'
+        ? APP_URL . '/'
+        : APP_URL . '/?page=' . $item['page'];
+      $target = $item['page'] === '__frontend__' ? ' target="_blank" rel="noopener"' : '';
     ?>
-      <a href="<?= $href ?>" class="nav-item-link <?= $active ? 'active' : '' ?>">
+      <a href="<?= $href ?>" <?= $target ?> class="nav-item-link <?= $active ? 'active' : '' ?>">
         <span class="nav-icon"><?= $item['icon'] ?></span>
         <?= e($item['label']) ?>
       </a>
