@@ -24,9 +24,6 @@ Options -MultiViews
 </Files>
 
 # ── Exception: midnight_reset.php — localhost only ────────────────────────────
-# <Files> matches by filename regardless of directory depth, so this correctly
-# covers cron/midnight_reset.php without needing a path separator.
-# Restricted to 127.0.0.1 / ::1 so it cannot be triggered from the internet.
 <Files "midnight_reset.php">
   Order Deny,Allow
   Deny from all
@@ -47,6 +44,13 @@ Options -MultiViews
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /altas/
+
+  # ── Serve frontend landing page at the root URL (no ?page= param) ────────────
+  # Matches: /altas/  OR  /altas/index.php  (with no query string page param)
+  # Internally forwards to frontend/index.php — URL stays http://localhost/altas/
+  RewriteCond %{QUERY_STRING} (?:^|&)page= [NC]
+  RewriteRule ^ - [S=1]
+  RewriteRule ^(index\.php)?$ frontend/index.php [QSA,L]
 
   # Allow direct access to real files and directories (assets, uploads)
   RewriteCond %{REQUEST_FILENAME} !-f

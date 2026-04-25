@@ -33,9 +33,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AltasFarm">
-  <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="apple-touch-icon" href="favicon.png">
-  <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"AltasFarm","short_name":"AltasFarm","start_url":".","display":"standalone","background_color":"#faf7f0","theme_color":"#1a3a1e","icons":[{"src":"favicon.png","sizes":"192x192","type":"image/png"},{"src":"favicon.png","sizes":"512x512","type":"image/png"}]}'>
+  <link rel="icon" type="image/png" href="/altas/frontend/favicon.png">
+  <link rel="apple-touch-icon" href="/altas/frontend/favicon.png">
+  <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"AltasFarm","short_name":"AltasFarm","start_url":".","display":"standalone","background_color":"#faf7f0","theme_color":"#1a3a1e","icons":[{"src":"/altas/frontend/favicon.png","sizes":"192x192","type":"image/png"},{"src":"/altas/frontend/favicon.png","sizes":"512x512","type":"image/png"}]}'>
 
   <!-- ── Schema.org Organization (machine-readable trust signal) ── -->
   <script type="application/ld+json">
@@ -133,7 +133,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/altas/frontend/style.css">
 </head>
 
 <body>
@@ -464,7 +464,7 @@
   <nav>
     <div class="nav-inner">
       <a href="#" class="nav-logo">
-        <img src="logo.png" alt="AltasFarm logo" width="36" height="36" onerror="this.style.display='none'">
+        <img src="/altas/frontend/logo.png" alt="AltasFarm logo" width="36" height="36" onerror="this.style.display='none'">
         <span class="nav-logo-text">AltasFarm</span>
       </a>
       <ul class="nav-links">
@@ -611,7 +611,7 @@
       <div class="about-grid">
         <div class="about-img-wrap fade-up">
           <div class="about-img">
-            <img src="about.jpg" alt="Rhode Island Red and Australorp chickens on the AltasFarm partner farm" loading="lazy">
+            <img src="/altas/frontend/about.jpg" alt="Rhode Island Red and Australorp chickens on the AltasFarm partner farm" loading="lazy">
           </div>
           <div class="about-chip">1,000<small>Seats Total</small></div>
         </div>
@@ -744,7 +744,7 @@
       <div class="pkg-single-wrap">
         <div class="pkg-single fade-up">
           <div class="pkg-img">
-            <img src="pkg-starter.jpg" alt="Broiler Starter Package — Day-old chicks on AltasFarm partner farm" loading="lazy">
+            <img src="/altas/frontend/pkg-starter.jpg" alt="Broiler Starter Package — Day-old chicks on AltasFarm partner farm" loading="lazy">
           </div>
           <div class="pkg-body">
             <div class="pkg-badge">🐣 Broiler Starter</div>
@@ -775,7 +775,7 @@
     <div class="container">
       <div class="why-grid">
         <div class="why-img fade-up">
-          <img src="why.jpg" alt="Farmer collecting eggs from free-range chickens at AltasFarm partner operation" loading="lazy">
+          <img src="/altas/frontend/why.jpg" alt="Farmer collecting eggs from free-range chickens at AltasFarm partner operation" loading="lazy">
         </div>
         <div class="fade-up">
           <div class="tag">Why AltasFarm</div>
@@ -967,7 +967,7 @@
   <!-- ════════════════════════════════════════════════════════════
      SCRIPTS
 ════════════════════════════════════════════════════════════ -->
-  <script src="script.js"></script>
+  <script src="/altas/frontend/script.js"></script>
 </body>
 
 </html>
