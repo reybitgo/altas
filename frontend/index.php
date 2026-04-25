@@ -469,7 +469,7 @@ $frontend = $base . '/frontend';           // e.g. http://localhost/altas/fronte
   <nav>
     <div class="nav-inner">
       <a href="#" class="nav-logo">
-        <img src="<?= $frontend ?>/logo.png" alt="AltasFarm logo" width="36" height="36" onerror="this.style.display='none'">
+        <img src="<?= $frontend ?>/logo.png" alt="AltasFarm logo" width="auto" height="36" onerror="this.style.display='none'">
         <span class="nav-logo-text">AltasFarm</span>
       </a>
       <ul class="nav-links">
