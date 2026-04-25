@@ -246,6 +246,9 @@ if ($isLoggedIn && !$prefillSponsor) {
                 <div class="auth-footer">
                   Already have an account? <a href="<?= APP_URL ?>/?page=login">Sign in →</a>
                 </div>
+                <div class="auth-footer" style="border-top:none;padding-top:0;">
+                  <a href="<?= APP_URL ?>/">← Back to Home</a>
+                </div>
               <?php endif; ?>
 
             </div><!-- .auth-card -->

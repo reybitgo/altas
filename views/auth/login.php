@@ -60,6 +60,9 @@
       <div class="auth-footer">
         Don't have an account? <a href="<?= APP_URL ?>/?page=register">Register with a code →</a>
       </div>
+      <div class="auth-footer" style="border-top:none;padding-top:0;">
+        <a href="<?= APP_URL ?>/">← Back to Home</a>
+      </div>
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
