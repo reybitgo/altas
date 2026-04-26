@@ -204,13 +204,18 @@ h2.section-title {
   transform: translateY(-4px);
 }
 
-/* ── NAV ─────────────────────────────────────────────────── */
-nav {
+/* ── SITE HEADER (fixed wrapper: contact-strip + nav) ─────── */
+.site-header {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1000;
+}
+
+/* ── NAV ─────────────────────────────────────────────────── */
+nav {
+  position: relative; /* fixed positioning is now on .site-header */
   background: rgba(26, 58, 30, 0.96);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -308,7 +313,7 @@ nav {
   position: fixed;
   inset: 0;
   background: var(--green-deep);
-  z-index: 999;
+  z-index: 1001; /* above .site-header (1000) */
   display: flex;
   flex-direction: column;
   padding: 6rem 24px 2rem;
@@ -365,7 +370,9 @@ nav {
     var(--hero-bg) center/cover no-repeat;
   display: flex;
   align-items: center;
-  padding: 120px 20px 80px;
+  /* Use JS-measured --header-h so hero always clears the full fixed header
+     regardless of how many rows the contact strip wraps to on any screen. */
+  padding: calc(var(--header-h, 116px) + 40px) 20px 80px;
   position: relative;
   overflow: hidden;
 }
@@ -1252,7 +1259,8 @@ footer {
   .hero {
     text-align: center;
     justify-content: center;
-    padding-top: 140px;
+    /* padding-top comes from the CSS var set by JS — no override needed here.
+       The JS syncHeaderH() handles both desktop and mobile automatically. */
   }
   .hero-content {
     margin: 0 auto;
@@ -1262,6 +1270,7 @@ footer {
   }
   .hero-stats {
     justify-content: center;
+    gap: 1.5rem;
   }
   .hero-badge {
     display: none;
@@ -1291,6 +1300,34 @@ footer {
   h1.hero-title {
     font-size: 2.75rem;
   }
+  /* Package card: remove max-width constraint so it fills mobile screens */
+  .pkg-single {
+    max-width: 100%;
+  }
+  .pkg-single .pkg-body {
+    padding: 1.5rem;
+  }
+  /* Plan note: tighten on small screens */
+  .plan-note {
+    padding: 1.25rem 1rem;
+    font-size: 0.8rem;
+  }
+  /* Trust bar: allow wrapping with tighter gaps */
+  .trust-bar-inner {
+    gap: 1rem 1.5rem;
+    justify-content: flex-start;
+    padding: 0 20px;
+  }
+  /* Footer bottom: stack on mobile */
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .footer-legal {
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1301,6 +1338,45 @@ footer {
     flex-direction: column;
     align-items: center;
     text-align: center;
+  }
+  /* Hero: tighten further on very small phones */
+  .hero-title {
+    font-size: 2.25rem !important;
+    letter-spacing: -0.5px;
+  }
+  .hero-desc {
+    font-size: 1rem;
+  }
+  .hero-stat-val {
+    font-size: 1.6rem;
+  }
+  .hero-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  .hero-actions .btn-gold,
+  .hero-actions .btn-outline {
+    width: 100%;
+    max-width: 300px;
+  }
+  /* Steps: tighten card padding */
+  .step-card {
+    padding: 1.5rem;
+  }
+  /* Plan card: tighten */
+  .plan-card {
+    padding: 1.5rem;
+  }
+  /* CTA buttons: stack */
+  .cta-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  /* Closed banner: tighter */
+  .closed-banner {
+    padding: 1rem 1.25rem;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 }
 
@@ -1778,8 +1854,15 @@ footer {
     gap: 1.25rem;
   }
   .contact-strip-inner {
-    flex-direction: column;
-    gap: 0.75rem;
+    /* 2×2 grid keeps the strip compact on narrow screens
+       instead of stacking all 4 items vertically */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem 0.75rem;
+    text-align: left;
+  }
+  .contact-item {
+    font-size: 0.78rem;
   }
   .af-modal-body {
     max-height: 60vh;

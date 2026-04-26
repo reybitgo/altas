@@ -444,48 +444,53 @@ $frontend = $base . '/frontend';           // e.g. http://localhost/altas/fronte
 
 
   <!-- ════════════════════════════════════════════════════════════
-     CONTACT STRIP (above nav — gives crawlers a top-level address)
+     SITE HEADER (fixed wrapper: contact strip + nav)
 ════════════════════════════════════════════════════════════ -->
-  <div class="contact-strip" role="banner">
-    <div class="contact-strip-inner">
-      <a href="mailto:support@altasfarm.com" class="contact-item">
-        <span>✉</span> support@altasfarm.com
-      </a>
-      <a href="https://t.me/altasfarm" target="_blank" rel="noopener" class="contact-item">
-        <span>✈</span> t.me/altasfarm
-      </a>
-      <span class="contact-item">
-        <span>📍</span> Santiago, Isabela, Philippines
-      </span>
-      <span class="contact-item">
-        <span>🕐</span> Mon–Sat · 8 AM–6 PM PST
-      </span>
-    </div>
-  </div>
+  <header class="site-header">
 
-  <!-- ════════════════════════════════════════════════════════════
-     NAV
-════════════════════════════════════════════════════════════ -->
-  <nav>
-    <div class="nav-inner">
-      <a href="#" class="nav-logo">
-        <img src="<?= $frontend ?>/logo.png" alt="AltasFarm logo" width="auto" height="36" onerror="this.style.display='none'">
-        <span class="nav-logo-text">AltasFarm</span>
-      </a>
-      <ul class="nav-links">
-        <li><a href="#about">About</a></li>
-        <li><a href="#how">How It Works</a></li>
-        <li><a href="#plan">Earn Plan</a></li>
-        <li><a href="#packages">Packages</a></li>
-        <li><a href="#why">Why Us</a></li>
-      </ul>
-      <div class="nav-cta">
-        <a href="<?= $base ?>/?page=login" class="nav-btn-login">Login</a>
-        <a href="<?= $base ?>/?page=register" class="nav-btn-register">Join Now</a>
+    <!-- CONTACT STRIP (gives crawlers a top-level address) -->
+    <div class="contact-strip" role="banner">
+      <div class="contact-strip-inner">
+        <a href="mailto:support@altasfarm.com" class="contact-item">
+          <span>✉</span> support@altasfarm.com
+        </a>
+        <a href="https://t.me/altasfarm" target="_blank" rel="noopener" class="contact-item">
+          <span>✈</span> t.me/altasfarm
+        </a>
+        <span class="contact-item">
+          <span>📍</span> Santiago, Isabela, Philippines
+        </span>
+        <span class="contact-item">
+          <span>🕐</span> Mon–Sat · 8 AM–6 PM PST
+        </span>
       </div>
-      <button class="nav-mobile-toggle" aria-label="Toggle Menu" onclick="toggleMobileMenu()">☰</button>
     </div>
-  </nav>
+
+    <!-- ════════════════════════════════════════════════════════
+       NAV
+    ════════════════════════════════════════════════════════ -->
+    <nav>
+      <div class="nav-inner">
+        <a href="#" class="nav-logo">
+          <img src="<?= $frontend ?>/logo.png" alt="AltasFarm logo" width="auto" height="36" onerror="this.style.display='none'">
+          <span class="nav-logo-text">AltasFarm</span>
+        </a>
+        <ul class="nav-links">
+          <li><a href="#about">About</a></li>
+          <li><a href="#how">How It Works</a></li>
+          <li><a href="#plan">Earn Plan</a></li>
+          <li><a href="#packages">Packages</a></li>
+          <li><a href="#why">Why Us</a></li>
+        </ul>
+        <div class="nav-cta">
+          <a href="<?= $base ?>/?page=login" class="nav-btn-login">Login</a>
+          <a href="<?= $base ?>/?page=register" class="nav-btn-register">Join Now</a>
+        </div>
+        <button class="nav-mobile-toggle" aria-label="Toggle Menu" onclick="toggleMobileMenu()">☰</button>
+      </div>
+    </nav>
+
+  </header><!-- /site-header -->
 
   <!-- Mobile Menu -->
   <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
@@ -973,6 +978,24 @@ $frontend = $base . '/frontend';           // e.g. http://localhost/altas/fronte
      SCRIPTS
 ════════════════════════════════════════════════════════════ -->
   <script src="<?= $frontend ?>/script.js"></script>
+
+  <script>
+    /* ── Sync fixed header height → CSS var so hero always clears it ── */
+    (function() {
+      function syncHeaderH() {
+        var hdr = document.querySelector('.site-header');
+        if (hdr) {
+          document.documentElement.style.setProperty('--header-h', hdr.offsetHeight + 'px');
+        }
+      }
+      syncHeaderH();
+      window.addEventListener('resize', syncHeaderH);
+      /* Re-check after fonts load (can shift layout) */
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(syncHeaderH);
+      }
+    })();
+  </script>
 </body>
 
 </html>
