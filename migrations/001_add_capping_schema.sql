@@ -66,7 +66,8 @@ ALTER TABLE users ADD INDEX idx_reactivation_window (reactivation_window_expires
 UPDATE users u
   JOIN packages p ON p.id = u.package_id
   SET u.cap_status = 'capped',
-      u.capped_at = u.joined_at
+      u.capped_at = NOW(),
+      u.reactivation_window_expires = DATE_ADD(NOW(), INTERVAL p.reactivation_window_days DAY)
   WHERE u.binary_earned_this_cycle >= p.income_cap
     AND u.cap_status = 'active'
     AND u.role = 'member';
