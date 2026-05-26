@@ -3,8 +3,8 @@
 --  Run once: mysql -u root -p kensue_db < install.sql
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS kensue_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE kensue_db;
+CREATE DATABASE IF NOT EXISTS u938213108_altas_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE u938213108_altas_db;
 
 -- ─── PACKAGES ────────────────────────────────────────────────
 CREATE TABLE packages (
@@ -191,12 +191,12 @@ INSERT INTO package_indirect_levels (package_id, level, bonus) VALUES
 
 -- System settings
 INSERT INTO settings (key_name, value) VALUES
-  ('site_name',         'NetPro MLM'),
+  ('site_name',         'Altas Farm'),
   ('site_tagline',      'Build Your Network. Grow Your Income.'),
   ('min_payout',        '500'),
   ('last_reset',        ''),
   ('maintenance_mode',  '0'),
-  ('contact_email',     'support@mlm.local'),
+  ('contact_email',     'support@altasfarm.com'),
   ('service_fee_gcash', '0'),
   ('service_fee_maya',  '0'),
   ('service_fee_usdt',  '5'),
