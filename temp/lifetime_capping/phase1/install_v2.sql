@@ -85,6 +85,7 @@ CREATE TABLE users (
   FOREIGN KEY (sponsor_id)       REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (binary_parent_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (package_id)       REFERENCES packages(id) ON DELETE SET NULL
+  -- reg_code_id FK is deferred to ALTER TABLE below (avoids circular ref with reg_codes)
 ) ENGINE=InnoDB;
 
 -- ─── REGISTRATION CODES ───────────────────────────────────────
@@ -184,7 +185,7 @@ CREATE TABLE daily_fixed_income_log (
   cap_remaining       DECIMAL(14,2) NOT NULL DEFAULT 0.00,
   created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id),
-  UNIQUE KEY uq_user_day (user_id, day_number, DATE(created_at))
+  UNIQUE KEY uq_user_day (user_id, day_number)
 ) ENGINE=InnoDB;
 
 -- ─── SYSTEM SETTINGS ──────────────────────────────────────────
