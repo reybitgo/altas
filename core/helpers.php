@@ -83,6 +83,12 @@ function fmt_datetime(?string $ts): string
 
 function redirect(string $path): never
 {
+    // Ensure session data is written before redirecting
+    // Prevents flash messages from being lost on same-page redirects
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+
     // $path should start with / (relative to APP_URL) or be a full URL
     if (str_starts_with($path, 'http')) {
         header('Location: ' . $path);
@@ -111,6 +117,9 @@ function is_page(string $page): bool
  */
 function flash(string $key, string $msg = ''): string
 {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
     if ($msg !== '') {
         $_SESSION['flash'][$key] = $msg;
         return '';

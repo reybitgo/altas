@@ -57,8 +57,10 @@ class AdminController
             redirect('/?page=admin_packages');
         }
 
-        // Validate v2 fields
-        if ($data['lifetime_cap_multiplier'] < 1) {
+        // ── NEW v2 Validation ──────────────────────────────────────────────
+        // Robust float comparison: cast to string with 2 decimals, then compare as strings
+        $capMultStr = number_format($data['lifetime_cap_multiplier'], 2, '.', '');
+        if ($capMultStr < '1.00') {
             flash('error', 'Lifetime cap multiplier must be at least 1.0.');
             redirect('/?page=admin_packages');
         }
@@ -66,7 +68,8 @@ class AdminController
             flash('error', 'Reactivation window must be at least 1 day.');
             redirect('/?page=admin_packages');
         }
-        if ($data['daily_fixed_income'] < 0) {
+        $dfiStr = number_format($data['daily_fixed_income'], 2, '.', '');
+        if ($dfiStr < '0.00') {
             flash('error', 'Daily fixed income cannot be negative.');
             redirect('/?page=admin_packages');
         }
@@ -74,6 +77,7 @@ class AdminController
             flash('error', 'Max DFI days must be at least 1.');
             redirect('/?page=admin_packages');
         }
+        // ── End v2 Validation ─────────────────────────────────────────────
 
         Package::save($data, $id ?: null);
         flash('success', $id ? 'Package updated with v2 settings.' : 'Package created with v2 settings.');
@@ -98,7 +102,7 @@ class AdminController
 
         $where = "u.role='member'";
         $params = [];
-        if ($status && in_array($status, ['active','capped','perminact'])) {
+        if ($status && in_array($status, ['active', 'capped', 'perminact'])) {
             $where .= " AND u.cap_status = ?";
             $params[] = $status;
         }

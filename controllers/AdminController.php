@@ -165,27 +165,32 @@ class AdminController
             $data['indirect_levels'][$lvl] = (float)($_POST["indirect_{$lvl}"] ?? 0);
         }
 
+        // Build back-URL so validation errors return to the correct form (edit or new)
+        $backUrl = $id
+            ? '/?page=admin_packages&edit=' . $id
+            : '/?page=admin_packages';
+
         if (!$data['name'] || $data['entry_fee'] <= 0) {
             flash('error', 'Package name and entry fee are required.');
-            redirect('/?page=admin_packages');
+            redirect($backUrl);
         }
 
         // Validate v2 fields
         if ($data['lifetime_cap_multiplier'] < 1) {
             flash('error', 'Lifetime cap multiplier must be at least 1.0.');
-            redirect('/?page=admin_packages');
+            redirect($backUrl);
         }
         if ($data['reactivation_window_days'] < 1) {
             flash('error', 'Reactivation window must be at least 1 day.');
-            redirect('/?page=admin_packages');
+            redirect($backUrl);
         }
         if ($data['daily_fixed_income'] < 0) {
             flash('error', 'Daily fixed income cannot be negative.');
-            redirect('/?page=admin_packages');
+            redirect($backUrl);
         }
         if ($data['daily_fixed_income_days'] < 1) {
             flash('error', 'Max DFI days must be at least 1.');
-            redirect('/?page=admin_packages');
+            redirect($backUrl);
         }
 
         Package::save($data, $id ?: null);
