@@ -2,13 +2,14 @@
 
 /**
  * @file   index.php
- * @brief  Front Controller for MLM Binary System
+ * @brief  Front Controller for MLM Binary System (v2)
+ * All HTTP requests route through here.
  */
 ?>
 <?php
 
 /**
- * MLM BINARY SYSTEM — Front Controller
+ * MLM BINARY SYSTEM — Front Controller (v2)
  * All HTTP requests route through here.
  */
 
@@ -18,6 +19,11 @@ require_once 'config/db.php';
 require_once 'core/helpers.php';
 require_once 'core/Auth.php';
 require_once 'core/Commission.php';
+
+// NEW v2: Load cap engine and DFI services
+require_once 'core/CapEngine.php';
+require_once 'core/DailyFixedIncome.php';
+require_once 'core/Reactivation.php';
 
 // Auto-load models and controllers
 spl_autoload_register(function (string $class): void {
@@ -65,6 +71,14 @@ $routes = [
     'request_payout'     => ['MemberController', 'requestPayout',   'member'],
     'update_usdt_gas'    => ['AdminController',  'updateUsdtGas',   'member'],
 
+    // NEW v2: Member cap + DFI + reactivation pages
+    'cap_status'         => ['MemberController', 'capStatus',       'member'],
+    'dfi_history'        => ['MemberController', 'dfiHistory',        'member'],
+    'reactivate'         => ['MemberController', 'reactivate',        'member'],
+    'do_reactivate'      => ['MemberController', 'doReactivate',      'member'],
+    'api_cap_status'     => ['MemberController', 'apiCapStatus',      'member'],
+    'api_dfi_status'     => ['MemberController', 'apiDfiStatus',      'member'],
+
     // ── Admin ─────────────────────────────────────────
     'admin'              => ['AdminController',  'dashboard',       'admin'],
     'admin_users'        => ['AdminController',  'users',           'admin'],
@@ -80,6 +94,11 @@ $routes = [
     'admin_settings'     => ['AdminController',  'settings',        'admin'],
     'admin_save_settings' => ['AdminController',  'saveSettings',    'admin'],
     'admin_manual_reset' => ['AdminController',  'manualReset',     'admin'],
+
+    // NEW v2: Admin monitoring pages
+    'admin_cap_monitor'  => ['AdminController',  'capMonitor',      'admin'],
+    'admin_dfi'          => ['AdminController',  'dfiAdmin',        'admin'],
+    'admin_reactivations' => ['AdminController',  'reactivations',   'admin'],
 ];
 
 $page = $_GET['page'] ?? 'login';
@@ -96,7 +115,6 @@ if (!$route) {
 [$ctrlClass, $method, $role] = $route;
 
 // Auth guards
-// 'guest' pages redirect logged-in users away EXCEPT register (members can register new members)
 if ($role === 'guest' && Auth::check() && !in_array($page, ['register', 'do_register'])) {
     redirect(Auth::isAdmin() ? '/?page=admin' : '/?page=dashboard');
 }
