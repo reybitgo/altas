@@ -6,7 +6,12 @@
  */
 class Package
 {
-    // ── CRUD ────────────────────────────────────────────────────────────────
+    public static function find(int $id): ?array
+    {
+        $st = db()->prepare("SELECT * FROM packages WHERE id = ?");
+        $st->execute([$id]);
+        return $st->fetch() ?: null;
+    }
 
     public static function all(bool $activeOnly = false): array
     {
@@ -19,11 +24,15 @@ class Package
         return $pdo->query($sql)->fetchAll();
     }
 
-    public static function find(int $id): ?array
+    public static function getIndirectLevels(int $packageId): array
     {
-        $st = db()->prepare("SELECT * FROM packages WHERE id = ?");
-        $st->execute([$id]);
-        return $st->fetch() ?: null;
+        $st = db()->prepare("SELECT level, bonus FROM package_indirect_levels WHERE package_id = ?");
+        $st->execute([$packageId]);
+        $levels = [0];
+        while ($row = $st->fetch()) {
+            $levels[(int)$row['level']] = (float)$row['bonus'];
+        }
+        return $levels;
     }
 
     public static function withLevels(int $id): ?array
@@ -39,17 +48,6 @@ class Package
         }
         $pkg['indirect_levels'] = $levels;
         return $pkg;
-    }
-
-    public static function getIndirectLevels(int $packageId): array
-    {
-        $st = db()->prepare("SELECT level, bonus FROM package_indirect_levels WHERE package_id = ?");
-        $st->execute([$packageId]);
-        $levels = [0];
-        while ($row = $st->fetch()) {
-            $levels[(int)$row['level']] = (float)$row['bonus'];
-        }
-        return $levels;
     }
 
     /**
