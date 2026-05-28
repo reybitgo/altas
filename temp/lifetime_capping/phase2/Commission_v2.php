@@ -11,8 +11,7 @@ class Commission
     //  Called immediately after a new member is inserted.
     //  Walks the binary tree upward, updating leg counts on every ancestor and
     //  firing pairing bonuses in real time for each ancestor that earns one.
-    //  v2: Capped/perminact members are SKIPPED — they earn no pairs themselves,
-    //      but active ancestors above them continue to earn normally.
+    //  v2: Capped members are SKIPPED — their subtree exists but earns no pairs.
     // ══════════════════════════════════════════════════════════════════════════
 
     public static function processBinaryPlacement(
@@ -31,7 +30,7 @@ class Commission
             $pdo->prepare("UPDATE users SET {$col} = {$col} + 1 WHERE id = ?")
                 ->execute([$cur]);
 
-            // v2: Skip capped/perminact members entirely — no pairing bonuses for them
+            // v2: Skip capped/perminact members entirely — no pairing bonuses
             if (!CapEngine::isActiveForPairs($cur)) {
                 // Move to parent but do NOT process pairs for this capped ancestor
                 $upRow = $pdo->prepare(

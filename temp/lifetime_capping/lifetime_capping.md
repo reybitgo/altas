@@ -101,8 +101,8 @@ Modify ALL commission-crediting methods to check cap BEFORE crediting:
 ### 2.3 Binary Placement Engine Update (`Commission::processBinaryPlacement()`)
 
 - Before processing pairs for any ancestor, check `CapEngine::isActiveForPairs($ancestorId)`
-- **If capped or permanently inactive**: skip entirely (do NOT increment `pairs_paid`, do NOT credit bonus)
-- This implements "skipped in pair counting" from the simulator
+- **If capped or permanently inactive**: skip pair processing for that ancestor only (do NOT increment `pairs_paid`, do NOT credit bonus)
+- Active ancestors above them continue to earn normally — only the capped member themselves is skipped
 
 ### 2.4 User Model Updates (`models/User.php`)
 
@@ -413,7 +413,7 @@ Su  Mo  Tu  We  Th  Fr  Sa
 | Test Case                              | Expected Result                                                                                |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Member earns exactly at cap            | Cap triggered, status='capped', no more earnings                                               |
-| Capped member in binary tree           | Skipped in pair counting, ancestors don't get their pairs                                      |
+| Capped member in binary tree           | Skipped in pair counting for themselves; ancestors above still earn normally                   |
 | DFI near cap                           | Partial DFI paid, cap triggered, remaining DFI blocked                                         |
 | Reactivation within window             | Fee paid, cap resets, DFI days reset, fresh cycle                                              |
 | Reactivation after window              | Cannot reactivate, status='perminact' permanently                                              |
@@ -473,7 +473,7 @@ Su  Mo  Tu  We  Th  Fr  Sa
 
 1. **Cap applies to ALL earnings combined** (per simulator): pairing + direct + indirect + DFI all count toward the same lifetime cap
 2. **Direct/Indirect referrals are immediate** and DO count toward the recipient's cap (not the new member's cap) — the simulator pays these immediately regardless of sponsor status
-3. **Capped members are SKIPPED in binary pair counting** — their sub-tree exists but contributes no pairing bonuses to ancestors
+3. **Capped members are SKIPPED in binary pair counting** — they earn no pairing bonuses themselves, but their sub-tree still contributes to ancestors above them
 4. **DFI days PAUSE when capped** — the duration clock does not advance while inactive, but resets on reactivation
 5. **Reactivation is probabilistic in simulator, deterministic in system** — members choose to reactivate by paying the fee
 6. **Reactivation resets ALL counters** — lifetime_earned, dfi_days_used, dfi_active — fresh cycle from zero
