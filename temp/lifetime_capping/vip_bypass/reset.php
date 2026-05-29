@@ -72,12 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
         $pdo->exec("DELETE FROM daily_fixed_income_log");
         $logs[] = ['ok', 'Cleared DFI log table'];
 
-        $pdo->exec("DELETE FROM ewallet_transfers");
-        $logs[] = ['ok', 'Cleared e-wallet transfers'];
-
-        $pdo->exec("DELETE FROM ewallet_admin_topups");
-        $logs[] = ['ok', 'Cleared admin top-ups'];
-
         // v2: Clear uploaded reactivation proof images
         $proofDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'reactivation_proofs';
         if (is_dir($proofDir)) {
@@ -95,7 +89,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
         // 4. Reset admin account
         $pdo->exec("UPDATE users SET
             ewallet_balance       = 0.00,
-            withdrawable_balance  = 0.00,
             left_count            = 0,
             right_count           = 0,
             pairs_paid            = 0,
@@ -115,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
         $logs[] = ['ok', 'Reset admin counters, cap state, and balance to zero'];
 
         // 5. Reset auto-increment counters
-        foreach (['users','commissions','ewallet_ledger','payout_requests','reg_codes','reactivations','daily_fixed_income_log','ewallet_transfers','ewallet_admin_topups'] as $tbl) {
+        foreach (['users','commissions','ewallet_ledger','payout_requests','reg_codes','reactivations','daily_fixed_income_log'] as $tbl) {
             $pdo->exec("ALTER TABLE {$tbl} AUTO_INCREMENT = 1");
         }
         $logs[] = ['ok', 'Reset auto-increment counters'];

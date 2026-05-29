@@ -77,21 +77,18 @@
     <div class="row g-3 mb-3">
       <?php foreach (
         [
-          ['E-Wallet Balance', fmt_money($user['ewallet_balance']),              'primary', 'primary',
-           fmt_money((float)($user['withdrawable_balance'] ?? 0)) . ' withdrawable · ' . fmt_money(max(0, (float)$user['ewallet_balance'] - (float)($user['withdrawable_balance'] ?? 0))) . ' internal'],
+          ['E-Wallet Balance', fmt_money($user['ewallet_balance']),              'primary', 'primary'],
           ['Total Earned',     fmt_money($summary['total_earned']),              'success', 'success'],
           ['Pairs Paid / Today', $pairingStatus['pairs_paid'] . ' / ' . $pairingStatus['pairs_paid_today'], 'orange', 'warning'],
           ['Pairs Flushed',    number_format($pairingStatus['pairs_flushed']),   'danger', 'danger'],
-        ] as $card
+        ] as [$label, $val, $accent, $color]
       ): ?>
-        <?php [$label, $val, $accent, $color] = $card; $subText = $card[4] ?? null; ?>
         <div class="col-6 col-xl-3">
           <div class="card stat-card">
             <div class="stat-accent stat-accent-<?= $accent ?>"></div>
             <div class="card-body pt-4">
               <div class="stat-label"><?= $label ?></div>
               <div class="stat-value text-<?= $color ?>" style="font-size:1.25rem;"><?= $val ?></div>
-              <?php if ($subText): ?><div class="stat-sub"><?= $subText ?></div><?php endif; ?>
               <?php if ($label === 'Pairs Paid / Today'): ?><div class="stat-sub">Cap: <?= $pairingStatus['daily_cap'] ?> / day</div><?php endif; ?>
             </div>
           </div>
@@ -185,7 +182,7 @@
     <div class="card">
       <div class="card-header">
         <ul class="nav nav-pills card-header-pills gap-1">
-          <?php foreach (['commissions' => '💰 Commissions', 'ledger' => '📒 E-Wallet Ledger', 'payouts' => '💳 Payouts', 'cap_dfi' => '🛡️ Cap & DFI', 'ewallet' => '💱 Transfers'] as $t => $label): ?>
+          <?php foreach (['commissions' => '💰 Commissions', 'ledger' => '📒 E-Wallet Ledger', 'payouts' => '💳 Payouts', 'cap_dfi' => '🛡️ Cap & DFI'] as $t => $label): ?>
             <li class="nav-item"><a class="nav-link <?= $tab === $t ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=admin_user_view&id=<?= $user['id'] ?>&tab=<?= $t ?>"><?= $label ?></a></li>
           <?php endforeach; ?>
         </ul>
@@ -374,52 +371,6 @@
                       <td class="text-truncate" style="max-width:200px;font-size:.78rem;"><?= e($c['description']) ?></td>
                       <td class="td-green font-mono">+<?= fmt_money($c['amount']) ?></td>
                       <td class="text-warning font-mono">−<?= fmt_money($c['cap_deduction']) ?></td>
-                    </tr>
-                  <?php endforeach; endif; ?>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-      <?php elseif ($tab === 'ewallet'): ?>
-        <div class="card-body">
-          <!-- Transfer History -->
-          <div class="card mb-0">
-            <div class="card-header"><span class="card-title">💱 Transfer History</span></div>
-            <div class="table-responsive">
-              <table class="table table-hover mb-0" style="font-size:.85rem;">
-                <thead class="table-light">
-                  <tr><th>Date</th><th>Direction</th><th>Counterparty</th><th>Amount</th><th>Fee</th><th>Note</th></tr>
-                </thead>
-                <tbody>
-                  <?php
-                  $transferRows = [];
-                  if (!empty($transferHistory)) {
-                      $transferRows = $transferHistory;
-                  }
-                  if (empty($transferRows)): ?>
-                    <tr><td colspan="6" class="text-center py-4 text-muted">No transfer history.</td></tr>
-                  <?php else: foreach ($transferRows as $t): ?>
-                    <tr>
-                      <td style="font-size:.75rem;"><?= fmt_datetime($t['created_at']) ?></td>
-                      <td>
-                        <?php if ($t['sender_id'] == $user['id']): ?>
-                          <span class="badge bg-danger-subtle text-danger" style="font-size:.65rem;">SENT</span>
-                        <?php else: ?>
-                          <span class="badge bg-success-subtle text-success" style="font-size:.65rem;">RECEIVED</span>
-                        <?php endif; ?>
-                      </td>
-                      <td>
-                        <?php if ($t['sender_id'] == $user['id']): ?>
-                          <a href="<?= APP_URL ?>/?page=admin_user_view&id=<?= $t['recipient_id'] ?>" class="text-decoration-none fw-semibold">@<?= e($t['recipient_username'] ?? '') ?></a>
-                        <?php else: ?>
-                          <a href="<?= APP_URL ?>/?page=admin_user_view&id=<?= $t['sender_id'] ?>" class="text-decoration-none fw-semibold">@<?= e($t['sender_username'] ?? '') ?></a>
-                        <?php endif; ?>
-                      </td>
-                      <td class="font-mono fw-semibold"><?= fmt_money($t['amount']) ?></td>
-                      <td class="font-mono text-muted"><?= ($t['fee'] ?? 0) > 0 ? fmt_money($t['fee']) : '—' ?></td>
-                      <td class="text-muted" style="font-size:.75rem;"><?= e($t['note'] ?? '') ?></td>
                     </tr>
                   <?php endforeach; endif; ?>
                 </tbody>

@@ -62,18 +62,6 @@ class AdminController
         $capBlocked = db()->prepare("SELECT c.*, u.username AS source_username FROM commissions c LEFT JOIN users u ON u.id = c.source_user_id WHERE c.user_id = ? AND c.cap_deduction > 0 ORDER BY c.created_at DESC LIMIT 20");
         $capBlocked->execute([$id]);
 
-        // Transfer history for e-wallet tab
-        $transferHistory = db()->prepare("
-            SELECT t.*, su.username AS sender_username, ru.username AS recipient_username
-            FROM ewallet_transfers t
-            JOIN users su ON su.id = t.sender_id
-            JOIN users ru ON ru.id = t.recipient_id
-            WHERE t.sender_id = ? OR t.recipient_id = ?
-            ORDER BY t.created_at DESC
-            LIMIT 50
-        ");
-        $transferHistory->execute([$id, $id]);
-
         require 'views/admin/user_view.php';
     }
 
@@ -345,10 +333,6 @@ class AdminController
             'default_cap_multiplier',
             'reactivation_ewallet_enabled',
             'reactivation_external_enabled',
-            'ewallet_transfer_fee',
-            'ewallet_min_transfer',
-            'ewallet_transfer_daily_limit',
-            'ewallet_transfer_weekly_limit',
         ];
         $pdo = db();
         $st  = $pdo->prepare("INSERT INTO settings (key_name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
@@ -557,86 +541,5 @@ class AdminController
                 flash('error', 'Unknown action.');
         }
         redirect('/?page=admin_reactivations');
-    }
-
-    // ── E-Wallet Top-Up & Monitor ──────────────────────────────────────────
-
-    public function ewalletTopUp(): void
-    {
-        Auth::guard('admin');
-        require 'views/admin/ewallet_topup.php';
-    }
-
-    public function doEwalletTopUp(): void
-    {
-        Auth::guard('admin');
-        csrf_verify();
-
-        $adminId = Auth::id();
-        $recipientUsername = trim($_POST['recipient'] ?? '');
-        $amount = (float) ($_POST['amount'] ?? 0);
-        $note = trim($_POST['note'] ?? '');
-
-        $recipient = User::findByUsername($recipientUsername);
-        if (!$recipient) {
-            flash('error', 'Recipient not found.');
-            redirect('/?page=admin_ewallet_topup');
-            return;
-        }
-
-        $result = Ewallet::adminTopUp($adminId, $recipient['id'], $amount, $note);
-
-        flash($result['ok'] ? 'success' : 'error', $result['error'] ?? 'Top-up completed successfully.');
-        redirect('/?page=admin_ewallet_topup');
-    }
-
-    public function ewalletMonitor(): void
-    {
-        Auth::guard('admin');
-        $pdo = db();
-
-        $transfers = $pdo->query("
-            SELECT t.*, su.username AS sender_username, ru.username AS recipient_username
-            FROM ewallet_transfers t
-            JOIN users su ON su.id = t.sender_id
-            JOIN users ru ON ru.id = t.recipient_id
-            ORDER BY t.created_at DESC
-            LIMIT 200
-        ")->fetchAll();
-
-        $topups = $pdo->query("
-            SELECT tu.*, au.username AS admin_username, ru.username AS recipient_username
-            FROM ewallet_admin_topups tu
-            JOIN users au ON au.id = tu.admin_id
-            JOIN users ru ON ru.id = tu.recipient_id
-            ORDER BY tu.created_at DESC
-            LIMIT 200
-        ")->fetchAll();
-
-        // Fee credits to admin from ewallet_ledger
-        $fees = $pdo->query("
-            SELECT l.*, t.sender_id, t.recipient_id,
-                   su.username AS sender_username, ru.username AS recipient_username
-            FROM ewallet_ledger l
-            JOIN ewallet_transfers t ON t.id = l.reference_id
-            JOIN users su ON su.id = t.sender_id
-            JOIN users ru ON ru.id = t.recipient_id
-            WHERE l.ref_type = 'transfer' AND l.type = 'credit'
-              AND l.note LIKE '%fee%'
-            ORDER BY l.created_at DESC
-            LIMIT 200
-        ")->fetchAll();
-
-        $stats = [
-            'total_transfers' => (float) $pdo->query("SELECT COALESCE(SUM(amount),0) FROM ewallet_transfers WHERE status='completed'")->fetchColumn(),
-            'total_fees'      => (float) $pdo->query("SELECT COALESCE(SUM(fee),0) FROM ewallet_transfers WHERE status='completed'")->fetchColumn(),
-            'total_topups'    => (float) $pdo->query("SELECT COALESCE(SUM(amount),0) FROM ewallet_admin_topups")->fetchColumn(),
-            'transfer_count'  => (int)   $pdo->query("SELECT COUNT(*) FROM ewallet_transfers WHERE status='completed'")->fetchColumn(),
-            'topup_count'     => (int)   $pdo->query("SELECT COUNT(*) FROM ewallet_admin_topups")->fetchColumn(),
-            'system_withdrawable' => (float) $pdo->query("SELECT COALESCE(SUM(withdrawable_balance),0) FROM users WHERE role='member'")->fetchColumn(),
-            'system_non_withdrawable' => (float) $pdo->query("SELECT COALESCE(SUM(ewallet_balance - withdrawable_balance),0) FROM users WHERE role='member'")->fetchColumn(),
-        ];
-
-        require 'views/admin/ewallet_monitor.php';
     }
 }

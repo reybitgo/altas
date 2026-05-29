@@ -75,9 +75,8 @@ CREATE TABLE users (
   address           TEXT         NULL,
   photo             VARCHAR(200) NULL,
 
-  ewallet_balance       DECIMAL(14,2) NOT NULL DEFAULT 0.00,
-  withdrawable_balance  DECIMAL(14,2) NOT NULL DEFAULT 0.00,
-  status                ENUM('active','suspended','pending') NOT NULL DEFAULT 'active',
+  ewallet_balance   DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+  status            ENUM('active','suspended','pending') NOT NULL DEFAULT 'active',
   joined_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   last_login        TIMESTAMP NULL,
 
@@ -130,38 +129,11 @@ CREATE TABLE ewallet_ledger (
   type          ENUM('credit','debit') NOT NULL,
   amount        DECIMAL(12,2) NOT NULL,
   reference_id  INT UNSIGNED  NULL,
-  ref_type      ENUM('commission','payout','reactivation','transfer','topup') NULL,  -- v2: added 'reactivation', 'transfer', 'topup'
+  ref_type      ENUM('commission','payout','reactivation') NULL,  -- v2: added 'reactivation'
   balance_after DECIMAL(14,2) NOT NULL,
   note          VARCHAR(255)  NULL,
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
-) ENGINE=InnoDB;
-
--- ─── E-WALLET TRANSFERS ─────────────────────────────────────
-CREATE TABLE ewallet_transfers (
-  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  sender_id     INT UNSIGNED NOT NULL,
-  recipient_id  INT UNSIGNED NOT NULL,
-  amount        DECIMAL(12,2) NOT NULL,
-  fee           DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-  net_amount    DECIMAL(12,2) NOT NULL,
-  status        ENUM('completed','failed') NOT NULL DEFAULT 'completed',
-  note          VARCHAR(255) NULL,
-  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (sender_id)    REFERENCES users(id),
-  FOREIGN KEY (recipient_id) REFERENCES users(id)
-) ENGINE=InnoDB;
-
--- ─── E-WALLET ADMIN TOP-UPS ─────────────────────────────────
-CREATE TABLE ewallet_admin_topups (
-  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  admin_id      INT UNSIGNED NOT NULL,
-  recipient_id  INT UNSIGNED NOT NULL,
-  amount        DECIMAL(12,2) NOT NULL,
-  note          VARCHAR(255) NULL,
-  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (admin_id)     REFERENCES users(id),
-  FOREIGN KEY (recipient_id) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 -- ─── PAYOUT REQUESTS ──────────────────────────────────────────
@@ -300,11 +272,7 @@ INSERT INTO settings (key_name, value) VALUES
   ('usdt_address',      ''),
   ('default_cap_multiplier', '3.00'),
   ('reactivation_ewallet_enabled', '1'),
-  ('reactivation_external_enabled', '1'),
-  ('ewallet_transfer_fee',        '0.00'),
-  ('ewallet_min_transfer',        '50.00'),
-  ('ewallet_transfer_daily_limit',  '5000.00'),
-  ('ewallet_transfer_weekly_limit', '20000.00');
+  ('reactivation_external_enabled', '1');
 
 -- Demo registration code (package 1, price 10500)
 INSERT INTO reg_codes (code, package_id, price, created_by)

@@ -93,15 +93,8 @@
 
     <!-- KPI Cards -->
     <div class="row g-3 mb-3">
-      <?php
-      $withdrawable = (float) ($user['withdrawable_balance'] ?? 0);
-      $nonWithdrawable = (float) ($user['ewallet_balance'] ?? 0) - $withdrawable;
-      $balanceSub = 'Withdraw →';
-      if ($nonWithdrawable > 0) {
-          $balanceSub = fmt_money($withdrawable) . ' withdrawable · ' . fmt_money($nonWithdrawable) . ' locked';
-      }
-      $cards = [
-        [$user['ewallet_balance'], 'E-Wallet Balance',   '💰', 'primary', 'primary', $balanceSub, '/?page=payout'],
+      <?php $cards = [
+        [$user['ewallet_balance'], 'E-Wallet Balance',   '💰', 'primary', 'primary', 'Withdraw →', '/?page=payout'],
         [$summary['total_pairing'],  'Pairing Earnings', '🤝', 'success', 'success', number_format($user['pairs_paid']) . ' pairs lifetime', null],
         [$summary['total_direct'],   'Direct Referral',  '👥', 'orange',  'warning', null, '/?page=genealogy&view=referral'],
         [$summary['total_indirect'], 'Indirect Referral', '🔗', 'purple',  'purple',  'Up to 10 levels', null],

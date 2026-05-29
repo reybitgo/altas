@@ -104,13 +104,6 @@ $routes = [
     // VIP bypass toggles
     'admin_toggle_vip'       => ['AdminController',  'toggleVipBypass',      'admin'],
     'admin_toggle_daily_cap' => ['AdminController',  'toggleDailyCapBypass', 'admin'],
-
-    // E-Wallet Transfer & Top-Up
-    'ewallet_transfer'       => ['MemberController', 'ewalletTransfer',     'any'],
-    'do_ewallet_transfer'    => ['MemberController', 'doEwalletTransfer',   'any'],
-    'admin_ewallet_topup'    => ['AdminController',  'ewalletTopUp',        'admin'],
-    'do_admin_ewallet_topup' => ['AdminController',  'doEwalletTopUp',      'admin'],
-    'admin_ewallet_monitor'  => ['AdminController',  'ewalletMonitor',      'admin'],
 ];
 
 $page = $_GET['page'] ?? 'login';

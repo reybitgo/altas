@@ -10,9 +10,13 @@ class Payout
     {
         $minPayout = (float)setting('min_payout', '500');
         $balance   = Ewallet::balance($userId);
+        $withdrawable = (float) db()->query("SELECT withdrawable_balance FROM users WHERE id = {$userId}")->fetchColumn();
 
         if ($amount < $minPayout) {
             return ['ok' => false, 'error' => "Minimum payout is " . fmt_money($minPayout)];
+        }
+        if ($amount > $withdrawable) {
+            return ['ok' => false, 'error' => "Withdrawable balance insufficient. You can withdraw up to " . fmt_money($withdrawable) . "."];
         }
         if ($amount > $balance) {
             return ['ok' => false, 'error' => "Insufficient balance. Available: " . fmt_money($balance)];
