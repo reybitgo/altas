@@ -79,6 +79,20 @@ function fmt_datetime(?string $ts): string
     return fmt_date($ts, 'M d, Y h:i A');
 }
 
+// ── Seat Limit Helpers ──────────────────────────────────────────────────────
+
+function seatsRemaining(): int
+{
+    $limit = (int) setting('seat_limit', '1000');
+    $count = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
+    return max(0, $limit - $count);
+}
+
+function isSeatLimitReached(): bool
+{
+    return seatsRemaining() <= 0;
+}
+
 // ── Navigation ────────────────────────────────────────────────────────────────
 
 function redirect(string $path): never

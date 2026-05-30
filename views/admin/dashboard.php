@@ -23,6 +23,7 @@ $lastReset        = setting('last_reset');
       <?php foreach (
         [
           ['Total Members',    number_format((int)$memberCounts['total']),   'primary', '👥', '+' . number_format((int)$memberCounts['joined_today']) . ' today · ' . number_format((int)$memberCounts['active']) . ' active'],
+          ['Seat Capacity',    number_format((int)seatsRemaining()),         'warning', '🪑', 'Limit: ' . number_format((int)setting('seat_limit', '1000')) . ' · ' . number_format((int)$memberCounts['total']) . ' filled'],
           ['Code Revenue',     fmt_money($codeStat['revenue']),              'success', '💰', number_format($codeStat['used']) . ' codes sold'],
           ['Pending Payouts',  fmt_money($pendingPayout),                    'warning', '💸', '<a href="' . APP_URL . '/?page=admin_payouts" class="text-decoration-none fw-semibold" style="font-size:.72rem;">Review →</a>'],
           ['Total Paid Out',   fmt_money($totalPaid),                        'purple', '✅', 'Completed payouts'],

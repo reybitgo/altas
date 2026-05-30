@@ -99,6 +99,16 @@
                 </select>
               </div>
 
+              <div class="mb-3">
+                <label class="form-label">🪑 Seat Limit (Hard Member Cap)</label>
+                <input type="number" name="seat_limit" class="form-control" min="1" step="1" value="<?= e(setting('seat_limit', '1000')) ?>">
+                <div class="form-text">
+                  Maximum member accounts allowed. When reached, registration closes permanently.
+                  Current members: <strong><?= User::counts()['total'] ?? 0 ?></strong> ·
+                  Remaining seats: <strong><?= seatsRemaining() ?></strong>
+                </div>
+              </div>
+
               <hr class="my-3">
               <p class="fw-bold mb-2" style="font-size:.82rem;">📋 Compensation Plan Defaults</p>
               <div class="form-text mb-3">Default values applied to new packages. Can be overridden per package.</div>

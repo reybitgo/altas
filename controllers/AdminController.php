@@ -350,6 +350,7 @@ class AdminController
             'ewallet_min_transfer',
             'ewallet_transfer_daily_limit',
             'ewallet_transfer_weekly_limit',
+            'seat_limit',
         ];
         $pdo = db();
         $st  = $pdo->prepare("INSERT INTO settings (key_name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");

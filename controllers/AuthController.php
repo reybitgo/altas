@@ -48,6 +48,13 @@ class AuthController
 
     public function showRegister(): void
     {
+        // ── Seat limit check ──
+        if (isSeatLimitReached()) {
+            http_response_code(403);
+            require 'views/auth/register_closed.php';
+            return;
+        }
+
         // Pass pre-filled sponsor from ?sponsor= param
         $prefillSponsor = trim($_GET['sponsor'] ?? '');
         $packages       = Package::all(true); // active packages only
@@ -65,6 +72,12 @@ class AuthController
     public function doRegister(): void
     {
         csrf_verify();
+
+        // ── Seat limit check ──
+        if (isSeatLimitReached()) {
+            flash('error', 'Registration is closed. The member seat limit has been reached.');
+            redirect('/?page=register');
+        }
 
         $wasLoggedIn = Auth::check();
         $prevUserId  = $wasLoggedIn ? Auth::id() : 0;

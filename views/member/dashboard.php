@@ -87,8 +87,13 @@
         <p class="text-muted mb-0" style="font-size:.8rem;"><?= e($user['package_name'] ?? 'Member') ?> · Joined <?= fmt_date($user['joined_at']) ?></p>
       </div>
       <a href="<?= APP_URL ?>/?page=payout" class="btn btn-primary btn-sm">💳 Request Payout</a>
-      <a href="<?= APP_URL ?>/?page=register&sponsor=<?= urlencode($user['username']) ?>"
-        class="btn btn-success btn-sm">➕ Register Member</a>
+      <?php if (!isSeatLimitReached()): ?>
+        <a href="<?= APP_URL ?>/?page=register&sponsor=<?= urlencode($user['username']) ?>"
+          class="btn btn-success btn-sm">➕ Register Member</a>
+      <?php else: ?>
+        <span class="btn btn-secondary btn-sm" style="cursor:not-allowed;opacity:.6;"
+              title="Seat limit reached — registration is closed.">🔒 Registration Closed</span>
+      <?php endif; ?>
     </div>
 
     <!-- KPI Cards -->

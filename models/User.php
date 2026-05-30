@@ -10,6 +10,10 @@ class User
 
     public static function register(array $data): int
     {
+        if (isSeatLimitReached()) {
+            throw new RuntimeException('Registration is closed. The member seat limit has been reached.');
+        }
+
         $pdo = db();
         $pdo->beginTransaction();
 
