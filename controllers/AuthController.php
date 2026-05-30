@@ -50,6 +50,15 @@ class AuthController
     {
         // Pass pre-filled sponsor from ?sponsor= param
         $prefillSponsor = trim($_GET['sponsor'] ?? '');
+        $packages       = Package::all(true); // active packages only
+
+        // Can the logged-in user afford e-wallet registration?
+        $canUseEwallet = false;
+        if (Auth::check() && !empty($packages)) {
+            $minFee = min(array_map(fn($p) => (float)$p['entry_fee'], $packages));
+            $canUseEwallet = Ewallet::balance(Auth::id()) >= $minFee;
+        }
+
         require 'views/auth/register.php';
     }
 
@@ -57,22 +66,67 @@ class AuthController
     {
         csrf_verify();
 
-        $code       = strtoupper(trim($_POST['reg_code']         ?? ''));
-        $username   = strtolower(trim($_POST['username']         ?? ''));
-        $password   = $_POST['password']                          ?? '';
-        $passwordC  = $_POST['password_confirm']                  ?? '';
-        $sponsorU   = strtolower(trim($_POST['sponsor_username'] ?? ''));
-        $uplineU    = strtolower(trim($_POST['upline_username']  ?? ''));
-        $position   = $_POST['binary_position']                   ?? '';
+        $wasLoggedIn = Auth::check();
+        $prevUserId  = $wasLoggedIn ? Auth::id() : 0;
+        $prevUserRole = $_SESSION['user_role'] ?? '';
 
-        // Validate code
-        $codeRow = Code::validate($code);
-        if (!$codeRow) {
-            flash('error', 'Invalid or already-used registration code.');
-            redirect('/?page=register');
+        $paymentMethod = $_POST['payment_method'] ?? 'code';
+        $code          = strtoupper(trim($_POST['reg_code']         ?? ''));
+        $packageId     = (int)($_POST['package_id']                ?? 0);
+        $username      = strtolower(trim($_POST['username']         ?? ''));
+        $password      = $_POST['password']                          ?? '';
+        $passwordC     = $_POST['password_confirm']                  ?? '';
+        $sponsorU      = strtolower(trim($_POST['sponsor_username'] ?? ''));
+        $uplineU       = strtolower(trim($_POST['upline_username']  ?? ''));
+        $position      = $_POST['binary_position']                   ?? '';
+
+        // ── Guests can only use registration codes ──
+        if (!$wasLoggedIn && $paymentMethod !== 'code') {
+            flash('error', 'Please log in to use e-wallet registration.');
+            redirect('/?page=login');
         }
 
-        // Validate username
+        $payerId = $wasLoggedIn ? (int)Auth::id() : 0;
+
+        // ── Payment-specific validation ──
+        if ($paymentMethod === 'code') {
+            if (empty($code)) {
+                flash('error', 'Registration code is required.');
+                redirect('/?page=register');
+            }
+            $codeRow = Code::validate($code);
+            if (!$codeRow) {
+                flash('error', 'Invalid or already-used registration code.');
+                redirect('/?page=register');
+            }
+            $packageId   = (int)$codeRow['package_id'];
+            $regCodeId   = (int)$codeRow['id'];
+            $regPaidBy   = null;
+        } else {
+            // E-Wallet payment (logged-in only)
+            if ($packageId <= 0) {
+                flash('error', 'Please select a package.');
+                redirect('/?page=register');
+            }
+            $pkg = Package::find($packageId);
+            if (!$pkg) {
+                flash('error', 'Invalid package selected.');
+                redirect('/?page=register');
+            }
+            $entryFee = (float)$pkg['entry_fee'];
+
+            // Pre-check balance for a friendly error message
+            $bal = Ewallet::balance($payerId);
+            if ($bal < $entryFee) {
+                flash('error', 'Insufficient e-wallet balance. Required: ' . fmt_money($entryFee));
+                redirect('/?page=register');
+            }
+
+            $regCodeId = null;
+            $regPaidBy = $payerId;
+        }
+
+        // ── Common validation ──
         if (!is_valid_username($username)) {
             flash('error', 'Username must be 3–40 characters, letters/numbers/underscore, start with a letter.');
             redirect('/?page=register');
@@ -81,8 +135,6 @@ class AuthController
             flash('error', 'Username is already taken.');
             redirect('/?page=register');
         }
-
-        // Validate password
         if (strlen($password) < 8) {
             flash('error', 'Password must be at least 8 characters.');
             redirect('/?page=register');
@@ -92,57 +144,50 @@ class AuthController
             redirect('/?page=register');
         }
 
-        // Validate sponsor — any existing user can be a sponsor
         $sponsor = User::findByUsername($sponsorU);
         if (!$sponsor) {
             flash('error', 'Sponsor username not found.');
             redirect('/?page=register');
         }
 
-        // Validate binary upline — any existing user can be an upline
         $upline = User::findByUsername($uplineU);
         if (!$upline) {
             flash('error', 'Binary upline username not found.');
             redirect('/?page=register');
         }
 
-        // Validate position
         if (!in_array($position, ['left', 'right'])) {
             flash('error', 'Invalid binary position.');
             redirect('/?page=register');
         }
-
-        // Check slot availability
         if (!User::isSlotFree((int)$upline['id'], $position)) {
             flash('error', "The {$position} position under @{$uplineU} is already occupied.");
             redirect('/?page=register');
         }
 
-        // Register
-        $wasLoggedIn   = Auth::check();
-        $prevUserId    = Auth::id();
-        $prevUserRole  = $_SESSION['user_role'] ?? '';
-
+        // ── Register ──
         try {
             $newId = User::register([
                 'username'         => $username,
                 'password'         => $password,
-                'package_id'       => (int)$codeRow['package_id'],
-                'reg_code_id'      => (int)$codeRow['id'],
+                'package_id'       => $packageId,
+                'reg_code_id'      => $regCodeId,
+                'reg_payment_method' => $paymentMethod,
+                'reg_paid_by'      => $regPaidBy,
+                'paid_by_username' => $wasLoggedIn ? (Auth::user()['username'] ?? '') : '',
                 'sponsor_id'       => (int)$sponsor['id'],
                 'binary_parent_id' => (int)$upline['id'],
                 'binary_position'  => $position,
             ]);
 
             if ($wasLoggedIn) {
-                // Registrant was already logged in (admin or member registering someone)
-                // Restore their session — do NOT switch to the new member
+                // Logged-in user registering someone else — restore their session
                 $_SESSION['user_id']   = $prevUserId;
                 $_SESSION['user_role'] = $prevUserRole;
                 flash('success', "Account @{$username} registered successfully.");
                 redirect($prevUserRole === 'admin' ? '/?page=admin_users' : '/?page=dashboard');
             } else {
-                // New visitor registering themselves — log them in
+                // Guest registering themselves — log them in as the new user
                 $newUser = User::find($newId);
                 Auth::login($newUser);
                 flash('success', 'Welcome! Your account has been created successfully.');
@@ -173,6 +218,23 @@ class AuthController
             'pairing_bonus' => fmt_money((float)$row['pairing_bonus']),
             'daily_cap'    => $row['daily_pair_cap'],
         ]);
+    }
+
+    /** AJAX: get active packages for e-wallet registration */
+    public function ajaxGetPackages(): void
+    {
+        $packages = Package::all(true);
+        $out = [];
+        foreach ($packages as $p) {
+            $out[] = [
+                'id'            => (int)$p['id'],
+                'name'          => $p['name'],
+                'entry_fee'     => (float)$p['entry_fee'],
+                'pairing_bonus' => (float)$p['pairing_bonus'],
+                'daily_cap'     => (int)$p['daily_pair_cap'],
+            ];
+        }
+        json_response(['packages' => $out]);
     }
 
     /** AJAX: check username availability */

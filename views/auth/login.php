@@ -58,7 +58,7 @@
         </form>
       </div>
       <div class="auth-footer">
-        Don't have an account? <a href="<?= APP_URL ?>/?page=register">Register with a code →</a>
+        Have a registration code? <a href="<?= APP_URL ?>/?page=register">Register here →</a>
       </div>
       <div class="auth-footer" style="border-top:none;padding-top:0;">
         <a href="<?= APP_URL ?>/">← Back to Home</a>

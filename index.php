@@ -56,6 +56,7 @@ $routes = [
     'register'           => ['AuthController',   'showRegister',    'any'],
     'do_register'        => ['AuthController',   'doRegister',      'any'],
     'validate_code'      => ['AuthController',   'ajaxValidateCode', 'any'],
+    'get_packages'       => ['AuthController',   'ajaxGetPackages', 'member'],
     'check_username'     => ['AuthController',   'ajaxCheckUser',   'any'],
     'check_upline'       => ['AuthController',   'ajaxCheckUpline', 'any'],
     'logout'             => ['AuthController',   'logout',          'any'],

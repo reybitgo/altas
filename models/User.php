@@ -14,6 +14,49 @@ class User
         $pdo->beginTransaction();
 
         try {
+            $paymentMethod = $data['reg_payment_method'] ?? 'code';
+            $entryFee      = 0.00;
+
+            // ── E-Wallet payment: debit payer, credit admin ──
+            if ($paymentMethod === 'ewallet') {
+                $package = Package::find((int)$data['package_id']);
+                if (!$package) {
+                    throw new RuntimeException('Invalid package selected.');
+                }
+                $entryFee = (float)$package['entry_fee'];
+                $payerId  = (int)($data['reg_paid_by'] ?? 0);
+
+                if ($payerId <= 0) {
+                    throw new RuntimeException('Invalid payer account.');
+                }
+
+                // Debit payer (non-withdrawable first, then withdrawable)
+                $debitOk = Ewallet::debitInternal(
+                    $payerId,
+                    $entryFee,
+                    0,
+                    'registration',
+                    "Entry fee for new member @" . $data['username']
+                );
+                if (!$debitOk) {
+                    throw new RuntimeException('Insufficient e-wallet balance for entry fee.');
+                }
+
+                // Credit admin as revenue
+                $adminId = (int) $pdo->query("SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1")
+                    ->fetchColumn();
+                if ($adminId) {
+                    Ewallet::credit(
+                        $adminId,
+                        $entryFee,
+                        0,
+                        'registration',
+                        "Entry fee from @" . $data['username']
+                            . " (registered by @" . ($data['paid_by_username'] ?? 'admin') . ")"
+                    );
+                }
+            }
+
             // Verify binary slot is free
             $slotCheck = $pdo->prepare("
                 SELECT COUNT(*) FROM users
@@ -29,24 +72,29 @@ class User
             $pdo->prepare("
                 INSERT INTO users
                   (username, password_hash, package_id, reg_code_id,
+                   reg_payment_method, reg_paid_by,
                    sponsor_id, binary_parent_id, binary_position)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ")->execute([
                 $data['username'],
                 $hash,
                 $data['package_id'],
-                $data['reg_code_id'],
+                $data['reg_code_id'] ?? null,
+                $paymentMethod,
+                $data['reg_paid_by'] ?? null,
                 $data['sponsor_id'],
                 $data['binary_parent_id'],
                 $data['binary_position'],
             ]);
             $newId = (int)$pdo->lastInsertId();
 
-            // Mark registration code as used
-            $pdo->prepare("
-                UPDATE reg_codes SET status = 'used', used_by = ?, used_at = NOW()
-                WHERE id = ?
-            ")->execute([$newId, $data['reg_code_id']]);
+            // Mark registration code as used (code payment only)
+            if (!empty($data['reg_code_id'])) {
+                $pdo->prepare("
+                    UPDATE reg_codes SET status = 'used', used_by = ?, used_at = NOW()
+                    WHERE id = ?
+                ")->execute([$newId, $data['reg_code_id']]);
+            }
 
             $pdo->commit();
         } catch (\Exception $e) {

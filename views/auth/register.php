@@ -79,7 +79,7 @@ if ($isLoggedIn && !$prefillSponsor) {
               <div class="steps-bar" id="stepsBar">
                 <div class="reg-step active" id="step-ind-1">
                   <div class="step-dot">1</div>
-                  <div class="step-text">Validate Code</div>
+                  <div class="step-text">Select Package</div>
                 </div>
                 <div class="reg-step" id="step-ind-2">
                   <div class="step-dot">2</div>
@@ -98,17 +98,109 @@ if ($isLoggedIn && !$prefillSponsor) {
 
                 <!-- ── STEP 1 ── -->
                 <div class="auth-body" id="step1">
-                  <p class="text-muted mb-3" style="font-size:.85rem;">Enter the registration code for the new member.</p>
-                  <div class="mb-3">
-                    <label class="form-label">Registration Code <span class="text-danger">*</span></label>
-                    <div class="input-group">
-                      <input type="text" id="reg_code" name="reg_code" class="form-control font-mono"
-                        placeholder="XXXX-XXXX-XXXX" maxlength="14"
-                        style="text-transform:uppercase;letter-spacing:2px;font-size:1rem;" required>
-                      <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Validate</button>
+                  <?php if ($isLoggedIn): ?>
+                    <p class="text-muted mb-3" style="font-size:.85rem;">Choose payment method and package for the new member.</p>
+
+                    <!-- Payment Method Toggle (logged-in only) -->
+                    <div class="mb-3">
+                      <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                      <div class="position-toggle">
+                        <div class="position-option">
+                          <input type="radio" id="pay_code" name="payment_method" value="code" checked required>
+                          <label class="position-label" for="pay_code">🎫 Code</label>
+                        </div>
+                        <div class="position-option">
+                          <input type="radio" id="pay_ewallet" name="payment_method" value="ewallet">
+                          <label class="position-label" for="pay_ewallet">💳 E-Wallet</label>
+                        </div>
+                      </div>
                     </div>
-                    <div class="form-text" id="codeHint"></div>
+                  <?php else: ?>
+                    <p class="text-muted mb-3" style="font-size:.85rem;">Enter your registration code to get started.</p>
+                    <input type="hidden" name="payment_method" value="code">
+                  <?php endif; ?>
+
+                  <!-- Code Input -->
+                  <div id="codeSection">
+                    <div class="mb-3">
+                      <label class="form-label">Registration Code <span class="text-danger">*</span></label>
+                      <div class="input-group">
+                        <input type="text" id="reg_code" name="reg_code" class="form-control font-mono"
+                          placeholder="XXXX-XXXX-XXXX" maxlength="14"
+                          style="text-transform:uppercase;letter-spacing:2px;font-size:1rem;" required>
+                        <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Validate</button>
+                      </div>
+                      <div class="form-text" id="codeHint"></div>
+                    </div>
                   </div>
+
+                  <?php if ($isLoggedIn): ?>
+                    <!-- Package Selector (E-Wallet) -->
+                    <div id="packageSection" style="display:none;">
+                      <?php if ($canUseEwallet): ?>
+                        <div class="mb-3">
+                          <label class="form-label">Package <span class="text-danger">*</span></label>
+                          <?php $pkgCount = count($packages); ?>
+                          <?php if ($pkgCount === 1): ?>
+                            <?php $pkg = $packages[0]; ?>
+                            <input type="hidden" name="package_id" id="packageId" value="<?= (int)$pkg['id'] ?>">
+                            <div class="card border-primary">
+                              <div class="card-body">
+                                <div class="fw-bold text-primary"><?= e($pkg['name']) ?></div>
+                                <div style="font-size:.8rem;color:var(--muted);">
+                                  Entry: <?= fmt_money((float)$pkg['entry_fee']) ?> ·
+                                  Bonus: <?= fmt_money((float)$pkg['pairing_bonus']) ?> ·
+                                  Cap: <?= (int)$pkg['daily_pair_cap'] ?> pairs/day
+                                </div>
+                              </div>
+                            </div>
+                            <div class="form-text text-success">✓ Package auto-selected.</div>
+                          <?php else: ?>
+                            <select class="form-select" id="packageSelect" name="package_id">
+                              <option value="">Select a package…</option>
+                              <?php foreach ($packages as $pkg): ?>
+                                <option value="<?= (int)$pkg['id'] ?>"
+                                  data-name="<?= e($pkg['name']) ?>"
+                                  data-fee="<?= fmt_money((float)$pkg['entry_fee']) ?>"
+                                  data-bonus="<?= fmt_money((float)$pkg['pairing_bonus']) ?>"
+                                  data-cap="<?= (int)$pkg['daily_pair_cap'] ?>">
+                                  <?= e($pkg['name']) ?> — <?= fmt_money((float)$pkg['entry_fee']) ?>
+                                </option>
+                              <?php endforeach; ?>
+                            </select>
+                            <div class="form-text" id="packageHint"></div>
+                            <div id="packageCard" class="code-verified d-none mt-2">
+                              <span style="font-size:1.2rem;">📦</span>
+                              <div>
+                                <div class="fw-bold" id="pkgCardName"></div>
+                                <div style="font-size:.75rem;margin-top:2px;" id="pkgCardDetails"></div>
+                              </div>
+                            </div>
+                          <?php endif; ?>
+                        </div>
+                        <div class="alert alert-info py-2 mb-3" style="font-size:.8rem;">
+                          💳 Your balance:
+                          <strong><?= fmt_money((float)($currentUser['ewallet_balance'] ?? 0)) ?></strong>
+                          (<?= fmt_money((float)($currentUser['withdrawable_balance'] ?? 0)) ?> withdrawable)
+                        </div>
+                      <?php else: ?>
+                        <div class="alert alert-warning py-3 mb-3">
+                          <div class="d-flex align-items-center gap-2">
+                            <span style="font-size:1.25rem;">⚠️</span>
+                            <div>
+                              <strong>Insufficient E-Wallet Balance</strong>
+                              <div style="font-size:.8rem;opacity:.9;">
+                                Your current balance is <?= fmt_money((float)($currentUser['ewallet_balance'] ?? 0)) ?>.
+                                The minimum entry fee is <?= fmt_money((float)(!empty($packages) ? min(array_map(fn($p) => (float)$p['entry_fee'], $packages)) : 0)) ?>.
+                                Please top up or switch to registration code.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      <?php endif; ?>
+                    </div>
+                  <?php endif; ?>
+
                   <div id="packageInfo" class="code-verified d-none">
                     <span style="font-size:1.2rem;">✅</span>
                     <div>
@@ -203,6 +295,10 @@ if ($isLoggedIn && !$prefillSponsor) {
                     <div class="card-body">
                       <table class="info-table">
                         <tr>
+                          <td>Payment</td>
+                          <td id="rev_payment">—</td>
+                        </tr>
+                        <tr id="revCodeRow">
                           <td>Code</td>
                           <td><span class="reg-code" id="rev_code">—</span></td>
                         </tr>
@@ -268,10 +364,14 @@ if ($isLoggedIn && !$prefillSponsor) {
 <?php endif; ?>
 <script>
   const API = '<?= APP_URL ?>';
+  const IS_LOGGED_IN = <?= $isLoggedIn ? 'true' : 'false' ?>;
+  const CAN_USE_EWALLET = <?= ($isLoggedIn && ($canUseEwallet ?? false)) ? 'true' : 'false' ?>;
   const LOCKED_SPONSOR = <?= ($isLoggedIn && ($currentUser['role'] ?? '') === 'member') ? 'true' : 'false' ?>;
   const PREFILL_SPONSOR = <?= json_encode($prefillSponsor) ?>;
+  const PKG_COUNT = <?= (int)count($packages) ?>;
 
   let codeData = {},
+    selectedPkg = {},
     usernameOk = false,
     sponsorOk = false,
     uplineOk = false,
@@ -285,13 +385,9 @@ if ($isLoggedIn && !$prefillSponsor) {
       const el = document.getElementById('step-ind-' + i);
       el.className = 'reg-step ' + (i < n ? 'done' : i === n ? 'active' : '');
     });
-    // Clear server flash errors when navigating — they no longer apply
     const flash = document.getElementById('flashArea');
     if (flash) flash.innerHTML = '';
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function setHint(id, msg, ok) {
@@ -307,6 +403,87 @@ if ($isLoggedIn && !$prefillSponsor) {
     btn.textContent = el.type === 'password' ? '👁' : '🙈';
   }
 
+  // ── Payment Method Toggle ─────────────────────────────────────
+  function getPaymentMethod() {
+    if (!IS_LOGGED_IN) return 'code';
+    return document.querySelector('[name=payment_method]:checked')?.value || 'code';
+  }
+
+  function updateStep1State() {
+    const method = getPaymentMethod();
+    const codeSec = document.getElementById('codeSection');
+    const pkgSec  = document.getElementById('packageSection');
+    const regCode = document.getElementById('reg_code');
+    const pkgSel  = document.getElementById('packageSelect');
+    const toBtn   = document.getElementById('toStep2Btn');
+
+    if (method === 'code') {
+      codeSec.style.display = 'block';
+      if (pkgSec) pkgSec.style.display = 'none';
+      regCode.required = true;
+      if (pkgSel) pkgSel.required = false;
+      toBtn.disabled = !document.getElementById('validatedCode').value;
+    } else {
+      codeSec.style.display = 'none';
+      if (pkgSec) pkgSec.style.display = 'block';
+      regCode.required = false;
+      if (pkgSel) pkgSel.required = true;
+      // If e-wallet balance is insufficient, keep Continue disabled
+      if (!CAN_USE_EWALLET) {
+        toBtn.disabled = true;
+        return;
+      }
+      // Enable continue if single package, or if dropdown has a value
+      if (PKG_COUNT === 1) {
+        toBtn.disabled = false;
+      } else {
+        toBtn.disabled = !(pkgSel && pkgSel.value);
+      }
+    }
+  }
+
+  document.querySelectorAll('[name=payment_method]').forEach(r => {
+    r.addEventListener('change', function() {
+      resetCodeState();
+      resetPackageState();
+      updateStep1State();
+    });
+  });
+
+  // ── Package Selector (E-Wallet) ───────────────────────────────
+  const packageSelect = document.getElementById('packageSelect');
+  if (packageSelect) {
+    packageSelect.addEventListener('change', function() {
+      const opt = this.options[this.selectedIndex];
+      if (!this.value) {
+        resetPackageState();
+        return;
+      }
+      selectedPkg = {
+        id: this.value,
+        name: opt.dataset.name,
+        fee: opt.dataset.fee,
+        bonus: opt.dataset.bonus,
+        cap: opt.dataset.cap
+      };
+      document.getElementById('pkgCardName').textContent = selectedPkg.name;
+      document.getElementById('pkgCardDetails').textContent =
+        'Entry: ' + selectedPkg.fee + ' · Bonus: ' + selectedPkg.bonus + ' · Cap: ' + selectedPkg.cap + ' pairs/day';
+      document.getElementById('packageCard').classList.remove('d-none');
+      setHint('packageHint', '✓ Package selected.', true);
+      document.getElementById('toStep2Btn').disabled = false;
+    });
+  }
+
+  function resetPackageState() {
+    selectedPkg = {};
+    if (packageSelect) {
+      packageSelect.selectedIndex = 0;
+      document.getElementById('packageCard')?.classList.add('d-none');
+    }
+    setHint('packageHint', '', null);
+  }
+
   // ── Code formatting & validation ──────────────────────────────
   document.getElementById('reg_code').addEventListener('input', function() {
     const clean = this.value.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 12);
@@ -318,9 +495,11 @@ if ($isLoggedIn && !$prefillSponsor) {
   function resetCodeState() {
     document.getElementById('packageInfo').classList.add('d-none');
     document.getElementById('validatedCode').value = '';
-    document.getElementById('toStep2Btn').disabled = true;
     setHint('codeHint', '', null);
     codeData = {};
+    if (getPaymentMethod() === 'code') {
+      document.getElementById('toStep2Btn').disabled = true;
+    }
   }
 
   document.getElementById('validateCodeBtn').addEventListener('click', async function() {
@@ -359,16 +538,17 @@ if ($isLoggedIn && !$prefillSponsor) {
   });
 
   document.getElementById('toStep2Btn').addEventListener('click', () => {
-    if (document.getElementById('validatedCode').value) {
-      goStep(2);
-      // Auto-validate pre-filled sponsor (locked member or prefilled from URL)
-      if (PREFILL_SPONSOR) {
-        const sField = document.getElementById('sponsor_username');
-        if (LOCKED_SPONSOR) {
-          sponsorOk = true; // locked to self — already validated server-side
-        } else if (sField.value) {
-          checkSponsor(sField.value);
-        }
+    const method = getPaymentMethod();
+    if (method === 'code' && !document.getElementById('validatedCode').value) return;
+    if (method === 'ewallet' && PKG_COUNT > 1 && !document.getElementById('packageSelect')?.value) return;
+
+    goStep(2);
+    if (PREFILL_SPONSOR) {
+      const sField = document.getElementById('sponsor_username');
+      if (LOCKED_SPONSOR) {
+        sponsorOk = true;
+      } else if (sField.value) {
+        checkSponsor(sField.value);
       }
     }
   });
@@ -411,7 +591,6 @@ if ($isLoggedIn && !$prefillSponsor) {
       setHint('sponsorHint', 'Checking…', null);
       sTimer = setTimeout(() => checkSponsor(v), 600);
     });
-    // Auto-trigger if pre-filled from URL
     if (PREFILL_SPONSOR) {
       setTimeout(() => {
         const el = document.getElementById('sponsor_username');
@@ -422,7 +601,7 @@ if ($isLoggedIn && !$prefillSponsor) {
 
   async function checkSponsor(v) {
     const data = await (await fetch(API + '/?page=check_username&username=' + encodeURIComponent(v))).json();
-    sponsorOk = !data.available; // exists = not available as a new username
+    sponsorOk = !data.available;
     setHint('sponsorHint', sponsorOk ? '✓ Sponsor @' + v + ' found.' : '✗ Sponsor not found.', sponsorOk);
   }
 
@@ -538,8 +717,14 @@ if ($isLoggedIn && !$prefillSponsor) {
       return;
     }
 
-    document.getElementById('rev_code').textContent = document.getElementById('validatedCode').value;
-    document.getElementById('rev_package').textContent = codeData.package_name || '—';
+    // Populate review
+    const method = getPaymentMethod();
+    document.getElementById('rev_payment').textContent = method === 'code' ? '🎫 Registration Code' : '💳 E-Wallet';
+    document.getElementById('revCodeRow').style.display = method === 'code' ? 'table-row' : 'none';
+    document.getElementById('rev_code').textContent = document.getElementById('validatedCode').value || '—';
+    document.getElementById('rev_package').textContent = method === 'code'
+      ? (codeData.package_name || '—')
+      : (selectedPkg.name || (PKG_COUNT === 1 ? document.querySelector('#packageSection .fw-bold')?.textContent : '—'));
     document.getElementById('rev_username').textContent = '@' + document.getElementById('username').value;
     document.getElementById('rev_sponsor').textContent = '@' + sponsorVal;
     document.getElementById('rev_upline').textContent = '@' + document.getElementById('upline_username').value;
@@ -554,10 +739,11 @@ if ($isLoggedIn && !$prefillSponsor) {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating account…';
   });
 
-  // ── If locked sponsor, mark as ok immediately ─────────────────
+  // ── Init ──────────────────────────────────────────────────────
   if (LOCKED_SPONSOR) {
     sponsorOk = true;
   }
+  updateStep1State();
 </script>
 <?php if (!$isLoggedIn): ?>
   </body>
