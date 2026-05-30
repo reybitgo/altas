@@ -17,7 +17,7 @@ $nav = [
   ['page' => 'dashboard', 'icon' => '🏠', 'label' => 'Dashboard',        'pages' => ['dashboard']],
   ['page' => 'earnings',  'icon' => '💰', 'label' => 'Earnings',         'pages' => ['earnings']],
   ['page' => 'cap_status', 'icon' => '🛡️', 'label' => 'Lifetime Cap',     'pages' => ['cap_status']],
-  ['page' => 'dfi_history','icon' => '📅', 'label' => 'DFI History',      'pages' => ['dfi_history']],
+  ['page' => 'dfi_history', 'icon' => '📅', 'label' => 'DFI History',      'pages' => ['dfi_history']],
   'SEPARATOR:Network',
   ['page' => 'genealogy&view=binary',  'icon' => '🌳', 'label' => 'Binary Tree',      'pages' => ['genealogy'], 'view' => 'binary'],
   ['page' => 'genealogy&view=referral', 'icon' => '👥', 'label' => 'Referral Network', 'pages' => ['genealogy'], 'view' => 'referral'],
@@ -74,6 +74,9 @@ function renderSidebarNav($nav, $cp, $user, $view, $initial, $name)
         <?= e($item['label']) ?>
       </a>
     <?php endforeach; ?>
+    <a href="<?= APP_URL ?>/?page=logout" class="nav-item-link">
+      <span class="nav-icon">⏻</span> Logout
+    </a>
   </nav>
 
   <div class="sidebar-footer">
@@ -89,7 +92,7 @@ function renderSidebarNav($nav, $cp, $user, $view, $initial, $name)
         <div class="user-name"><?= e($name) ?></div>
         <div class="user-role"><?= e($user['package_name'] ?? 'Member') ?></div>
       </div>
-      <a href="<?= APP_URL ?>/?page=logout" class="sidebar-logout" title="Log out">⏻</a>
+      <!-- <a href="<?= APP_URL ?>/?page=logout" class="sidebar-logout" title="Log out">⏻</a> -->
     </div>
   </div>
 <?php } ?>
