@@ -385,7 +385,10 @@ if ($isLoggedIn && !$prefillSponsor) {
     });
     const flash = document.getElementById('flashArea');
     if (flash) flash.innerHTML = '';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   }
 
   function setHint(id, msg, ok) {
@@ -410,10 +413,10 @@ if ($isLoggedIn && !$prefillSponsor) {
   function updateStep1State() {
     const method = getPaymentMethod();
     const codeSec = document.getElementById('codeSection');
-    const pkgSec  = document.getElementById('packageSection');
+    const pkgSec = document.getElementById('packageSection');
     const regCode = document.getElementById('reg_code');
-    const pkgSel  = document.getElementById('packageSelect');
-    const toBtn   = document.getElementById('toStep2Btn');
+    const pkgSel = document.getElementById('packageSelect');
+    const toBtn = document.getElementById('toStep2Btn');
 
     if (method === 'code') {
       codeSec.style.display = 'block';
@@ -720,9 +723,9 @@ if ($isLoggedIn && !$prefillSponsor) {
     document.getElementById('rev_payment').textContent = method === 'code' ? '🎫 Registration Code' : '💳 E-Wallet';
     document.getElementById('revCodeRow').style.display = method === 'code' ? 'table-row' : 'none';
     document.getElementById('rev_code').textContent = document.getElementById('validatedCode').value || '—';
-    document.getElementById('rev_package').textContent = method === 'code'
-      ? (codeData.package_name || '—')
-      : (selectedPkg.name || (PKG_COUNT === 1 ? document.querySelector('#packageSection .fw-bold')?.textContent : '—'));
+    document.getElementById('rev_package').textContent = method === 'code' ?
+      (codeData.package_name || '—') :
+      (selectedPkg.name || (PKG_COUNT === 1 ? document.querySelector('#packageSection .fw-bold')?.textContent : '—'));
     document.getElementById('rev_username').textContent = '@' + document.getElementById('username').value;
     document.getElementById('rev_sponsor').textContent = '@' + sponsorVal;
     document.getElementById('rev_upline').textContent = '@' + document.getElementById('upline_username').value;
