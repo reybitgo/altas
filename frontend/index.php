@@ -102,10 +102,10 @@ $streamOxford = count($streamWords) > 2
       },
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Balintocatoc",
-        "addressLocality": "Santiago",
+        "streetAddress": "Rang-ay",
+        "addressLocality": "Cabatuan",
         "addressRegion": "Isabela",
-        "postalCode": "3311",
+        "postalCode": "3315",
         "addressCountry": "PH"
       },
       "contactPoint": [{
@@ -406,7 +406,7 @@ $streamOxford = count($streamWords) > 2
         <h3>11. Changes to This Policy</h3>
         <p>We may update this Privacy Policy. The effective date at the top will reflect any changes. We will notify registered members of material changes via their registered email address.</p>
 
-        <p class="meta-line"><?= e($siteName) ?> · Santiago, Isabela, Philippines · RA 10173 compliant · Version 1.0, effective January 1, 2025</p>
+        <p class="meta-line"><?= e($siteName) ?> · Cabatuan, Isabela, Philippines · RA 10173 compliant · Version 1.0, effective January 1, 2025</p>
       </div>
     </div>
   </div>
@@ -456,7 +456,7 @@ $streamOxford = count($streamWords) > 2
 
         <h3>8. Reporting and Contact</h3>
         <p>For compliance concerns, legal inquiries, or to report a policy violation: <a href="mailto:support@altasfarm.com" style="color:var(--green-mid);">support@altasfarm.com</a><br>
-          Mailing address: <?= e($siteName) ?>, Balintocatoc, Santiago, Isabela 3311, Philippines</p>
+          Mailing address: <?= e($siteName) ?>, Rang-ay, Cabatuan, Isabela 3315, Philippines</p>
 
         <p class="meta-line">This disclosure is provided in good faith as part of <?= e($siteName) ?>'s commitment to operating transparently. Last reviewed: January 2025.</p>
       </div>
@@ -489,8 +489,8 @@ $streamOxford = count($streamWords) > 2
 
         <h3>Office Address</h3>
         <p><?= e($siteName) ?><br>
-          Balintocatoc, Santiago<br>
-          Isabela 3311<br>
+          Rang-ay, Cabatuan<br>
+          Isabela 3315<br>
           Philippines</p>
         <p style="font-size:.82rem;color:var(--muted);">Walk-in visits are by appointment only. Contact us via email or Telegram to schedule.</p>
 
@@ -522,7 +522,7 @@ $streamOxford = count($streamWords) > 2
           <span>✈</span> t.me/altasfarm
         </a>
         <span class="contact-item">
-          <span>📍</span> Santiago, Isabela, Philippines
+          <span>📍</span> Rang-ay, Cabatuan, Isabela, Philippines
         </span>
         <span class="contact-item">
           <span>🕐</span> Mon–Sat · 8 AM–6 PM PST
@@ -660,7 +660,7 @@ $streamOxford = count($streamWords) > 2
 ════════════════════════════════════════════════════════════ -->
   <?php
   $marqueeItems = [
-    '<?= number_format($seatLimit) ?> Members Only',
+    number_format($seatLimit) . ' Members Only',
     'Real Poultry Products',
     'Instant Commissions',
     'USDT TRC20 Payouts',
@@ -711,7 +711,7 @@ $streamOxford = count($streamWords) > 2
             <li>Backed by real, operating Philippine poultry farms in Isabela</li>
             <li>Commissions fire the instant a new member registers</li>
             <li>One package tier — every member enters as an equal</li>
-            <li>All payouts in USDT TRC20 — borderless, no bank required</li>
+            <li>Payouts in Gcash, Maya, or USDT TRC20 — borderless, no bank required</li>
             <li>Full audit trail: every commission logged and traceable</li>
           </ul>
           <div style="margin-top:2rem;">
@@ -729,7 +729,7 @@ $streamOxford = count($streamWords) > 2
     <div class="container">
       <div class="tag tag-green" style="background:rgba(76,175,80,.15);color:rgba(255,255,255,.7);">Simple Process</div>
       <h2 class="section-title">How <?= e($siteName) ?> Works</h2>
-      <p class="section-lead">Six steps from your first registration to your first withdrawal. The structure is binary — your income grows as both sides of your tree fill, within a defined daily cap and a community that stops at <?= number_format($seatLimit) ?>.</p>
+      <p class="section-lead">Easy steps from your first registration to your first withdrawal. The structure is binary — your income grows as both sides of your tree fill, within a defined daily cap and a community that stops at <?= number_format($seatLimit) ?>.</p>
       <div class="steps-grid">
         <div class="step-card fade-up">
           <div class="step-num">01</div>
@@ -882,10 +882,10 @@ $streamOxford = count($streamWords) > 2
               </div>
               <div class="pkg-price"><?= fmt_money($pkg['entry_fee']) ?> <small>one-time entry fee</small></div>
               <?php if (!$isFull): ?>
-              <a href="<?= $base ?>/?page=register" class="btn-primary" style="width:100%;font-size:.95rem;">Claim Your Seat →</a>
-            <?php else: ?>
-              <span class="btn btn-secondary" style="width:100%;font-size:.95rem;cursor:not-allowed;opacity:.6;">🔒 Registration Closed</span>
-            <?php endif; ?>
+                <a href="<?= $base ?>/?page=register" class="btn-primary" style="width:100%;font-size:.95rem;">Claim Your Seat →</a>
+              <?php else: ?>
+                <span class="btn btn-secondary" style="width:100%;font-size:.95rem;cursor:not-allowed;opacity:.6;">🔒 Registration Closed</span>
+              <?php endif; ?>
             </div>
           </div>
         </div>
@@ -1077,10 +1077,10 @@ $streamOxford = count($streamWords) > 2
           <!-- Address (machine-readable for ScamAdviser / Schema) -->
           <address itemprop="address" itemscope itemtype="https://schema.org/PostalAddress"
             style="font-style:normal;font-size:.82rem;color:rgba(255,255,255,.45);margin-top:1rem;line-height:1.7;">
-            <span itemprop="streetAddress">Balintocatoc</span>,
-            <span itemprop="addressLocality">Santiago</span>,
+            <span itemprop="streetAddress">Rang-ay</span>,
+            <span itemprop="addressLocality">Cabatuan</span>,
             <span itemprop="addressRegion">Isabela</span>
-            <span itemprop="postalCode">3311</span><br>
+            <span itemprop="postalCode">3315</span><br>
             <span itemprop="addressCountry">Philippines</span>
           </address>
 
