@@ -155,7 +155,7 @@ $streamOxford = count($streamWords) > 2
           "name": "What is <?= e($siteName) ?>?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "<?= e($siteName) ?> is a closed binary referral network backed by real Philippine poultry operations. It is limited to exactly 1,000 members. Each member holds one seat, earns through <?= $streamCount ?> commission streams (<?= $streamOxford ?>), and receives payouts via <?= $payoutMethodsText ?>."
+            "text": "<?= e($siteName) ?> is a closed binary referral network backed by real Philippine poultry operations. It is limited to exactly <?= number_format($seatLimit) ?> members. Each member holds one seat, earns through <?= $streamCount ?> commission streams (<?= $streamOxford ?>), and receives payouts via <?= $payoutMethodsText ?>."
           }
         },
         {
@@ -881,7 +881,11 @@ $streamOxford = count($streamWords) > 2
                 <span class="badge-payout" style="background:#26a17b20;color:#26a17b;">₮ USDT TRC20</span>
               </div>
               <div class="pkg-price"><?= fmt_money($pkg['entry_fee']) ?> <small>one-time entry fee</small></div>
+              <?php if (!$isFull): ?>
               <a href="<?= $base ?>/?page=register" class="btn-primary" style="width:100%;font-size:.95rem;">Claim Your Seat →</a>
+            <?php else: ?>
+              <span class="btn btn-secondary" style="width:100%;font-size:.95rem;cursor:not-allowed;opacity:.6;">🔒 Registration Closed</span>
+            <?php endif; ?>
             </div>
           </div>
         </div>
@@ -907,7 +911,11 @@ $streamOxford = count($streamWords) > 2
                   <?php if ($mayaEnabled): ?><span class="badge-payout" style="background:#48b0db20;color:#48b0db;font-size:.7rem;padding:.2rem .5rem;border-radius:4px;">Maya</span><?php endif; ?>
                   <span class="badge-payout" style="background:#26a17b20;color:#26a17b;font-size:.7rem;padding:.2rem .5rem;border-radius:4px;">USDT</span>
                 </div>
-                <a href="<?= $base ?>/?page=register" class="btn-primary" style="width:100%;font-size:.9rem;">Claim Your Seat →</a>
+                <?php if (!$isFull): ?>
+                  <a href="<?= $base ?>/?page=register" class="btn-primary" style="width:100%;font-size:.9rem;">Claim Your Seat →</a>
+                <?php else: ?>
+                  <span class="btn btn-secondary" style="width:100%;font-size:.9rem;cursor:not-allowed;opacity:.6;">🔒 Closed</span>
+                <?php endif; ?>
               </div>
             </div>
           <?php endforeach; ?>

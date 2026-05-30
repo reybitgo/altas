@@ -83,7 +83,10 @@ function fmt_datetime(?string $ts): string
 
 function seatsRemaining(): int
 {
-    $limit = (int) setting('seat_limit', '1000');
+    // Read directly from DB to avoid stale cache
+    $row = db()->prepare("SELECT value FROM settings WHERE key_name = 'seat_limit'");
+    $row->execute();
+    $limit = (int) ($row->fetchColumn() ?: '1000');
     $count = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
     return max(0, $limit - $count);
 }
