@@ -170,7 +170,7 @@
                   </div>
                   <div class="col-md-6">
                     <label class="form-label" style="color:var(--pink);">Max DFI Days</label>
-                    <input type="number" name="daily_fixed_income_days" class="form-control" inputmode="numeric" min="1" max="730" value="<?= e($editPkg['daily_fixed_income_days'] ?? 90) ?>">
+                    <input type="number" name="daily_fixed_income_days" class="form-control" inputmode="numeric" min="1" max="1000" value="<?= e($editPkg['daily_fixed_income_days'] ?? 90) ?>">
                     <div class="form-text">Maximum days of fixed income per member</div>
                   </div>
                 </div>
@@ -186,23 +186,23 @@
               </div>
 
               <?php if (setting('indirect_referral_enabled', '1') === '1'): ?>
-              <!-- Indirect Referral Levels -->
-              <div class="mb-3">
-                <label class="form-label fw-bold">🔗 Indirect Referral Bonuses (10 Levels)</label>
-                <div class="row g-2">
-                  <?php $lvls = $editPkg['indirect_levels'] ?? [];
-                  for ($lvl = 1; $lvl <= 10; $lvl++): ?>
-                    <div class="col-6 col-md-4 col-lg-6 col-xl-4">
-                      <label class="form-label" style="font-size:.72rem;">Level <?= $lvl ?></label>
-                      <div class="input-group input-group-sm">
-                        <span class="input-group-text">₱</span>
-                        <input type="number" name="indirect_<?= $lvl ?>" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($lvls[$lvl] ?? 0) ?>" placeholder="0.00">
+                <!-- Indirect Referral Levels -->
+                <div class="mb-3">
+                  <label class="form-label fw-bold">🔗 Indirect Referral Bonuses (10 Levels)</label>
+                  <div class="row g-2">
+                    <?php $lvls = $editPkg['indirect_levels'] ?? [];
+                    for ($lvl = 1; $lvl <= 10; $lvl++): ?>
+                      <div class="col-6 col-md-4 col-lg-6 col-xl-4">
+                        <label class="form-label" style="font-size:.72rem;">Level <?= $lvl ?></label>
+                        <div class="input-group input-group-sm">
+                          <span class="input-group-text">₱</span>
+                          <input type="number" name="indirect_<?= $lvl ?>" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($lvls[$lvl] ?? 0) ?>" placeholder="0.00">
+                        </div>
                       </div>
-                    </div>
-                  <?php endfor; ?>
+                    <?php endfor; ?>
+                  </div>
+                  <div class="form-text mt-1">Set 0 to disable a level. Paid once to each upline sponsor on member join.</div>
                 </div>
-                <div class="form-text mt-1">Set 0 to disable a level. Paid once to each upline sponsor on member join.</div>
-              </div>
               <?php endif; ?>
 
               <button type="submit" class="btn btn-primary w-100 btn-lg">
