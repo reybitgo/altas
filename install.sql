@@ -202,8 +202,8 @@ CREATE TABLE reactivations (
   FOREIGN KEY (user_id)     REFERENCES users(id),
   FOREIGN KEY (package_id)  REFERENCES packages(id),
   FOREIGN KEY (processed_by) REFERENCES users(id) ON DELETE SET NULL,
-  INDEX idx_user (user_id, created_at),
-  INDEX idx_status (status, created_at)
+  INDEX idx_react_user (user_id, created_at),            -- v2
+  INDEX idx_react_status (status, created_at)             -- v2
 ) ENGINE=InnoDB;
 
 -- ─── DAILY FIXED INCOME LOG ───────────────────────────────────
@@ -216,7 +216,7 @@ CREATE TABLE daily_fixed_income_log (
   cap_remaining       DECIMAL(14,2) NOT NULL DEFAULT 0.00,
   created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id),
-  INDEX idx_user_date (user_id, created_at)
+  INDEX idx_dfi_user_date (user_id, created_at)         -- v2
 ) ENGINE=InnoDB;
 
 -- ─── SYSTEM SETTINGS ──────────────────────────────────────────
@@ -227,6 +227,7 @@ CREATE TABLE settings (
 ) ENGINE=InnoDB;
 
 -- ─── INDEXES ──────────────────────────────────────────────────
+-- (Indexes already defined inline in CREATE TABLE for reactivations & daily_fixed_income_log)
 ALTER TABLE users          ADD INDEX idx_sponsor       (sponsor_id);
 ALTER TABLE users          ADD INDEX idx_binary_parent (binary_parent_id, binary_position);
 ALTER TABLE users          ADD INDEX idx_role_status   (role, status);
@@ -239,9 +240,6 @@ ALTER TABLE reg_codes      ADD INDEX idx_status        (status);
 ALTER TABLE ewallet_ledger ADD INDEX idx_user          (user_id, created_at);
 ALTER TABLE payout_requests ADD INDEX idx_user_status  (user_id, status);
 ALTER TABLE payout_requests ADD INDEX idx_status       (status, requested_at);
-ALTER TABLE reactivations  ADD INDEX idx_user          (user_id, created_at);            -- v2
-ALTER TABLE reactivations  ADD INDEX idx_status        (status, created_at);             -- v2
-ALTER TABLE daily_fixed_income_log ADD INDEX idx_user_date (user_id, created_at);         -- v2
 
 -- ─── SEED DATA ────────────────────────────────────────────────
 
