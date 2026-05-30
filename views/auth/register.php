@@ -243,18 +243,10 @@ if ($isLoggedIn && !$prefillSponsor) {
                   <hr class="my-3">
                   <div class="mb-3">
                     <label class="form-label">Sponsor Username <span class="text-danger">*</span></label>
-                    <?php if ($isLoggedIn && ($currentUser['role'] ?? '') === 'member'): ?>
-                      <!-- Member always sponsors as themselves — locked -->
-                      <input type="text" id="sponsor_username" name="sponsor_username"
-                        class="form-control" value="<?= e($prefillSponsor) ?>" readonly
-                        style="background:#f8fafd;font-weight:600;">
-                      <div class="form-text text-success">✓ Sponsor locked to your account.</div>
-                    <?php else: ?>
-                      <input type="text" id="sponsor_username" name="sponsor_username"
-                        class="form-control" placeholder="Sponsor's username"
-                        value="<?= e($prefillSponsor) ?>" autocomplete="off" required>
-                      <div class="form-text" id="sponsorHint"></div>
-                    <?php endif; ?>
+                    <input type="text" id="sponsor_username" name="sponsor_username"
+                      class="form-control" placeholder="Sponsor's username"
+                      value="<?= e($prefillSponsor) ?>" autocomplete="off" required>
+                    <div class="form-text" id="sponsorHint"></div>
                   </div>
                   <div class="mb-3">
                     <label class="form-label">Binary Upline Username <span class="text-danger">*</span></label>
@@ -366,7 +358,7 @@ if ($isLoggedIn && !$prefillSponsor) {
   const API = '<?= APP_URL ?>';
   const IS_LOGGED_IN = <?= $isLoggedIn ? 'true' : 'false' ?>;
   const CAN_USE_EWALLET = <?= ($isLoggedIn && ($canUseEwallet ?? false)) ? 'true' : 'false' ?>;
-  const LOCKED_SPONSOR = <?= ($isLoggedIn && ($currentUser['role'] ?? '') === 'member') ? 'true' : 'false' ?>;
+  const LOCKED_SPONSOR = false;
   const PREFILL_SPONSOR = <?= json_encode($prefillSponsor) ?>;
   const PKG_COUNT = <?= (int)count($packages) ?>;
 

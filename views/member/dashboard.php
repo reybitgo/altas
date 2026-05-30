@@ -104,7 +104,9 @@
         [$user['ewallet_balance'], 'E-Wallet Balance',   '💰', 'primary', 'primary', $balanceSub, '/?page=payout'],
         [$summary['total_pairing'],  'Pairing Earnings', '🤝', 'success', 'success', number_format($user['pairs_paid']) . ' pairs lifetime', null],
         [$summary['total_direct'],   'Direct Referral',  '👥', 'orange',  'warning', null, '/?page=genealogy&view=referral'],
-        [$summary['total_indirect'], 'Indirect Referral', '🔗', 'purple',  'purple',  'Up to 10 levels', null],
+        ...(setting('indirect_referral_enabled', '1') === '1' ? [
+          [$summary['total_indirect'], 'Indirect Referral', '🔗', 'purple',  'purple',  'Up to 10 levels', null],
+        ] : []),
       ];
       foreach ($cards as [$val, $label, $icon, $accent, $color, $sub, $link]): ?>
         <div class="col-6 col-xl-3">
@@ -292,12 +294,15 @@
           </div>
           <?php else: foreach ($recent as $item):
             $isCredit = $item['status'] === 'credited';
-            $typeMap  = ['pairing' => ['🤝', '#ecfdf5', 'var(--success)'], 'direct_referral' => ['👥', '#fff7ed', 'var(--orange)'], 'indirect_referral' => ['🔗', '#f5f3ff', 'var(--purple)'], 'daily_fixed_income' => ['📅', '#eff6ff', 'var(--primary)']];
+            $typeMap  = ['pairing' => ['🤝', '#ecfdf5', 'var(--success)'], 'direct_referral' => ['👥', '#fff7ed', 'var(--orange)'], 'daily_fixed_income' => ['📅', '#eff6ff', 'var(--primary)']];
+            if (setting('indirect_referral_enabled', '1') === '1') {
+                $typeMap['indirect_referral'] = ['🔗', '#f5f3ff', 'var(--purple)'];
+            }
             [$icon, $bg, $col] = $typeMap[$item['type']] ?? ['💬', '#f4f6fb', 'var(--muted)'];
             $typeName = match ($item['type']) {
               'pairing' => 'Pairing Bonus',
               'direct_referral' => 'Direct Referral',
-              'indirect_referral' => 'Indirect — Lvl ' . $item['level'],
+              'indirect_referral' => setting('indirect_referral_enabled', '1') === '1' ? 'Indirect — Lvl ' . $item['level'] : $item['type'],
               'daily_fixed_income' => 'Daily Fixed Income',
               default => $item['type']
             };

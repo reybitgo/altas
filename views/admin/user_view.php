@@ -212,7 +212,7 @@
                   $tn = match ($c['type']) {
                     'pairing' => '🤝 Pairing',
                     'direct_referral' => '👥 Direct',
-                    'indirect_referral' => '🔗 Indirect Lvl ' . $c['level'],
+                    'indirect_referral' => setting('indirect_referral_enabled', '1') === '1' ? '🔗 Indirect Lvl ' . $c['level'] : '🔗 Indirect (disabled)',
                     default => $c['type']
                   };
                 ?>
@@ -363,7 +363,7 @@
                     $tn = match ($c['type']) {
                       'pairing' => '🤝 Pairing',
                       'direct_referral' => '👥 Direct',
-                      'indirect_referral' => '🔗 Indirect Lvl ' . $c['level'],
+                      'indirect_referral' => setting('indirect_referral_enabled', '1') === '1' ? '🔗 Indirect Lvl ' . $c['level'] : '🔗 Indirect (disabled)',
                       'daily_fixed_income' => '📅 DFI',
                       default => $c['type']
                     };

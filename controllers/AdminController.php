@@ -345,6 +345,7 @@ class AdminController
             'default_cap_multiplier',
             'reactivation_ewallet_enabled',
             'reactivation_external_enabled',
+            'indirect_referral_enabled',
             'ewallet_transfer_fee',
             'ewallet_min_transfer',
             'ewallet_transfer_daily_limit',
@@ -356,7 +357,7 @@ class AdminController
         foreach ($allowed as $key) {
             // Checkbox toggles: when unchecked the field is absent from POST,
             // so we explicitly save '0' for these keys when not present.
-            if (in_array($key, ['gcash_enabled', 'maya_enabled', 'dfi_enabled', 'reactivation_ewallet_enabled', 'reactivation_external_enabled'], true)) {
+            if (in_array($key, ['gcash_enabled', 'maya_enabled', 'dfi_enabled', 'reactivation_ewallet_enabled', 'reactivation_external_enabled', 'indirect_referral_enabled'], true)) {
                 $value = isset($_POST[$key]) && $_POST[$key] === '1' ? '1' : '0';
                 $st->execute([$key, $value]);
             } elseif (isset($_POST[$key])) {

@@ -95,7 +95,7 @@
             </div>
           </div>
           <?php endif; ?>
-          <?php if ((float)$summary['total_indirect'] > 0): ?>
+          <?php if (setting('indirect_referral_enabled', '1') === '1' && (float)$summary['total_indirect'] > 0): ?>
           <div class="timeline-item">
             <div class="timeline-dot" style="background:#8b5cf6;"></div>
             <div class="timeline-content">
@@ -236,7 +236,7 @@
               $breakdown = [
                   ['Pairing', (float)$summary['total_pairing']],
                   ['Direct Referral', (float)$summary['total_direct']],
-                  ['Indirect Referral', (float)$summary['total_indirect']],
+                  ...(setting('indirect_referral_enabled', '1') === '1' ? [['Indirect Referral', (float)$summary['total_indirect']]] : []),
                   ['Daily Fixed Income', (float)($summary['total_dfi'] ?? 0)],
               ];
               $hasRows = false;

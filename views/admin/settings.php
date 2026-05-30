@@ -102,6 +102,13 @@
               <hr class="my-3">
               <p class="fw-bold mb-2" style="font-size:.82rem;">📋 Compensation Plan Defaults</p>
               <div class="form-text mb-3">Default values applied to new packages. Can be overridden per package.</div>
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" name="indirect_referral_enabled" id="indirectRefEnabled" value="1" <?= setting('indirect_referral_enabled', '1') === '1' ? 'checked' : '' ?>>
+                <label class="form-check-label" for="indirectRefEnabled" style="font-weight:600;font-size:.8rem;">
+                  Enable Indirect Referral (Unilevel) Bonuses
+                </label>
+              </div>
+              <div class="form-text mb-3">When disabled, no unilevel bonuses are paid and all indirect referral UI is hidden from members.</div>
               <div class="mb-3">
                 <label class="form-label">Default Lifetime Cap Multiplier</label>
                 <input type="number" name="default_cap_multiplier" class="form-control" min="0" step="0.01" value="<?= e(setting('default_cap_multiplier', '3.00')) ?>">

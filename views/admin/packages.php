@@ -185,6 +185,7 @@
                 </select>
               </div>
 
+              <?php if (setting('indirect_referral_enabled', '1') === '1'): ?>
               <!-- Indirect Referral Levels -->
               <div class="mb-3">
                 <label class="form-label fw-bold">🔗 Indirect Referral Bonuses (10 Levels)</label>
@@ -202,6 +203,7 @@
                 </div>
                 <div class="form-text mt-1">Set 0 to disable a level. Paid once to each upline sponsor on member join.</div>
               </div>
+              <?php endif; ?>
 
               <button type="submit" class="btn btn-primary w-100 btn-lg">
                 <?= ($editPkg ?? null) ? '💾 Update Package' : '➕ Create Package' ?>

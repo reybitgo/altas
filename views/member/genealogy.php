@@ -281,7 +281,7 @@
         </div>
       </div>
 
-    <?php else: ?>
+    <?php elseif (setting('indirect_referral_enabled', '1') === '1'): ?>
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span class="card-title">👥 Referral Network (10 Levels)</span>
@@ -321,6 +321,52 @@
           <?php endforeach;
           endif; ?>
         </div>
+      </div>
+    <?php else: ?>
+      <!-- Indirect disabled — show direct referrals table instead -->
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="card-title">👥 Direct Referrals</span>
+          <span class="badge bg-secondary-subtle text-secondary"><?= $direct['total'] ?? 0 ?> members</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Username</th>
+                <th>Package</th>
+                <th>Joined</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php if (empty($direct['data'])): ?>
+                <tr>
+                  <td colspan="5" class="text-center py-5 text-muted">
+                    <div style="font-size:2.5rem;">👥</div>
+                    <p class="mt-2 mb-0">You haven't referred anyone yet.</p>
+                  </td>
+                </tr>
+                <?php else: foreach ($direct['data'] as $i => $m): ?>
+                  <tr>
+                    <td class="td-muted" style="font-size:.7rem;"><?= ($direct['page'] - 1) * 20 + $i + 1 ?></td>
+                    <td class="fw-bold">@<?= e($m['username']) ?></td>
+                    <td><span class="badge bg-primary-subtle text-primary"><?= e($m['package_name'] ?? '—') ?></span></td>
+                    <td class="td-muted" style="font-size:.75rem;"><?= fmt_date($m['joined_at']) ?></td>
+                    <td>
+                      <?php $b = $m['status'] === 'active' ? 'bg-success-subtle text-success' : ($m['status'] === 'suspended' ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning'); ?>
+                      <span class="badge <?= $b ?>"><?= ucfirst($m['status']) ?></span>
+                    </td>
+                  </tr>
+                <?php endforeach;
+                endif; ?>
+            </tbody>
+          </table>
+        </div>
+        <?php if (($direct['total_pages'] ?? 1) > 1): ?>
+          <div class="card-footer"><?= pagination_links($direct, APP_URL . '/?page=genealogy&view=referral') ?></div>
+        <?php endif; ?>
       </div>
     <?php endif; ?>
   </div>

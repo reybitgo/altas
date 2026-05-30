@@ -165,6 +165,10 @@ class Commission
         int $newUserId,
         int $packageId
     ): void {
+        if (setting('indirect_referral_enabled', '1') !== '1') {
+            return;
+        }
+
         $levels = Package::getIndirectLevels($packageId);
         if (empty($levels)) return;
 

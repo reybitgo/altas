@@ -13,15 +13,16 @@
   <div class="page-content">
     <?= render_flash() ?>
     <div class="row g-3 mb-3">
-      <?php foreach (
-        [
-          ['Total Earned',      $summary['total_earned'],   'primary', 'primary'],
-          ['Pairing Bonuses',   $summary['total_pairing'],  'success', 'success'],
-          ['Direct Referral',   $summary['total_direct'],   'orange', 'warning'],
-          ['Indirect Referral', $summary['total_indirect'],  'purple', 'primary'],
-          ['DFI',               $summary['total_dfi'] ?? 0,  'teal', 'info'],
-        ] as [$label, $val, $accent, $color]
-      ): ?>
+      <?php
+      $statCards = [
+        ['Total Earned',      $summary['total_earned'],   'primary', 'primary'],
+        ['Pairing Bonuses',   $summary['total_pairing'],  'success', 'success'],
+        ['Direct Referral',   $summary['total_direct'],   'orange', 'warning'],
+        ...(setting('indirect_referral_enabled', '1') === '1' ? [['Indirect Referral', $summary['total_indirect'], 'purple', 'primary']] : []),
+        ['DFI',               $summary['total_dfi'] ?? 0,  'teal', 'info'],
+      ];
+      foreach ($statCards as [$label, $val, $accent, $color]):
+      ?>
         <div class="col-6 col-xl-3">
           <div class="card stat-card">
             <div class="stat-accent stat-accent-<?= $accent ?>"></div>
@@ -37,7 +38,10 @@
     <div class="card">
       <div class="card-header">
         <ul class="nav nav-pills card-header-pills gap-1">
-          <?php foreach (['' => 'All', 'pairing' => '🤝 Pairing', 'direct_referral' => '👥 Direct', 'indirect_referral' => '🔗 Indirect', 'daily_fixed_income' => '📅 DFI'] as $val => $label): ?>
+          <?php
+          $filterTabs = ['' => 'All', 'pairing' => '🤝 Pairing', 'direct_referral' => '👥 Direct', ...(setting('indirect_referral_enabled', '1') === '1' ? ['indirect_referral' => '🔗 Indirect'] : []), 'daily_fixed_income' => '📅 DFI'];
+          foreach ($filterTabs as $val => $label):
+          ?>
             <li class="nav-item">
               <a class="nav-link <?= $type === $val ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=earnings&type=<?= $val ?>"><?= $label ?></a>
             </li>
@@ -66,7 +70,7 @@
                 $typeName = match ($row['type']) {
                   'pairing' => '🤝 Pairing',
                   'direct_referral' => '👥 Direct Referral',
-                  'indirect_referral' => '🔗 Indirect Lvl ' . $row['level'],
+                  'indirect_referral' => setting('indirect_referral_enabled', '1') === '1' ? '🔗 Indirect Lvl ' . $row['level'] : $row['type'],
                   'daily_fixed_income' => '📅 Daily Fixed Income',
                   default => $row['type']
                 };

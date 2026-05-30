@@ -123,8 +123,14 @@ class MemberController
         $user     = Auth::user();
         $view     = $_GET['view'] ?? 'binary'; // 'binary' | 'referral'
         $indirect = [];
+        $direct   = [];
         if ($view === 'referral') {
-            $indirect = User::indirectReferralTree($user['id']);
+            if (setting('indirect_referral_enabled', '1') === '1') {
+                $indirect = User::indirectReferralTree($user['id']);
+            } else {
+                $page   = max(1, (int)($_GET['pg'] ?? 1));
+                $direct = User::directReferrals($user['id'], $page);
+            }
         }
         require 'views/member/genealogy.php';
     }

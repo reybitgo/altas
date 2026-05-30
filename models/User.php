@@ -112,7 +112,9 @@ class User
         Commission::processDirectReferral($data['sponsor_id'], $newId, $data['package_id']);
 
         // 3. Indirect referral bonuses → up to 10 levels in sponsor chain
-        Commission::processIndirectReferral($data['sponsor_id'], $newId, $data['package_id']);
+        if (setting('indirect_referral_enabled', '1') === '1') {
+            Commission::processIndirectReferral($data['sponsor_id'], $newId, $data['package_id']);
+        }
 
         return $newId;
     }
