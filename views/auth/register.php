@@ -9,6 +9,12 @@
 $pageTitle      = 'Register Member — ' . setting('site_name', APP_NAME);
 $isLoggedIn     = Auth::check();
 $currentUser    = $isLoggedIn ? Auth::user() : null;
+$packages       = $packages ?? [];
+$canUseEwallet  = $canUseEwallet ?? false;
+if ($isLoggedIn && !$canUseEwallet && !empty($packages)) {
+  $minEntryFee   = min(array_map(fn($pkg) => (float)$pkg['entry_fee'], $packages));
+  $canUseEwallet = (float)($currentUser['ewallet_balance'] ?? 0) >= $minEntryFee;
+}
 $prefillSponsor = $prefillSponsor ?? trim($_GET['sponsor'] ?? '');
 // Auto-prefill sponsor with current user's username for both members AND admins
 if ($isLoggedIn && !$prefillSponsor) {

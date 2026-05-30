@@ -41,7 +41,9 @@ CREATE TABLE users (
   password_hash     VARCHAR(255) NOT NULL,
   role              ENUM('member','admin') NOT NULL DEFAULT 'member',
   package_id        INT UNSIGNED NULL,
-  reg_code_id       INT UNSIGNED NULL,
+  reg_code_id           INT UNSIGNED NULL,
+  reg_payment_method    ENUM('code','ewallet') NOT NULL DEFAULT 'code',
+  reg_paid_by           INT UNSIGNED NULL,
 
   -- Binary tree placement
   sponsor_id        INT UNSIGNED NULL,
@@ -130,7 +132,7 @@ CREATE TABLE ewallet_ledger (
   type          ENUM('credit','debit') NOT NULL,
   amount        DECIMAL(12,2) NOT NULL,
   reference_id  INT UNSIGNED  NULL,
-  ref_type      ENUM('commission','payout','reactivation','transfer','topup') NULL,  -- v2: added 'reactivation', 'transfer', 'topup'
+  ref_type      ENUM('commission','payout','reactivation','transfer','topup', 'registration') NULL,  -- v2: added 'reactivation', 'transfer', 'topup', 'registration'
   balance_after DECIMAL(14,2) NOT NULL,
   note          VARCHAR(255)  NULL,
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -203,7 +205,8 @@ CREATE TABLE reactivations (
   FOREIGN KEY (package_id)  REFERENCES packages(id),
   FOREIGN KEY (processed_by) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_react_user (user_id, created_at),            -- v2
-  INDEX idx_react_status (status, created_at)             -- v2
+  INDEX idx_react_status (status, created_at),            -- v2
+  INDEX fk_reactivations_processed_by (processed_by)
 ) ENGINE=InnoDB;
 
 -- ─── DAILY FIXED INCOME LOG ───────────────────────────────────
@@ -216,7 +219,8 @@ CREATE TABLE daily_fixed_income_log (
   cap_remaining       DECIMAL(14,2) NOT NULL DEFAULT 0.00,
   created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id),
-  INDEX idx_dfi_user_date (user_id, created_at)         -- v2
+  INDEX idx_dfi_user_date (user_id, created_at),         -- v2
+  UNIQUE KEY uq_user_day (user_id, day_number)
 ) ENGINE=InnoDB;
 
 -- ─── SYSTEM SETTINGS ──────────────────────────────────────────
@@ -233,6 +237,7 @@ ALTER TABLE users          ADD INDEX idx_binary_parent (binary_parent_id, binary
 ALTER TABLE users          ADD INDEX idx_role_status   (role, status);
 ALTER TABLE users          ADD INDEX idx_cap_status    (cap_status, capped_at);          -- v2
 ALTER TABLE users          ADD INDEX idx_dfi_active    (dfi_active, dfi_days_used);      -- v2
+ALTER TABLE users          ADD INDEX idx_reg_code      (reg_code_id);
 ALTER TABLE commissions    ADD INDEX idx_user_type     (user_id, type, created_at);
 ALTER TABLE commissions    ADD INDEX idx_source        (source_user_id);
 ALTER TABLE commissions    ADD INDEX idx_status        (status, created_at);
@@ -302,7 +307,9 @@ INSERT INTO settings (key_name, value) VALUES
   ('ewallet_transfer_fee',        '0.00'),
   ('ewallet_min_transfer',        '50.00'),
   ('ewallet_transfer_daily_limit',  '5000.00'),
-  ('ewallet_transfer_weekly_limit', '20000.00');
+  ('ewallet_transfer_weekly_limit', '20000.00'),
+  ('indirect_referral_enabled',   '1'),
+  ('seat_limit',                  '0');
 
 -- Demo registration code (package 1, price 10500)
 INSERT INTO reg_codes (code, package_id, price, created_by)
