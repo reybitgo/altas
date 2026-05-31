@@ -9,6 +9,9 @@
 // Copy this file and fill in your real credentials.
 // Never commit real credentials to version control.
 
+// ── Timezone ──────────────────────────────────────────────────────────────────
+date_default_timezone_set('Asia/Manila');
+
 define('DB_HOST', 'localhost');
 define('DB_PORT', '3306');
 define('DB_NAME', 'u938213108_altas_db');
@@ -40,7 +43,7 @@ function db(): PDO
 
     if ($pdo === null) {
         $dsn = sprintf(
-            'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
+            'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4;CLIENT_FOUND_ROWS=true',
             DB_HOST,
             DB_PORT,
             DB_NAME
@@ -50,8 +53,8 @@ function db(): PDO
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
-                PDO::MYSQL_ATTR_FOUND_ROWS   => true,
             ]);
+            $pdo->exec("SET time_zone = '+08:00'");
         } catch (PDOException $e) {
             if (APP_ENV === 'development') {
                 die('<pre>Database connection failed: ' . $e->getMessage() . '</pre>');

@@ -18,9 +18,6 @@
  * This script handles scheduled daily batch operations only.
  */
 
-// ── Timezone ──────────────────────────────────────────────────────────────────
-date_default_timezone_set('Asia/Manila');
-
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../core/helpers.php';
 

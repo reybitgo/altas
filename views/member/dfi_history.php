@@ -1,10 +1,29 @@
 <?php
+
 /**
  * @file   views/member/dfi_history.php
  * @brief  Member DFI payout history (Phase 3)
  */
 ?>
 <?php $pageTitle = 'DFI History'; ?>
+<?php
+$status = $status ?? [
+  'daily_rate' => 0,
+  'days_used' => 0,
+  'days_remaining' => 0,
+  'total_dfi_earned' => 0,
+  'status' => 'disabled',
+];
+if (!isset($calendarData) || !is_array($calendarData)) {
+  $calendarData = [];
+}
+if (!isset($history) || !is_array($history)) {
+  $history = [
+    'total' => 0,
+    'data' => [],
+  ];
+}
+?>
 <?php require 'views/partials/head.php'; ?>
 <?php require 'views/partials/sidebar_member.php'; ?>
 <div class="main-content">
@@ -41,12 +60,12 @@
             <div class="fw-700" style="font-size:1.1rem;">
               <?php
               $statusBadge = match ($status['status']) {
-                  'active'     => '<span class="badge bg-success-subtle text-success">Active</span>',
-                  'capped'     => '<span class="badge bg-warning-subtle text-warning">Capped</span>',
-                  'perminact'  => '<span class="badge bg-danger-subtle text-danger">Permanent</span>',
-                  'completed'  => '<span class="badge bg-info-subtle text-info">Completed</span>',
-                  'paused'     => '<span class="badge bg-secondary-subtle text-secondary">Paused</span>',
-                  default      => '<span class="badge bg-secondary-subtle text-secondary">Disabled</span>',
+                'active'     => '<span class="badge bg-success-subtle text-success">Active</span>',
+                'capped'     => '<span class="badge bg-warning-subtle text-warning">Capped</span>',
+                'perminact'  => '<span class="badge bg-danger-subtle text-danger">Permanent</span>',
+                'completed'  => '<span class="badge bg-info-subtle text-info">Completed</span>',
+                'paused'     => '<span class="badge bg-secondary-subtle text-secondary">Paused</span>',
+                default      => '<span class="badge bg-secondary-subtle text-secondary">Disabled</span>',
               };
               echo $statusBadge;
               ?>
@@ -67,47 +86,51 @@
       <div class="card-header"><span class="card-title">🗓️ DFI Calendar</span></div>
       <div class="card-body">
         <div class="row g-4">
-          <?php foreach ($monthsToShow as $monthObj): 
+          <?php foreach ($monthsToShow as $monthObj):
             $ym = $monthObj->format('Y-m');
             $daysInMonth = (int)$monthObj->format('t');
             $firstDow = (int)$monthObj->format('w'); // 0=Sun
           ?>
-          <div class="col-12 col-md-6">
-            <div class="calendar-month">
-              <div class="calendar-title"><?= $monthObj->format('F Y') ?></div>
-              <div class="calendar-grid">
-                <div class="cal-head">Su</div><div class="cal-head">Mo</div><div class="cal-head">Tu</div>
-                <div class="cal-head">We</div><div class="cal-head">Th</div><div class="cal-head">Fr</div>
-                <div class="cal-head">Sa</div>
-                <?php for ($i = 0; $i < $firstDow; $i++): ?><div class="cal-cell empty"></div><?php endfor; ?>
-                <?php for ($d = 1; $d <= $daysInMonth; $d++):
-                  $hasEntry = isset($calendarData[$ym][$d]);
-                  $cellClass = 'cal-cell';
-                  $icon = '';
-                  $tooltip = '';
-                  if ($hasEntry) {
+            <div class="col-12 col-md-6">
+              <div class="calendar-month">
+                <div class="calendar-title"><?= $monthObj->format('F Y') ?></div>
+                <div class="calendar-grid">
+                  <div class="cal-head">Su</div>
+                  <div class="cal-head">Mo</div>
+                  <div class="cal-head">Tu</div>
+                  <div class="cal-head">We</div>
+                  <div class="cal-head">Th</div>
+                  <div class="cal-head">Fr</div>
+                  <div class="cal-head">Sa</div>
+                  <?php for ($i = 0; $i < $firstDow; $i++): ?><div class="cal-cell empty"></div><?php endfor; ?>
+                  <?php for ($d = 1; $d <= $daysInMonth; $d++):
+                    $hasEntry = isset($calendarData[$ym][$d]);
+                    $cellClass = 'cal-cell';
+                    $icon = '';
+                    $tooltip = '';
+                    if ($hasEntry) {
                       $entry = $calendarData[$ym][$d];
                       if ($entry['amount'] > 0) {
-                          $cellClass .= ' paid';
-                          $icon = '✅';
-                          $tooltip = 'DFI paid: ' . fmt_money($entry['amount']);
+                        $cellClass .= ' paid';
+                        $icon = '✅';
+                        $tooltip = 'DFI paid: ' . fmt_money($entry['amount']);
                       } else {
-                          $cellClass .= ' blocked';
-                          $icon = '⛔';
-                          $tooltip = 'Blocked by cap';
+                        $cellClass .= ' blocked';
+                        $icon = '⛔';
+                        $tooltip = 'Blocked by cap';
                       }
-                  } elseif ($ym . '-' . sprintf('%02d', $d) > date('Y-m-d')) {
+                    } elseif ($ym . '-' . sprintf('%02d', $d) > date('Y-m-d')) {
                       $cellClass .= ' future';
-                  }
-                ?>
-                <div class="<?= $cellClass ?>" title="<?= e($tooltip) ?>">
-                  <span class="cal-day"><?= $d ?></span>
-                  <?php if ($icon): ?><span class="cal-icon"><?= $icon ?></span><?php endif; ?>
+                    }
+                  ?>
+                    <div class="<?= $cellClass ?>" title="<?= e($tooltip) ?>">
+                      <span class="cal-day"><?= $d ?></span>
+                      <?php if ($icon): ?><span class="cal-icon"><?= $icon ?></span><?php endif; ?>
+                    </div>
+                  <?php endfor; ?>
                 </div>
-                <?php endfor; ?>
               </div>
             </div>
-          </div>
           <?php endforeach; ?>
         </div>
         <div class="d-flex gap-3 mt-3" style="font-size:.75rem;">
@@ -118,17 +141,77 @@
       </div>
     </div>
     <style>
-      .calendar-month { border: 1px solid #e5e7eb; border-radius: 10px; padding: .75rem; }
-      .calendar-title { font-weight: 700; font-size: .85rem; text-align: center; margin-bottom: .5rem; text-transform: uppercase; letter-spacing: .5px; color: #374151; }
-      .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-      .cal-head { text-align: center; font-size: .65rem; font-weight: 700; color: #9ca3af; padding: 2px; }
-      .cal-cell { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 6px; font-size: .75rem; font-weight: 600; background: #f9fafb; color: #374151; position: relative; }
-      .cal-cell.empty { background: transparent; }
-      .cal-cell.future { opacity: .4; }
-      .cal-cell.paid { background: #dcfce7; color: #166534; }
-      .cal-cell.blocked { background: #fee2e2; color: #991b1b; }
-      .cal-day { line-height: 1; }
-      .cal-icon { font-size: .65rem; line-height: 1; margin-top: 1px; }
+      .calendar-month {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: .75rem;
+      }
+
+      .calendar-title {
+        font-weight: 700;
+        font-size: .85rem;
+        text-align: center;
+        margin-bottom: .5rem;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        color: #374151;
+      }
+
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+      }
+
+      .cal-head {
+        text-align: center;
+        font-size: .65rem;
+        font-weight: 700;
+        color: #9ca3af;
+        padding: 2px;
+      }
+
+      .cal-cell {
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        font-size: .75rem;
+        font-weight: 600;
+        background: #f9fafb;
+        color: #374151;
+        position: relative;
+      }
+
+      .cal-cell.empty {
+        background: transparent;
+      }
+
+      .cal-cell.future {
+        opacity: .4;
+      }
+
+      .cal-cell.paid {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .cal-cell.blocked {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .cal-day {
+        line-height: 1;
+      }
+
+      .cal-icon {
+        font-size: .65rem;
+        line-height: 1;
+        margin-top: 1px;
+      }
     </style>
 
     <!-- History Table -->
