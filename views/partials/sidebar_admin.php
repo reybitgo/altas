@@ -83,7 +83,7 @@ function renderAdminNav($cp, $user, $initial, $pendingPayouts, $pendingMembers)
       <span class="nav-icon">🌐</span> View Frontend
     </a>
     <a href="<?= APP_URL ?>/?page=logout" class="nav-item-link">
-      <span class="nav-icon">⏻</span> Logout
+      <span class="nav-icon">🚪</span> Logout
     </a>
   </nav>
 
@@ -96,7 +96,6 @@ function renderAdminNav($cp, $user, $initial, $pendingPayouts, $pendingMembers)
         <div class="user-name"><?= e($user['full_name'] ?: $user['username']) ?></div>
         <div class="user-role">Administrator</div>
       </div>
-      <!-- <a href="<?= APP_URL ?>/?page=logout" class="sidebar-logout" title="Log out">⏻</a> -->
     </div>
   </div>
 <?php } ?>

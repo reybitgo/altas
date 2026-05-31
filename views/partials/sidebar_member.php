@@ -75,7 +75,7 @@ function renderSidebarNav($nav, $cp, $user, $view, $initial, $name)
       </a>
     <?php endforeach; ?>
     <a href="<?= APP_URL ?>/?page=logout" class="nav-item-link">
-      <span class="nav-icon">⏻</span> Logout
+      <span class="nav-icon">🚪</span> Logout
     </a>
   </nav>
 
@@ -92,7 +92,6 @@ function renderSidebarNav($nav, $cp, $user, $view, $initial, $name)
         <div class="user-name"><?= e($name) ?></div>
         <div class="user-role"><?= e($user['package_name'] ?? 'Member') ?></div>
       </div>
-      <!-- <a href="<?= APP_URL ?>/?page=logout" class="sidebar-logout" title="Log out">⏻</a> -->
     </div>
   </div>
 <?php } ?>
