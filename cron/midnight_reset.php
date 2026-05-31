@@ -35,12 +35,19 @@ spl_autoload_register(function (string $class): void {
     }
 });
 
-// ── v2: Conditionally load CapEngine (Phase 2) ──────────────────────────────
+// ── v2: Conditionally load CapEngine & Reactivation (Phase 2/4) ─────────────
 $capEngineAvailable = false;
 $capEnginePath = __DIR__ . '/../core/CapEngine.php';
 if (file_exists($capEnginePath)) {
     require_once $capEnginePath;
     $capEngineAvailable = true;
+}
+
+$reactivationAvailable = false;
+$reactivationPath = __DIR__ . '/../core/Reactivation.php';
+if (file_exists($reactivationPath)) {
+    require_once $reactivationPath;
+    $reactivationAvailable = true;
 }
 
 // ── v3: Load DailyFixedIncome (Phase 3 deployed) ──────────────────────────────
@@ -143,7 +150,7 @@ try {
     // ══════════════════════════════════════════════════════════════════════════
 
     // ── 6. v4: Expire capped members who missed reactivation window ───────────
-    if ($capEngineAvailable) {
+    if ($reactivationAvailable && $capEngineAvailable) {
         $expired = Reactivation::expireOldCappedUsers();
         if ($expired > 0) {
             log_ok("Cap expiration: {$expired} member(s) moved from 'capped' to 'perminact'.", $logFile);
@@ -151,7 +158,12 @@ try {
             log_info('Cap expiration: No members past reactivation window.', $logFile);
         }
     } else {
-        log_warn('CapEngine not available — skipping cap expiration (deploy Phase 2 core/CapEngine.php).', $logFile);
+        if (!$capEngineAvailable) {
+            log_warn('CapEngine not available — skipping cap expiration (deploy Phase 2 core/CapEngine.php).', $logFile);
+        }
+        if (!$reactivationAvailable) {
+            log_warn('Reactivation model not available — skipping cap expiration (deploy Phase 4 core/Reactivation.php).', $logFile);
+        }
     }
 
     // ── 7. v3: Daily Fixed Income payout ──────────────────────────────────────
