@@ -38,6 +38,10 @@ if ($gcashEnabled) $payoutMethods[] = 'GCash';
 if ($mayaEnabled)  $payoutMethods[] = 'Maya';
 $payoutMethodsText = implode(', ', $payoutMethods);
 
+// ── Social / Contact URLs ──
+// Set your Telegram channel URL here, or leave empty '' to hide all Telegram links
+$telegramUrl = '';  // e.g. 'https://t.me/yourchannel' or ''
+
 // SEO description helper
 $streamWords = ['binary pairing', 'direct referral'];
 if ($indirectEnabled) $streamWords[] = 'unilevel';
@@ -115,10 +119,7 @@ $streamOxford = count($streamWords) > 2
         "availableLanguage": ["English", "Filipino"],
         "contactOption": "TollFree"
       }],
-      "sameAs": [
-        "https://www.facebook.com/altasfarm",
-        "https://t.me/altasfarm"
-      ],
+      "sameAs": <?= json_encode(array_filter(["https://www.facebook.com/altasfarm", $telegramUrl])) ?>,
       "areaServed": {
         "@type": "Country",
         "name": "Philippines"
@@ -269,7 +270,7 @@ $streamOxford = count($streamWords) > 2
 
         <div class="faq-item">
           <button class="faq-q" onclick="toggleFaq(this)">How do I contact support?</button>
-          <div class="faq-a">Reach us at <a href="mailto:support@altasfarm.com" style="color:var(--green-mid);font-weight:600;">support@altasfarm.com</a> or through our Telegram channel at <a href="https://t.me/altasfarm" target="_blank" rel="noopener" style="color:var(--green-mid);font-weight:600;">t.me/altasfarm</a>. Support is available Monday–Saturday, 8 AM–6 PM Philippine Standard Time (PST, UTC+8). We aim to respond within 24 hours on business days.</div>
+          <div class="faq-a">Reach us at <a href="mailto:support@altasfarm.com" style="color:var(--green-mid);font-weight:600;">support@altasfarm.com</a> or <?php if ($telegramUrl): ?>through our Telegram channel at <a href="<?= e($telegramUrl) ?>" target="_blank" rel="noopener" style="color:var(--green-mid);font-weight:600;"><?= e(preg_replace('#^https?://#', '', $telegramUrl)) ?></a>.<?php endif; ?> Support is available Monday–Saturday, 8 AM–6 PM Philippine Standard Time (PST, UTC+8). We aim to respond within 24 hours on business days.</div>
         </div>
 
       </div>
@@ -479,9 +480,11 @@ $streamOxford = count($streamWords) > 2
         <p>For account questions, withdrawal issues, compliance concerns, or general inquiries:</p>
         <p><a href="mailto:support@altasfarm.com" style="font-size:1.1rem;font-weight:700;color:var(--green-mid);">support@altasfarm.com</a></p>
 
-        <h3>Telegram Community</h3>
-        <p>For real-time updates, network announcements, and peer support from the <?= e($siteName) ?> community:</p>
-        <p><a href="https://t.me/altasfarm" target="_blank" rel="noopener" style="font-size:1.1rem;font-weight:700;color:var(--green-mid);">t.me/altasfarm</a></p>
+        <?php if ($telegramUrl): ?>
+          <h3>Telegram Community</h3>
+          <p>For real-time updates, network announcements, and peer support from the <?= e($siteName) ?> community:</p>
+          <p><a href="<?= e($telegramUrl) ?>" target="_blank" rel="noopener" style="font-size:1.1rem;font-weight:700;color:var(--green-mid);"><?= e(preg_replace('#^https?://#', '', $telegramUrl)) ?></a></p>
+        <?php endif; ?>
 
         <h3>Facebook Page</h3>
         <p>Follow us for farm updates, community stories, and network announcements:</p>
@@ -518,9 +521,11 @@ $streamOxford = count($streamWords) > 2
         <a href="mailto:support@altasfarm.com" class="contact-item">
           <span>✉</span> support@altasfarm.com
         </a>
-        <a href="https://t.me/altasfarm" target="_blank" rel="noopener" class="contact-item">
-          <span>✈</span> t.me/altasfarm
-        </a>
+        <?php if ($telegramUrl): ?>
+          <a href="<?= e($telegramUrl) ?>" target="_blank" rel="noopener" class="contact-item">
+            <span>✈</span> <?= e(preg_replace('#^https?://#', '', $telegramUrl)) ?>
+          </a>
+        <?php endif; ?>
         <span class="contact-item">
           <span>📍</span> Rang-ay, Cabatuan, Isabela, Philippines
         </span>
@@ -1087,7 +1092,7 @@ $streamOxford = count($streamWords) > 2
           <!-- Social -->
           <div class="footer-social" aria-label="Social media links">
             <a href="https://www.facebook.com/altasfarm" target="_blank" rel="noopener" aria-label="Facebook" title="<?= e($siteName) ?> on Facebook">f</a>
-            <a href="https://t.me/altasfarm" target="_blank" rel="noopener" aria-label="Telegram" title="<?= e($siteName) ?> on Telegram">✈</a>
+            <?php if ($telegramUrl): ?><a href="<?= e($telegramUrl) ?>" target="_blank" rel="noopener" aria-label="Telegram" title="<?= e($siteName) ?> on Telegram">✈</a><?php endif; ?>
             <a href="mailto:support@altasfarm.com" aria-label="Email Support" title="Email support@altasfarm.com">✉</a>
           </div>
         </div>
