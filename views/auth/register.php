@@ -16,6 +16,10 @@ if ($isLoggedIn && !$canUseEwallet && !empty($packages)) {
   $canUseEwallet = (float)($currentUser['ewallet_balance'] ?? 0) >= $minEntryFee;
 }
 $prefillSponsor = $prefillSponsor ?? trim($_GET['sponsor'] ?? '');
+$isReferralMode = ($isReferralMode ?? false);
+$prefillUpline   = $prefillUpline   ?? '';
+$prefillPosition = $prefillPosition ?? 'left';
+$lockSponsor     = $isReferralMode;
 // Auto-prefill sponsor with current user's username for both members AND admins
 if ($isLoggedIn && !$prefillSponsor) {
   $prefillSponsor = $currentUser['username'];
@@ -83,16 +87,18 @@ if ($isLoggedIn && !$prefillSponsor) {
 
               <!-- Step bar -->
               <div class="steps-bar" id="stepsBar">
+                <?php if (!$isReferralMode): ?>
                 <div class="reg-step active" id="step-ind-1">
                   <div class="step-dot">1</div>
                   <div class="step-text">Select Package</div>
                 </div>
-                <div class="reg-step" id="step-ind-2">
-                  <div class="step-dot">2</div>
+                <?php endif; ?>
+                <div class="reg-step <?= $isReferralMode ? 'active' : '' ?>" id="step-ind-2">
+                  <div class="step-dot"><?= $isReferralMode ? '1' : '2' ?></div>
                   <div class="step-text">Account Setup</div>
                 </div>
                 <div class="reg-step" id="step-ind-3">
-                  <div class="step-dot">3</div>
+                  <div class="step-dot"><?= $isReferralMode ? '2' : '3' ?></div>
                   <div class="step-text">Confirm</div>
                 </div>
               </div>
@@ -101,9 +107,12 @@ if ($isLoggedIn && !$prefillSponsor) {
 
               <form method="POST" action="<?= APP_URL ?>/?page=do_register" id="regForm">
                 <?= csrf_field() ?>
+                <?php if ($isReferralMode): ?>
+                  <input type="hidden" name="referral_mode" value="1">
+                <?php endif; ?>
 
                 <!-- ── STEP 1 ── -->
-                <div class="auth-body" id="step1">
+                <div class="auth-body" id="step1" <?= $isReferralMode ? 'style="display:none;"' : '' ?>>
                   <?php if ($isLoggedIn): ?>
                     <p class="text-muted mb-3" style="font-size:.85rem;">Choose payment method and package for the new member.</p>
 
@@ -219,7 +228,12 @@ if ($isLoggedIn && !$prefillSponsor) {
                 </div>
 
                 <!-- ── STEP 2 ── -->
-                <div class="auth-body" id="step2" style="display:none;">
+                <div class="auth-body" id="step2" <?= $isReferralMode ? '' : 'style="display:none;"' ?>>
+                  <?php if ($isReferralMode): ?>
+                    <div class="alert alert-info py-2 mb-3" style="font-size:.85rem;">
+                      🔗 You are registering via a referral link. No payment is required now — you can activate your account later with a registration code or e-wallet.
+                    </div>
+                  <?php endif; ?>
                   <div class="mb-3">
                     <label class="form-label">Username <span class="text-danger">*</span></label>
                     <input type="text" id="username" name="username" class="form-control"
@@ -250,14 +264,18 @@ if ($isLoggedIn && !$prefillSponsor) {
                   <div class="mb-3">
                     <label class="form-label">Sponsor Username <span class="text-danger">*</span></label>
                     <input type="text" id="sponsor_username" name="sponsor_username"
-                      class="form-control" placeholder="Sponsor's username"
-                      value="<?= e($prefillSponsor) ?>" autocomplete="off" required>
+                      class="form-control <?= $lockSponsor ? 'bg-light' : '' ?>"
+                      placeholder="Sponsor's username"
+                      value="<?= e($prefillSponsor) ?>"
+                      <?= $lockSponsor ? 'readonly' : 'autocomplete="off"' ?> required>
                     <div class="form-text" id="sponsorHint"></div>
                   </div>
                   <div class="mb-3">
                     <label class="form-label">Binary Upline Username <span class="text-danger">*</span></label>
                     <input type="text" id="upline_username" name="upline_username"
-                      class="form-control" placeholder="Upline in the binary tree"
+                      class="form-control"
+                      placeholder="Upline in the binary tree"
+                      value="<?= e($prefillUpline) ?>"
                       autocomplete="off" required>
                     <div class="form-text" id="uplineHint"></div>
                     <div id="slotStatus" class="slot-status d-none">
@@ -269,11 +287,13 @@ if ($isLoggedIn && !$prefillSponsor) {
                     <label class="form-label">Binary Position <span class="text-danger">*</span></label>
                     <div class="position-toggle">
                       <div class="position-option">
-                        <input type="radio" id="pos_left" name="binary_position" value="left" required>
+                        <input type="radio" id="pos_left" name="binary_position" value="left"
+                          <?= $prefillPosition === 'left' ? 'checked' : '' ?> required>
                         <label class="position-label" for="pos_left">↙ Left</label>
                       </div>
                       <div class="position-option">
-                        <input type="radio" id="pos_right" name="binary_position" value="right">
+                        <input type="radio" id="pos_right" name="binary_position" value="right"
+                          <?= $prefillPosition === 'right' ? 'checked' : '' ?>>
                         <label class="position-label" for="pos_right">↘ Right</label>
                       </div>
                     </div>
@@ -292,6 +312,7 @@ if ($isLoggedIn && !$prefillSponsor) {
                     <div class="card-header"><span class="card-title">📋 Registration Summary</span></div>
                     <div class="card-body">
                       <table class="info-table">
+                        <?php if (!$isReferralMode): ?>
                         <tr>
                           <td>Payment</td>
                           <td id="rev_payment">—</td>
@@ -304,6 +325,12 @@ if ($isLoggedIn && !$prefillSponsor) {
                           <td>Package</td>
                           <td id="rev_package">—</td>
                         </tr>
+                        <?php else: ?>
+                        <tr>
+                          <td>Activation</td>
+                          <td><span class="badge bg-warning text-dark">Pending</span></td>
+                        </tr>
+                        <?php endif; ?>
                         <tr>
                           <td>Username</td>
                           <td id="rev_username" class="fw-bold">—</td>
@@ -364,9 +391,12 @@ if ($isLoggedIn && !$prefillSponsor) {
   const API = '<?= APP_URL ?>';
   const IS_LOGGED_IN = <?= $isLoggedIn ? 'true' : 'false' ?>;
   const CAN_USE_EWALLET = <?= ($isLoggedIn && ($canUseEwallet ?? false)) ? 'true' : 'false' ?>;
-  const LOCKED_SPONSOR = false;
+  const LOCKED_SPONSOR = <?= $lockSponsor ? 'true' : 'false' ?>;
   const PREFILL_SPONSOR = <?= json_encode($prefillSponsor) ?>;
   const PKG_COUNT = <?= (int)count($packages) ?>;
+  const IS_REFERRAL_MODE = <?= $isReferralMode ? 'true' : 'false' ?>;
+  const PREFILL_UPLINE = <?= json_encode($prefillUpline) ?>;
+  const PREFILL_POSITION = <?= json_encode($prefillPosition) ?>;
 
   let codeData = {},
     selectedPkg = {},
@@ -376,19 +406,19 @@ if ($isLoggedIn && !$prefillSponsor) {
     slotData = {};
 
   function goStep(n) {
-    [1, 2, 3].forEach(i => {
-      document.getElementById('step' + i).style.display = i === n ? 'block' : 'none';
+    const steps = IS_REFERRAL_MODE ? [2, 3] : [1, 2, 3];
+    steps.forEach(i => {
+      const el = document.getElementById('step' + i);
+      if (el) el.style.display = i === n ? 'block' : 'none';
     });
-    [1, 2, 3].forEach(i => {
+    steps.forEach(i => {
       const el = document.getElementById('step-ind-' + i);
+      if (!el) return;
       el.className = 'reg-step ' + (i < n ? 'done' : i === n ? 'active' : '');
     });
     const flash = document.getElementById('flashArea');
     if (flash) flash.innerHTML = '';
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function setHint(id, msg, ok) {
@@ -411,6 +441,8 @@ if ($isLoggedIn && !$prefillSponsor) {
   }
 
   function updateStep1State() {
+    if (IS_REFERRAL_MODE) return; // Step 1 is skipped entirely in referral mode
+
     const method = getPaymentMethod();
     const codeSec = document.getElementById('codeSection');
     const pkgSec = document.getElementById('packageSection');
@@ -538,21 +570,24 @@ if ($isLoggedIn && !$prefillSponsor) {
     this.textContent = 'Validate';
   });
 
-  document.getElementById('toStep2Btn').addEventListener('click', () => {
-    const method = getPaymentMethod();
-    if (method === 'code' && !document.getElementById('validatedCode').value) return;
-    if (method === 'ewallet' && PKG_COUNT > 1 && !document.getElementById('packageSelect')?.value) return;
+  const toStep2Btn = document.getElementById('toStep2Btn');
+  if (toStep2Btn) {
+    toStep2Btn.addEventListener('click', () => {
+      const method = getPaymentMethod();
+      if (method === 'code' && !document.getElementById('validatedCode').value) return;
+      if (method === 'ewallet' && PKG_COUNT > 1 && !document.getElementById('packageSelect')?.value) return;
 
-    goStep(2);
-    if (PREFILL_SPONSOR) {
-      const sField = document.getElementById('sponsor_username');
-      if (LOCKED_SPONSOR) {
-        sponsorOk = true;
-      } else if (sField.value) {
-        checkSponsor(sField.value);
+      goStep(2);
+      if (PREFILL_SPONSOR) {
+        const sField = document.getElementById('sponsor_username');
+        if (LOCKED_SPONSOR) {
+          sponsorOk = true;
+        } else if (sField.value) {
+          checkSponsor(sField.value);
+        }
       }
-    }
-  });
+    });
+  }
 
   // ── Username ──────────────────────────────────────────────────
   let uTimer;
@@ -630,7 +665,7 @@ if ($isLoggedIn && !$prefillSponsor) {
   });
 
   async function checkUpline(v) {
-    const pos = document.querySelector('[name=binary_position]:checked')?.value || '';
+    const pos = IS_REFERRAL_MODE ? PREFILL_POSITION : (document.querySelector('[name=binary_position]:checked')?.value || '');
     const data = await (await fetch(API + '/?page=check_upline&username=' + encodeURIComponent(v) + '&position=' + pos)).json();
     if (!data.valid) {
       setHint('uplineHint', '✗ ' + data.message, false);
@@ -660,6 +695,10 @@ if ($isLoggedIn && !$prefillSponsor) {
   }
 
   function checkPos(pos) {
+    if (IS_REFERRAL_MODE && !slotData.username) {
+      setHint('positionHint', '✓ Position pre-selected by system.', true);
+      return;
+    }
     if (!slotData.username) {
       setHint('positionHint', '', null);
       return;
@@ -719,17 +758,27 @@ if ($isLoggedIn && !$prefillSponsor) {
     }
 
     // Populate review
-    const method = getPaymentMethod();
-    document.getElementById('rev_payment').textContent = method === 'code' ? '🎫 Registration Code' : '💳 E-Wallet';
-    document.getElementById('revCodeRow').style.display = method === 'code' ? 'table-row' : 'none';
-    document.getElementById('rev_code').textContent = document.getElementById('validatedCode').value || '—';
-    document.getElementById('rev_package').textContent = method === 'code' ?
-      (codeData.package_name || '—') :
-      (selectedPkg.name || (PKG_COUNT === 1 ? document.querySelector('#packageSection .fw-bold')?.textContent : '—'));
-    document.getElementById('rev_username').textContent = '@' + document.getElementById('username').value;
-    document.getElementById('rev_sponsor').textContent = '@' + sponsorVal;
-    document.getElementById('rev_upline').textContent = '@' + document.getElementById('upline_username').value;
-    document.getElementById('rev_position').textContent = pos.charAt(0).toUpperCase() + pos.slice(1);
+    if (!IS_REFERRAL_MODE) {
+      const method = getPaymentMethod();
+      const revPay = document.getElementById('rev_payment');
+      if (revPay) revPay.textContent = method === 'code' ? '🎫 Registration Code' : '💳 E-Wallet';
+      const revCodeRow = document.getElementById('revCodeRow');
+      if (revCodeRow) revCodeRow.style.display = method === 'code' ? 'table-row' : 'none';
+      const revCode = document.getElementById('rev_code');
+      if (revCode) revCode.textContent = document.getElementById('validatedCode').value || '—';
+      const revPkg = document.getElementById('rev_package');
+      if (revPkg) revPkg.textContent = method === 'code' ?
+        (codeData.package_name || '—') :
+        (selectedPkg.name || (PKG_COUNT === 1 ? document.querySelector('#packageSection .fw-bold')?.textContent : '—'));
+    }
+    const revUser = document.getElementById('rev_username');
+    if (revUser) revUser.textContent = '@' + document.getElementById('username').value;
+    const revSponsor = document.getElementById('rev_sponsor');
+    if (revSponsor) revSponsor.textContent = '@' + sponsorVal;
+    const revUpline = document.getElementById('rev_upline');
+    if (revUpline) revUpline.textContent = '@' + document.getElementById('upline_username').value;
+    const revPos = document.getElementById('rev_position');
+    if (revPos) revPos.textContent = pos.charAt(0).toUpperCase() + pos.slice(1);
     goStep(3);
   });
 
@@ -743,6 +792,23 @@ if ($isLoggedIn && !$prefillSponsor) {
   // ── Init ──────────────────────────────────────────────────────
   if (LOCKED_SPONSOR) {
     sponsorOk = true;
+  }
+  if (IS_REFERRAL_MODE) {
+    // Pre-validate sponsor and upline for referral mode
+    if (PREFILL_SPONSOR) {
+      checkSponsor(PREFILL_SPONSOR);
+    }
+    if (PREFILL_UPLINE) {
+      checkUpline(PREFILL_UPLINE);
+    }
+    // position is pre-selected; mark ok
+    uplineOk = !!PREFILL_UPLINE;
+
+    // Disable required on hidden step-1 fields so HTML5 validation doesn't block submission
+    const regCode = document.getElementById('reg_code');
+    if (regCode) regCode.required = false;
+    const pkgSel = document.getElementById('packageSelect');
+    if (pkgSel) pkgSel.required = false;
   }
   updateStep1State();
 </script>

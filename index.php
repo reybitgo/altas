@@ -93,6 +93,8 @@ $routes = [
     'dfi_history'        => ['MemberController', 'dfiHistory',        'member'],
     'reactivate'         => ['MemberController', 'reactivate',        'member'],
     'do_reactivate'      => ['MemberController', 'doReactivate',      'member'],
+    'activate'           => ['MemberController', 'activate',          'member'],
+    'do_activate'        => ['MemberController', 'doActivate',        'member'],
     'api_cap_status'     => ['MemberController', 'apiCapStatus',      'member'],
     'api_dfi_status'     => ['MemberController', 'apiDfiStatus',      'member'],
 

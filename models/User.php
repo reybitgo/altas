@@ -73,22 +73,24 @@ class User
 
             // Insert the new member
             $hash = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
+            $status = !empty($data['pending']) ? 'pending' : ($data['status'] ?? 'active');
             $pdo->prepare("
                 INSERT INTO users
                   (username, password_hash, package_id, reg_code_id,
                    reg_payment_method, reg_paid_by,
-                   sponsor_id, binary_parent_id, binary_position)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   sponsor_id, binary_parent_id, binary_position, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ")->execute([
                 $data['username'],
                 $hash,
-                $data['package_id'],
+                (!empty($data['package_id']) ? $data['package_id'] : null),
                 $data['reg_code_id'] ?? null,
                 $paymentMethod,
                 $data['reg_paid_by'] ?? null,
                 $data['sponsor_id'],
                 $data['binary_parent_id'],
                 $data['binary_position'],
+                $status,
             ]);
             $newId = (int)$pdo->lastInsertId();
 
@@ -107,20 +109,64 @@ class User
         }
 
         // ── Real-time commissions (outside transaction to prevent lock contention) ──
-        // These each use their own atomic updates.
+        // 1. Walk binary tree upward → increment leg counts (pairing bonuses only if active)
+        //    Pending users: do NOT increment leg counts; counts will be incremented at activation.
+        Commission::processBinaryPlacement($newId, $data['binary_parent_id'], $data['binary_position'], $status !== 'pending');
 
-        // 1. Walk binary tree upward → fire pairing bonuses on every ancestor
-        Commission::processBinaryPlacement($newId, $data['binary_parent_id'], $data['binary_position']);
+        if ($status !== 'pending') {
+            // 2. Direct referral bonus → sponsor
+            Commission::processDirectReferral($data['sponsor_id'], $newId, $data['package_id']);
 
-        // 2. Direct referral bonus → sponsor
-        Commission::processDirectReferral($data['sponsor_id'], $newId, $data['package_id']);
-
-        // 3. Indirect referral bonuses → up to 10 levels in sponsor chain
-        if (setting('indirect_referral_enabled', '1') === '1') {
-            Commission::processIndirectReferral($data['sponsor_id'], $newId, $data['package_id']);
+            // 3. Indirect referral bonuses → up to 10 levels in sponsor chain
+            if (setting('indirect_referral_enabled', '1') === '1') {
+                Commission::processIndirectReferral($data['sponsor_id'], $newId, $data['package_id']);
+            }
         }
 
         return $newId;
+    }
+
+    /**
+     * Activate a pending account.
+     * Returns the user's data for commission firing.
+     */
+    public static function activate(int $userId, int $packageId, ?int $regCodeId, string $paymentMethod): array
+    {
+        $pdo = db();
+
+        // Activate the user AND flush all binary pairs that formed while pending.
+        // This prevents retroactive pairing bonuses — only pairs formed AFTER
+        // activation will earn bonuses.
+        $pdo->prepare("
+            UPDATE users
+            SET status = 'active',
+                package_id = ?,
+                reg_code_id = COALESCE(?, reg_code_id),
+                reg_payment_method = ?,
+                joined_at = NOW(),
+                pairs_flushed = LEAST(left_count, right_count)
+            WHERE id = ? AND status = 'pending'
+        ")->execute([$packageId, $regCodeId, $paymentMethod, $userId]);
+
+        $user = self::find($userId);
+        if (!$user || $user['status'] !== 'active') {
+            throw new RuntimeException('Activation failed — user not found or not pending.');
+        }
+
+        // Fire commissions now that user is active.
+        // 1. Pairing bonuses — increment leg counts now (pending registration skipped this)
+        //    and calculate pairs for this single activation only.
+        Commission::processBinaryPlacement($userId, (int)$user['binary_parent_id'], $user['binary_position'], true);
+
+        // 2. Direct referral bonus → sponsor
+        Commission::processDirectReferral((int)$user['sponsor_id'], $userId, $packageId);
+
+        // 3. Indirect referral bonuses
+        if (setting('indirect_referral_enabled', '1') === '1') {
+            Commission::processIndirectReferral((int)$user['sponsor_id'], $userId, $packageId);
+        }
+
+        return $user;
     }
 
     // ── Finders ───────────────────────────────────────────────────────────────
@@ -332,10 +378,11 @@ class User
               COUNT(*)                                                        AS total,
               COALESCE(SUM(CASE WHEN status='active'    THEN 1 ELSE 0 END),0) AS active,
               COALESCE(SUM(CASE WHEN status='suspended' THEN 1 ELSE 0 END),0) AS suspended,
+              COALESCE(SUM(CASE WHEN status='pending'   THEN 1 ELSE 0 END),0) AS pending,
               COALESCE(SUM(CASE WHEN joined_at >= CURDATE() THEN 1 ELSE 0 END),0) AS joined_today
             FROM users WHERE role = 'member'
         ")->fetch();
-        return $row ?: ['total' => 0, 'active' => 0, 'suspended' => 0, 'joined_today' => 0];
+        return $row ?: ['total' => 0, 'active' => 0, 'suspended' => 0, 'pending' => 0, 'joined_today' => 0];
     }
 
     // ── Referral Chain (sponsor chain, not binary) ────────────────────────────

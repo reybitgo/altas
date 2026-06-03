@@ -44,12 +44,9 @@ $isMember      = ($user['role'] ?? '') === 'member';
     <?php endif; ?>
 
     <a href="<?= APP_URL ?>/?page=<?= Auth::isAdmin() ? 'admin' : 'profile' ?>"
-      class="topbar-avatar" title="<?= e($user['username'] ?? '') ?>">
-      <?php if (!empty($user['photo'])): ?>
-        <img src="<?= APP_URL ?>/uploads/<?= e($user['photo']) ?>" alt="">
-      <?php else: ?>
-        <?= $initials ?>
-      <?php endif; ?>
+      class="topbar-balance" title="<?= e($user['username'] ?? '') ?>" style="text-decoration:none;">
+      <span class="bal-label"><?= Auth::isAdmin() ? 'Admin' : 'User' ?></span>
+      <span class="bal-amount">@<?= e($user['username'] ?? '') ?></span>
     </a>
   </div>
 </div>

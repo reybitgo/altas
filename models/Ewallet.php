@@ -19,6 +19,10 @@ class Ewallet
         string $note = '',
         bool $withdrawable = true
     ): void {
+        $valid = ['commission', 'payout', 'reactivation', 'transfer', 'topup', 'registration'];
+        if (!in_array($refType, $valid, true)) {
+            throw new InvalidArgumentException("Invalid ref_type: {$refType}");
+        }
         $pdo = db();
 
         if ($withdrawable) {
@@ -53,6 +57,10 @@ class Ewallet
         string $note = '',
         bool $withdrawable = true
     ): bool {
+        $valid = ['commission', 'payout', 'reactivation', 'transfer', 'topup', 'registration'];
+        if (!in_array($refType, $valid, true)) {
+            throw new InvalidArgumentException("Invalid ref_type: {$refType}");
+        }
         $pdo = db();
 
         // Lock the row and check balance atomically
@@ -199,7 +207,7 @@ class Ewallet
         $pdo = db();
         $pdo->beginTransaction();
         try {
-            // Lock sender and check withdrawable balance (transfers can only use withdrawable funds)
+            // Lock sender and check balance
             $st = $pdo->prepare('SELECT ewallet_balance, withdrawable_balance FROM users WHERE id = ? FOR UPDATE');
             $st->execute([$senderId]);
             $senderRow = $st->fetch();
@@ -210,19 +218,17 @@ class Ewallet
                 $pdo->rollBack();
                 return ['ok' => false, 'error' => 'Insufficient balance.', 'transfer_id' => null];
             }
-            if ($withdrawableBal < $totalDebit) {
-                $nonWithdrawable = $bal - $withdrawableBal;
-                $pdo->rollBack();
-                return ['ok' => false, 'error' => 'You can only transfer withdrawable funds. ' . fmt_money($nonWithdrawable) . ' of your balance is non-transferable platform credit.', 'transfer_id' => null];
-            }
 
-            // Debit sender: both columns (withdrawable only)
+            // Debit sender: non-withdrawable funds are spent first, then withdrawable.
+            // Transferred funds remain non-withdrawable for the recipient.
+            $fromWithdrawable = min($totalDebit, $withdrawableBal);
+
             $pdo->prepare("
                 UPDATE users
-                SET ewallet_balance = ewallet_balance - ?,
-                    withdrawable_balance = withdrawable_balance - ?
-                WHERE id = ?
-            ")->execute([$totalDebit, $totalDebit, $senderId]);
+                SET ewallet_balance = ewallet_balance - :amt,
+                    withdrawable_balance = withdrawable_balance - :wamt
+                WHERE id = :id
+            ")->execute([':amt' => $totalDebit, ':wamt' => $fromWithdrawable, ':id' => $senderId]);
 
             // Credit recipient (non-withdrawable)
             $pdo->prepare('UPDATE users SET ewallet_balance = ewallet_balance + ? WHERE id = ?')

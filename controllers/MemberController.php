@@ -159,10 +159,12 @@ class MemberController
             'right_count' => (int)$u['right_count'],
             'left'        => null,
             'right'       => null,
+            'hasMore'     => false,
         ];
 
+        $pdo = db();
+
         if ($depth > 0) {
-            $pdo = db();
             $st  = $pdo->prepare(
                 "SELECT id FROM users WHERE binary_parent_id = ? AND binary_position = ?"
             );
@@ -173,6 +175,12 @@ class MemberController
             $st->execute([$id, 'right']);
             $rc = $st->fetchColumn();
             if ($rc) $node['right'] = self::buildTreeNode((int)$rc, $depth - 1);
+        } else {
+            // At max depth — flag if this node has deeper children not loaded yet
+            $hasChildren = (bool) $pdo->query(
+                "SELECT 1 FROM users WHERE binary_parent_id = {$id} LIMIT 1"
+            )->fetchColumn();
+            $node['hasMore'] = $hasChildren;
         }
 
         return $node;
@@ -385,6 +393,129 @@ class MemberController
             }
         } else {
             flash('error', $result['error'] ?? 'Reactivation failed.');
+        }
+
+        redirect('/?page=dashboard');
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  ACTIVATION (for pending referral-link accounts)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Show activation page for pending accounts.
+     */
+    public function activate(): void
+    {
+        Auth::guard('member');
+        $user = Auth::user();
+
+        if ($user['status'] !== 'pending') {
+            flash('info', 'Your account is already active.');
+            redirect('/?page=dashboard');
+        }
+
+        $packages = Package::all(true);
+        $canUseEwallet = false;
+        if (!empty($packages)) {
+            $minFee = min(array_map(fn($p) => (float)$p['entry_fee'], $packages));
+            $canUseEwallet = Ewallet::balance($user['id']) >= $minFee;
+        }
+
+        require 'views/member/activate.php';
+    }
+
+    /**
+     * Process activation (code or e-wallet).
+     */
+    public function doActivate(): void
+    {
+        Auth::guard('member');
+        csrf_verify();
+
+        $user   = Auth::user();
+        $userId = (int)$user['id'];
+
+        if ($user['status'] !== 'pending') {
+            flash('error', 'Your account is already active.');
+            redirect('/?page=dashboard');
+        }
+
+        $paymentMethod = $_POST['payment_method'] ?? 'code';
+        $code          = strtoupper(trim($_POST['reg_code'] ?? ''));
+        $packageId     = (int)($_POST['package_id'] ?? 0);
+
+        $regCodeId = null;
+
+        if ($paymentMethod === 'code') {
+            if (empty($code)) {
+                flash('error', 'Registration code is required.');
+                redirect('/?page=activate');
+            }
+            $codeRow = Code::validate($code);
+            if (!$codeRow) {
+                flash('error', 'Invalid or already-used registration code.');
+                redirect('/?page=activate');
+            }
+            $packageId = (int)$codeRow['package_id'];
+            $regCodeId = (int)$codeRow['id'];
+        } else {
+            // E-Wallet
+            if ($packageId <= 0) {
+                flash('error', 'Please select a package.');
+                redirect('/?page=activate');
+            }
+            $pkg = Package::find($packageId);
+            if (!$pkg) {
+                flash('error', 'Invalid package selected.');
+                redirect('/?page=activate');
+            }
+            $entryFee = (float)$pkg['entry_fee'];
+            $bal = Ewallet::balance($userId);
+            if ($bal < $entryFee) {
+                flash('error', 'Insufficient e-wallet balance. Required: ' . fmt_money($entryFee));
+                redirect('/?page=activate');
+            }
+
+            // Debit user
+            $debitOk = Ewallet::debitInternal(
+                $userId,
+                $entryFee,
+                0,
+                'registration',
+                "Activation fee for @" . $user['username']
+            );
+            if (!$debitOk) {
+                flash('error', 'E-wallet debit failed.');
+                redirect('/?page=activate');
+            }
+
+            // Credit admin
+            $adminId = (int) db()->query("SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1")
+                ->fetchColumn();
+            if ($adminId) {
+                Ewallet::credit(
+                    $adminId,
+                    $entryFee,
+                    $userId,
+                    'registration',
+                    "Activation fee from @" . $user['username']
+                );
+            }
+        }
+
+        try {
+            User::activate($userId, $packageId, $regCodeId, $paymentMethod);
+
+            // Mark code as used
+            if ($regCodeId) {
+                db()->prepare("UPDATE reg_codes SET status = 'used', used_by = ?, used_at = NOW() WHERE id = ?")
+                    ->execute([$userId, $regCodeId]);
+            }
+
+            flash('success', '🎉 Account activated! You can now start earning commissions.');
+        } catch (\Exception $e) {
+            flash('error', 'Activation failed: ' . $e->getMessage());
         }
 
         redirect('/?page=dashboard');

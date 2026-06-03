@@ -27,14 +27,14 @@
       <div class="col-12 col-md-5">
         <div class="card h-100" style="background:linear-gradient(135deg,#1a3a8f,#3b6ff0);border:none;">
           <div class="card-body text-white">
-            <div style="font-size:.68rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:.7;margin-bottom:.5rem;">Transferable Balance</div>
-            <div style="font-size:2.2rem;font-weight:800;font-family:var(--font-mono);line-height:1;"><?= fmt_money((float)($user['withdrawable_balance'] ?? 0)) ?></div>
+            <div style="font-size:.68rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:.7;margin-bottom:.5rem;">E-Wallet Balance</div>
+            <div style="font-size:2.2rem;font-weight:800;font-family:var(--font-mono);line-height:1;"><?= fmt_money((float)($user['ewallet_balance'] ?? 0)) ?></div>
             <div class="mt-2" style="font-size:.78rem;opacity:.85;">
               <?php
               $w = (float) ($user['withdrawable_balance'] ?? 0);
               $nw = (float) ($user['ewallet_balance'] ?? 0) - $w;
               ?>
-              Total: <?= fmt_money((float)$user['ewallet_balance']) ?> · <?= fmt_money($nw) ?> non-transferable
+              Withdrawable: <?= fmt_money($w) ?> · Non-withdrawable: <?= fmt_money($nw) ?>
               <?php if (!Auth::isAdmin()): ?>
                 <br>Fee: <?= fmt_money($fee) ?> per transfer · Min: <?= fmt_money($min) ?>
               <?php endif; ?>
@@ -61,8 +61,8 @@
 
               <div class="mb-3">
                 <label class="form-label" style="font-weight:700;font-size:.8rem;">Amount (₱)</label>
-                <input type="number" name="amount" id="transferAmount" class="form-control" min="<?= $min ?>" max="<?= (float)($user['withdrawable_balance'] ?? 0) ?>" step="0.01" required placeholder="0.00">
-                <div class="form-text">Minimum: <?= fmt_money($min) ?> · Max transferable: <?= fmt_money((float)($user['withdrawable_balance'] ?? 0)) ?></div>
+                <input type="number" name="amount" id="transferAmount" class="form-control" min="<?= $min ?>" max="<?= (float)($user['ewallet_balance'] ?? 0) ?>" step="0.01" required placeholder="0.00">
+                <div class="form-text">Minimum: <?= fmt_money($min) ?> · Max: <?= fmt_money((float)($user['ewallet_balance'] ?? 0)) ?></div>
               </div>
 
               <div class="mb-3">
@@ -72,7 +72,10 @@
 
               <div class="mb-3">
                 <label class="form-label" style="font-weight:700;font-size:.8rem;">Confirm Password</label>
-                <input type="password" name="password" class="form-control" required placeholder="Enter your password to confirm">
+                <div class="input-group">
+                  <input type="password" name="password" id="confirmPw" class="form-control" required placeholder="Enter your password to confirm">
+                  <button type="button" class="btn btn-outline-secondary" onclick="togglePw('confirmPw',this)">👁</button>
+                </div>
               </div>
 
               <!-- Preview -->
@@ -157,6 +160,14 @@
   </div>
 </div>
 <?php require 'views/partials/footer.php'; ?>
+
+<script>
+function togglePw(id, btn) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '👁' : '🙈';
+}
+</script>
 
 <?php if (!Auth::isAdmin()): ?>
 <script>

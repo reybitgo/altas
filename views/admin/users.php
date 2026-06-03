@@ -14,7 +14,7 @@
     <?= render_flash() ?>
     <?php $counts = User::counts(); ?>
     <div class="row g-3 mb-3">
-      <?php foreach ([['Total', (int)$counts['total'], 'primary'], ['Active', (int)$counts['active'], 'success'], ['Suspended', (int)$counts['suspended'], 'danger'], ['Joined Today', (int)$counts['joined_today'], 'warning']] as [$l, $v, $c]): ?>
+      <?php foreach ([['Total', (int)$counts['total'], 'primary'], ['Active', (int)$counts['active'], 'success'], ['Pending', (int)($counts['pending'] ?? 0), 'warning'], ['Suspended', (int)$counts['suspended'], 'danger'], ['Joined Today', (int)$counts['joined_today'], 'info']] as [$l, $v, $c]): ?>
         <div class="col-6 col-xl-3">
           <div class="card stat-card">
             <div class="stat-accent stat-accent-<?= $c ?>"></div>
@@ -83,20 +83,22 @@
                   <td>
                     <div class="d-flex gap-1">
                       <a href="<?= APP_URL ?>/?page=admin_user_view&id=<?= $m['id'] ?>" class="btn btn-sm btn-outline-primary">View</a>
+                      <?php if ($m['status'] !== 'pending'): ?>
                       <form method="POST" action="<?= APP_URL ?>/?page=admin_toggle_user" class="m-0" id="toggleForm<?= $m['id'] ?>">
                         <?= csrf_field() ?><input type="hidden" name="id" value="<?= $m['id'] ?>">
                         <?php $isSuspend = $m['status'] === 'active'; ?>
                         <button type="button" class="btn btn-sm <?= $isSuspend ? 'btn-outline-danger' : 'btn-outline-success' ?>"
                           onclick="showConfirm({
-            title: '<?= $isSuspend ? 'Suspend' : 'Activate' ?> Member',
-            message: 'Are you sure you want to <?= $isSuspend ? 'suspend' : 'activate' ?> <strong>@<?= e($user['username']) ?></strong>?',
-            confirmText: '<?= $isSuspend ? 'Suspend' : 'Activate' ?>',
+            title: '<?= $isSuspend ? 'Suspend' : 'Unsuspend' ?> Member',
+            message: 'Are you sure you want to <?= $isSuspend ? 'suspend' : 'unsuspend' ?> <strong>@<?= e($m['username']) ?></strong>?',
+            confirmText: '<?= $isSuspend ? 'Suspend' : 'Unsuspend' ?>',
             confirmClass: '<?= $isSuspend ? 'btn-danger' : 'btn-success' ?>',
             onConfirm: () => this.closest('form').submit()
         })">
-                          <?= $isSuspend ? '🔒 Suspend' : '✅ Activate' ?>
+                          <?= $isSuspend ? '🔒 Suspend' : '🔓 Unsuspend' ?>
                         </button>
                       </form>
+                      <?php endif; ?>
                     </div>
                   </td>
                 </tr>

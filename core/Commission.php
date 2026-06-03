@@ -18,18 +18,27 @@ class Commission
     public static function processBinaryPlacement(
         int $newUserId,
         int $parentId,
-        string $position          // 'left' | 'right'
+        string $position,          // 'left' | 'right'
+        bool $incrementCounts = true
     ): void {
+        if ($parentId <= 0) return;
         $pdo  = db();
         $cur  = $parentId;
         $side = $position;
 
+        // Pending users increment leg counts but do NOT trigger pairing bonuses.
+        $newUserStatus = $pdo->prepare('SELECT status FROM users WHERE id = ?');
+        $newUserStatus->execute([$newUserId]);
+        $newUserIsActive = ($newUserStatus->fetchColumn() ?? '') === 'active';
+
         while ($cur !== null) {
 
             // 1. Increment the correct leg count on this ancestor
-            $col = ($side === 'left') ? 'left_count' : 'right_count';
-            $pdo->prepare("UPDATE users SET {$col} = {$col} + 1 WHERE id = ?")
-                ->execute([$cur]);
+            if ($incrementCounts) {
+                $col = ($side === 'left') ? 'left_count' : 'right_count';
+                $pdo->prepare("UPDATE users SET {$col} = {$col} + 1 WHERE id = ?")
+                    ->execute([$cur]);
+            }
 
             // v2: Skip capped/perminact members entirely — no pairing bonuses for them
             if (!CapEngine::isActiveForPairs($cur)) {
@@ -59,7 +68,9 @@ class Commission
             $st->execute([$cur]);
             $ancestor = $st->fetch();
 
-            if ($ancestor) {
+            // Only fire pairing bonuses if the NEW user is active.
+            // Pending users increment leg counts but don't trigger payouts.
+            if ($newUserIsActive && $ancestor) {
                 $processed = $ancestor['pairs_paid'] + $ancestor['pairs_flushed'];
                 $available = min($ancestor['left_count'], $ancestor['right_count']);
                 $newPairs  = $available - $processed;
@@ -124,6 +135,12 @@ class Commission
         int $newUserId,
         int $packageId
     ): void {
+        // Skip if sponsor is not active (e.g., pending activation)
+        $sponsorStatus = db()->query("SELECT status FROM users WHERE id = {$sponsorId}")->fetchColumn();
+        if ($sponsorStatus !== 'active') {
+            return;
+        }
+
         $pkg = Package::find($packageId);
         if (!$pkg || (float)$pkg['direct_ref_bonus'] <= 0) return;
 
@@ -177,6 +194,25 @@ class Commission
         $visited = [$directSponsorId => true];
 
         for ($lvl = 1; $lvl <= 10; $lvl++) {
+
+            // Skip if this upline is not active
+            $uplineStatus = $pdo->query("SELECT status FROM users WHERE id = {$cur}")->fetchColumn();
+            if ($uplineStatus !== 'active') {
+                // Move up but do NOT pay this level
+                $row = $pdo->prepare('SELECT sponsor_id FROM users WHERE id = ?');
+                $row->execute([$cur]);
+                $upRow = $row->fetch();
+                if (!$upRow || empty($upRow['sponsor_id'])) {
+                    break;
+                }
+                $next = (int)$upRow['sponsor_id'];
+                if (isset($visited[$next])) {
+                    break;
+                }
+                $visited[$next] = true;
+                $cur = $next;
+                continue;
+            }
 
             $bonus = (float)($levels[$lvl] ?? 0);
 

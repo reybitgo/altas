@@ -69,6 +69,12 @@
     stroke-dasharray: 5, 5;
   }
 
+  .node.pending rect {
+    fill: #f59e0b;
+    stroke: #d97706;
+    stroke-width: 2px;
+  }
+
   /* Node Text */
   .node text {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -229,15 +235,45 @@
     background: #f8fafc;
     border: 2px dashed #cbd5e1;
   }
+
+  .legend-dot.pending {
+    background: #f59e0b;
+  }
 </style>
 
 <div class="main-content">
   <?php require 'views/partials/topbar.php'; ?>
   <div class="page-content">
-    <ul class="nav nav-pills mb-3">
-      <li class="nav-item"><a class="nav-link <?= $view !== 'referral' ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=genealogy&view=binary">🌳 Binary Tree</a></li>
-      <li class="nav-item"><a class="nav-link <?= $view === 'referral' ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=genealogy&view=referral">👥 Referral Network</a></li>
-    </ul>
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+      <ul class="nav nav-pills mb-0">
+        <li class="nav-item"><a class="nav-link <?= $view !== 'referral' ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=genealogy&view=binary">🌳 Binary Tree</a></li>
+        <li class="nav-item"><a class="nav-link <?= $view === 'referral' ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=genealogy&view=referral">👥 Referral Network</a></li>
+      </ul>
+      <div class="ms-auto" style="min-width:220px;max-width:360px;width:100%;">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text">🔗</span>
+          <input type="text" class="form-control font-mono" id="refLink" readonly
+            value="<?= APP_URL ?>/?page=register&sponsor=<?= urlencode($user['username']) ?>&ref=1">
+          <button class="btn btn-outline-secondary" type="button" onclick="copyRefLink()" title="Copy">
+            📋
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    function copyRefLink() {
+      const el = document.getElementById('refLink');
+      el.select();
+      el.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(el.value).then(() => {
+        const btn = el.nextElementSibling;
+        const old = btn.textContent;
+        btn.textContent = '✓';
+        setTimeout(() => btn.textContent = old, 1500);
+      });
+    }
+    </script>
 
     <?php if ($view !== 'referral'): ?>
       <div class="card">
@@ -273,8 +309,8 @@
               <span>Suspended</span>
             </div>
             <div class="legend-item">
-              <div class="legend-dot empty"></div>
-              <span>Open Slot</span>
+              <div class="legend-dot pending"></div>
+              <span>Pending</span>
             </div>
             <span class="ms-auto text-muted">Click nodes to expand/collapse • Drag to pan</span>
           </div>
@@ -410,6 +446,33 @@
       }
     }
 
+    // Hierarchy accessor — reusable for lazy loading
+    const treeAccessor = d => {
+      const children = [];
+      if (d.left) children.push(d.left);
+      if (d.right) children.push(d.right);
+      // Add empty slot indicators if missing children (for visualization)
+      if (!d.left && d.depth < 3) {
+        children.push({
+          username: 'Empty',
+          status: 'empty',
+          isPlaceholder: true,
+          parent: d,
+          depth: (d.depth || 0) + 1
+        });
+      }
+      if (!d.right && d.depth < 3) {
+        children.push({
+          username: 'Empty',
+          status: 'empty',
+          isPlaceholder: true,
+          parent: d,
+          depth: (d.depth || 0) + 1
+        });
+      }
+      return children.length > 0 ? children : null;
+    };
+
     function initD3Tree(data, container) {
       // Clear previous
       container.innerHTML = '';
@@ -441,32 +504,8 @@
       // Create main group for tree
       g = svg.append('g');
 
-      // Convert data to hierarchy - handle binary structure with left/right
-      root = d3.hierarchy(data, d => {
-        const children = [];
-        if (d.left) children.push(d.left);
-        if (d.right) children.push(d.right);
-        // Add empty slot indicators if missing children (for visualization)
-        if (!d.left && d.depth < 3) {
-          children.push({
-            username: 'Empty',
-            status: 'empty',
-            isPlaceholder: true,
-            parent: d,
-            depth: (d.depth || 0) + 1
-          });
-        }
-        if (!d.right && d.depth < 3) {
-          children.push({
-            username: 'Empty',
-            status: 'empty',
-            isPlaceholder: true,
-            parent: d,
-            depth: (d.depth || 0) + 1
-          });
-        }
-        return children.length > 0 ? children : null;
-      });
+      // Convert data to hierarchy
+      root = d3.hierarchy(data, treeAccessor);
 
       // Store original children for expand/collapse
       root.descendants().forEach(d => {
@@ -507,6 +546,7 @@
         .attr('class', d => `node ${d.data.status || 'active'} ${d.data.isPlaceholder ? 'empty' : ''}`)
         .attr('transform', d => `translate(${source.x0 || 0},${source.y0 || 0})`)
         .on('click', (event, d) => {
+          // Skip click on empty-slot placeholders
           if (!d.data.isPlaceholder) {
             toggle(d);
           }
@@ -532,6 +572,30 @@
           return name.length > maxLen ? name.slice(0, maxLen) + '…' : name;
         });
 
+      // Add expand/collapse circle for nodes with children (loaded or not-yet-loaded)
+      nodeEnter.filter(d => !d.data.isPlaceholder).append('circle')
+        .attr('class', 'toggle-circle')
+        .attr('r', d => d.data.hasMore ? 11 : 9)
+        .attr('cy', d => responsiveNodeHeight / 2 + 10)
+        .style('fill', '#fff')
+        .style('stroke', d => d.data.hasMore ? '#3b6ff0' : '#94a3b8')
+        .style('stroke-width', d => d.data.hasMore ? 2 : 1.5)
+        .style('cursor', 'pointer')
+        .style('display', d => (d.children || d._children || d.data.hasMore) ? null : 'none');
+
+      // Add + / − text inside the toggle circle (perfectly centred)
+      nodeEnter.filter(d => !d.data.isPlaceholder).append('text')
+        .attr('class', 'toggle-text')
+        .attr('dy', d => responsiveNodeHeight / 2 + 10)
+        .attr('font-size', d => d.data.hasMore ? '16px' : '14px')
+        .attr('font-weight', '700')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .style('fill', d => d.data.hasMore ? '#3b6ff0' : '#64748b')
+        .style('pointer-events', 'none')
+        .style('display', d => (d.children || d._children || d.data.hasMore) ? null : 'none')
+        .text(d => d.children ? '−' : '+');
+
       // Add count badges for non-empty nodes — hidden if leaf (no children at all)
       nodeEnter.filter(d => !d.data.isPlaceholder).append('text')
         .attr('class', 'count-text')
@@ -551,6 +615,20 @@
         .attr('height', d => d.data.isPlaceholder ? responsiveNodeHeight * 0.8 : responsiveNodeHeight)
         .attr('x', d => d.data.isPlaceholder ? -(responsiveNodeWidth * 0.4) : -responsiveNodeWidth / 2)
         .attr('y', d => d.data.isPlaceholder ? -(responsiveNodeHeight * 0.4) : -responsiveNodeHeight / 2);
+
+      // Update toggle circle visibility, colour & size
+      nodeUpdate.select('.toggle-circle')
+        .attr('r', d => d.data.hasMore ? 11 : 9)
+        .style('stroke', d => d.data.hasMore ? '#3b6ff0' : '#94a3b8')
+        .style('stroke-width', d => d.data.hasMore ? 2 : 1.5)
+        .style('display', d => (d.children || d._children || d.data.hasMore) ? null : 'none');
+
+      // Update toggle text (+ / −)
+      nodeUpdate.select('.toggle-text')
+        .attr('font-size', d => d.data.hasMore ? '16px' : '14px')
+        .style('fill', d => d.data.hasMore ? '#3b6ff0' : '#64748b')
+        .style('display', d => (d.children || d._children || d.data.hasMore) ? null : 'none')
+        .text(d => d.children ? '−' : '+');
 
       // Update count-text colour: white when expanded (has visible children), muted when collapsed/leaf
       // Also hide entirely if node has no children at all (free slot indicator)
@@ -614,8 +692,51 @@
             ${d.x} ${d.y - responsiveNodeHeight/2}`;
     }
 
+    // Lazy-load deeper levels when a node with hasMore is clicked
+    async function loadChildren(d) {
+      if (d.data.isLoading) return;
+      d.data.isLoading = true;
+
+      try {
+        const res = await fetch(`${'<?= APP_URL ?>/?page=api_binary_tree&root='}${d.data.id}&depth=4`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const subtree = await res.json();
+
+        // Build a temporary hierarchy to get properly-wired children
+        const tempRoot = d3.hierarchy(subtree, treeAccessor);
+
+        // Reparent the loaded children to the clicked node
+        if (tempRoot.children) {
+          tempRoot.children.forEach(child => {
+            child.parent = d;
+            // Recursively set correct depths in the main tree
+            function setDepth(node, depth) {
+              node.depth = depth;
+              const descendants = node.children || node._children;
+              if (descendants) {
+                descendants.forEach(c => setDepth(c, depth + 1));
+              }
+            }
+            setDepth(child, d.depth + 1);
+          });
+          d._children = tempRoot.children;
+        }
+        d.data.hasMore = false;
+      } catch (e) {
+        console.error('Failed to load children', e);
+        alert('Could not load deeper levels. Please try again.');
+      } finally {
+        d.data.isLoading = false;
+      }
+    }
+
     // Toggle children on click
-    function toggle(d) {
+    async function toggle(d) {
+      // Lazy-load if children haven't been fetched yet
+      if (d.data.hasMore && !d._children && !d.children) {
+        await loadChildren(d);
+      }
+
       if (d.children) {
         d._children = d.children;
         d.children = null;
@@ -666,7 +787,8 @@
         html += `<div style="color:rgba(255,255,255,0.7);font-size:0.75rem;line-height:1.4;">`;
         html += `${data.package || 'Member'} · ${data.joined || '—'}<br>`;
         html += `Left: ${data.left_count || 0} · Right: ${data.right_count || 0}<br>`;
-        html += `Status: <span style="color:${data.status==='active'?'#4ade80':'#f87171'};font-weight:600;">${data.status || 'active'}</span>`;
+        const statusColor = data.status==='active'?'#4ade80':data.status==='pending'?'#fbbf24':'#f87171';
+        html += `Status: <span style="color:${statusColor};font-weight:600;">${data.status || 'active'}</span>`;
         html += `</div>`;
       } else {
         html += `<div style="color:rgba(255,255,255,0.7);font-size:0.75rem;">Open slot available</div>`;

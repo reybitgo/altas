@@ -60,6 +60,7 @@ class DailyFixedIncome
             FROM users u
             JOIN packages p ON p.id = u.package_id
             WHERE u.role = 'member'
+              AND u.status = 'active'
               AND u.cap_status = 'active'
               AND u.dfi_active = 1
               AND u.dfi_days_used < p.daily_fixed_income_days

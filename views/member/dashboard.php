@@ -22,6 +22,28 @@
     }
     ?>
 
+    <?php if ($user['status'] === 'pending'): ?>
+      <!-- Pending Activation Banner -->
+      <div class="card mb-4 border-warning" style="border-width:2px;">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+              <div style="font-size:2rem;">⏳</div>
+              <div>
+                <h5 class="fw-700 mb-1">Account Pending Activation</h5>
+                <p class="text-muted mb-0" style="font-size:.8rem;">
+                  Your binary position is reserved. Activate your account with a registration code or e-wallet to unlock all earning features.
+                </p>
+              </div>
+            </div>
+            <a href="<?= APP_URL ?>/?page=activate" class="btn btn-warning">
+              ⚡ Activate Now
+            </a>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
+
     <?php if ($pendingReactivation): ?>
       <!-- Pending Reactivation Banner -->
       <div class="card mb-4 border-info" style="border-width:2px;">
