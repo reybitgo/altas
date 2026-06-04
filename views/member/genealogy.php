@@ -82,7 +82,6 @@
     font-weight: 600;
     fill: white;
     text-anchor: middle;
-    dominant-baseline: middle;
     pointer-events: none;
   }
 
@@ -417,18 +416,18 @@
     let currentTranslate = [0, 0];
 
     // Node dimensions - proportional and responsive
-    const nodeWidth = 100;
-    const nodeHeight = 44;
+    const nodeWidth = 140;
+    const nodeHeight = 54;
     const nodeRadius = 8; // Rounded corners
-    const levelHeight = 100; // Vertical spacing between levels
-    const siblingSpacing = 140; // Horizontal spacing between siblings
+    const levelHeight = 110; // Vertical spacing between levels
+    const siblingSpacing = 170; // Horizontal spacing between siblings
 
     // Mobile detection for responsive sizing
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
-    const responsiveNodeWidth = isMobile ? 70 : nodeWidth;
-    const responsiveNodeHeight = isMobile ? 36 : nodeHeight;
-    const responsiveLevelHeight = isMobile ? 80 : levelHeight;
-    const responsiveSiblingSpacing = isMobile ? 100 : siblingSpacing;
+    const responsiveNodeWidth = isMobile ? 110 : nodeWidth;
+    const responsiveNodeHeight = isMobile ? 48 : nodeHeight;
+    const responsiveLevelHeight = isMobile ? 90 : levelHeight;
+    const responsiveSiblingSpacing = isMobile ? 130 : siblingSpacing;
 
     async function loadTree() {
       const loader = document.getElementById('treeLoading');
@@ -563,20 +562,39 @@
         .attr('rx', nodeRadius)
         .attr('ry', nodeRadius);
 
-      // Add username text
+      // Add username text (multi-line wrap for long names)
       nodeEnter.append('text')
-        .attr('dy', '-0.2em')
-        .text(d => {
+        .attr('text-anchor', 'middle')
+        .each(function(d) {
+          const el = d3.select(this);
           const name = d.data.username || 'Unknown';
-          const maxLen = isMobile ? 6 : 8;
-          return name.length > maxLen ? name.slice(0, maxLen) + '…' : name;
+          const maxChars = isMobile ? 11 : 14;
+          const lineHeight = isMobile ? 11 : 12;
+
+          let lines = [];
+          if (name.length <= maxChars) {
+            lines = [name];
+          } else {
+            lines = [name.slice(0, maxChars), name.slice(maxChars)];
+            if (lines[1].length > maxChars) {
+              lines[1] = lines[1].slice(0, maxChars - 1) + '…';
+            }
+          }
+
+          const startY = -(lines.length - 1) * lineHeight / 2;
+          lines.forEach((line, i) => {
+            el.append('tspan')
+              .attr('x', 0)
+              .attr('dy', i === 0 ? startY + 'px' : lineHeight + 'px')
+              .text(line);
+          });
         });
 
       // Add expand/collapse circle for nodes with children (loaded or not-yet-loaded)
       nodeEnter.filter(d => !d.data.isPlaceholder).append('circle')
         .attr('class', 'toggle-circle')
-        .attr('r', d => d.data.hasMore ? 11 : 9)
-        .attr('cy', d => responsiveNodeHeight / 2 + 10)
+        .attr('r', d => d.data.hasMore ? 11 : 10)
+        .attr('cy', d => responsiveNodeHeight / 2 + 12)
         .style('fill', '#fff')
         .style('stroke', d => d.data.hasMore ? '#3b6ff0' : '#94a3b8')
         .style('stroke-width', d => d.data.hasMore ? 2 : 1.5)
@@ -586,11 +604,12 @@
       // Add + / − text inside the toggle circle (perfectly centred)
       nodeEnter.filter(d => !d.data.isPlaceholder).append('text')
         .attr('class', 'toggle-text')
-        .attr('dy', d => responsiveNodeHeight / 2 + 10)
-        .attr('font-size', d => d.data.hasMore ? '16px' : '14px')
+        .attr('x', 0)
+        .attr('y', d => responsiveNodeHeight / 2 + 12)
+        .attr('font-size', d => d.data.hasMore ? '22px' : '19px')
         .attr('font-weight', '700')
         .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'central')
+        .attr('dominant-baseline', 'middle')
         .style('fill', d => d.data.hasMore ? '#3b6ff0' : '#64748b')
         .style('pointer-events', 'none')
         .style('display', d => (d.children || d._children || d.data.hasMore) ? null : 'none')
@@ -618,14 +637,16 @@
 
       // Update toggle circle visibility, colour & size
       nodeUpdate.select('.toggle-circle')
-        .attr('r', d => d.data.hasMore ? 11 : 9)
+        .attr('r', d => d.data.hasMore ? 11 : 10)
+        .attr('cy', d => responsiveNodeHeight / 2 + 12)
         .style('stroke', d => d.data.hasMore ? '#3b6ff0' : '#94a3b8')
         .style('stroke-width', d => d.data.hasMore ? 2 : 1.5)
         .style('display', d => (d.children || d._children || d.data.hasMore) ? null : 'none');
 
       // Update toggle text (+ / −)
       nodeUpdate.select('.toggle-text')
-        .attr('font-size', d => d.data.hasMore ? '16px' : '14px')
+        .attr('y', d => responsiveNodeHeight / 2 + 12)
+        .attr('font-size', d => d.data.hasMore ? '22px' : '19px')
         .style('fill', d => d.data.hasMore ? '#3b6ff0' : '#64748b')
         .style('display', d => (d.children || d._children || d.data.hasMore) ? null : 'none')
         .text(d => d.children ? '−' : '+');
