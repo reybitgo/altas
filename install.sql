@@ -66,6 +66,7 @@ CREATE TABLE users (
   last_reactivation_at  TIMESTAMP NULL,
   dfi_days_used         INT UNSIGNED NOT NULL DEFAULT 0,
   dfi_active            TINYINT(1)   NOT NULL DEFAULT 1,
+  cd_active             TINYINT(1)   NOT NULL DEFAULT 0,
 
   -- Profile
   full_name         VARCHAR(120) NULL,
@@ -221,6 +222,44 @@ CREATE TABLE daily_fixed_income_log (
   FOREIGN KEY (user_id) REFERENCES users(id),
   INDEX idx_dfi_user_date (user_id, created_at),         -- v2
   UNIQUE KEY uq_user_day (user_id, day_number)
+) ENGINE=InnoDB;
+
+-- ─── COMMISSION-DEDUCT (CD) STATUS ────────────────────────────
+CREATE TABLE user_cd_status (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  user_id         INT UNSIGNED  NOT NULL,
+  target_amount   DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  filled_amount   DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  status          ENUM('active','completed','cancelled') NOT NULL DEFAULT 'active',
+  assigned_by     INT UNSIGNED  NOT NULL,
+  assigned_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at    TIMESTAMP NULL,
+  cancelled_at    TIMESTAMP NULL,
+  notes           TEXT NULL,
+  FOREIGN KEY (user_id)     REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_user_active (user_id, status),
+  INDEX idx_assigned_at (assigned_at)
+) ENGINE=InnoDB;
+
+-- ─── COMMISSION-DEDUCT LEDGER ─────────────────────────────────
+CREATE TABLE cd_ledger (
+  id                   INT AUTO_INCREMENT PRIMARY KEY,
+  user_id              INT UNSIGNED  NOT NULL,
+  cd_status_id         INT UNSIGNED  NOT NULL,
+  commission_id        INT UNSIGNED  NULL,
+  type                 ENUM('pairing','direct_referral','indirect_referral') NOT NULL,
+  gross_amount         DECIMAL(12,2) NOT NULL,
+  cd_amount            DECIMAL(12,2) NOT NULL,
+  withdrawable_amount  DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  source_user_id       INT UNSIGNED  NULL,
+  created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id)        REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (cd_status_id)   REFERENCES user_cd_status(id) ON DELETE CASCADE,
+  FOREIGN KEY (commission_id)  REFERENCES commissions(id) ON DELETE SET NULL,
+  FOREIGN KEY (source_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_user_cd (user_id, cd_status_id),
+  INDEX idx_created (created_at)
 ) ENGINE=InnoDB;
 
 -- ─── SYSTEM SETTINGS ──────────────────────────────────────────

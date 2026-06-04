@@ -80,6 +80,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
     $pdo->exec("DELETE FROM ewallet_admin_topups");
     $logs[] = ['ok', 'Cleared admin top-ups'];
 
+    // CD tables
+    $pdo->exec("DELETE FROM cd_ledger");
+    $logs[] = ['ok', 'Cleared CD ledger'];
+
+    $pdo->exec("DELETE FROM user_cd_status");
+    $logs[] = ['ok', 'Cleared CD status records'];
+
     // v2: Clear uploaded reactivation proof images
     $proofDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'reactivation_proofs';
     if (is_dir($proofDir)) {
@@ -121,13 +128,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
             last_reactivation_at  = NULL,
             dfi_days_used         = 0,
             dfi_active            = 1,
+            cd_active             = 0,
             last_login            = NULL
             WHERE role = 'admin'
         ");
     $logs[] = ['ok', 'Reset admin to clean install state (counters, balances, tree placement, package all cleared)'];
 
     // 5. Reset auto-increment counters
-    foreach (['users', 'commissions', 'ewallet_ledger', 'payout_requests', 'reg_codes', 'reactivations', 'daily_fixed_income_log', 'ewallet_transfers', 'ewallet_admin_topups'] as $tbl) {
+    foreach (['users', 'commissions', 'ewallet_ledger', 'payout_requests', 'reg_codes', 'reactivations', 'daily_fixed_income_log', 'ewallet_transfers', 'ewallet_admin_topups', 'cd_ledger', 'user_cd_status'] as $tbl) {
       $pdo->exec("ALTER TABLE {$tbl} AUTO_INCREMENT = 1");
     }
     $logs[] = ['ok', 'Reset auto-increment counters'];
@@ -746,6 +754,7 @@ try {
                 <li><span class="dot dot-red"></span><span class="text-red">All reactivation records</span></li>
                 <li><span class="dot dot-red"></span><span class="text-red">All DFI payout logs</span></li>
                 <li><span class="dot dot-red"></span><span class="text-red">All uploaded proof-of-payment images</span></li>
+                <li><span class="dot dot-red"></span><span class="text-red">All CD status records &amp; ledger entries</span></li>
                 <li><span class="dot dot-red"></span><span class="text-red">All registration codes</span></li>
                 <li><span class="dot dot-yellow"></span><span class="text-yellow">Admin balance &amp; counters reset to zero</span></li>
                 <li><span class="dot dot-green"></span><span class="text-green">Admin account &amp; password kept</span></li>

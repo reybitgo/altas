@@ -146,29 +146,63 @@ class Commission
 
         $bonus = (float)$pkg['direct_ref_bonus'];
 
-        // v2: Check lifetime cap before crediting
-        $capCheck = CapEngine::canEarn($sponsorId, $bonus);
-        if ($capCheck['allowed'] <= 0) {
-            // Cap reached — record as blocked (audit trail)
-            self::recordCapBlocked($sponsorId, $bonus, 'direct_referral', $newUserId);
-            return;
+        // 1. CD split BEFORE lifetime cap
+        $cdSplit = CdStatus::fillBucket($sponsorId, $bonus);
+        $cdPortion = $cdSplit['cd'];
+        $walletPortion = $cdSplit['wallet'];
+        $cdStatusId = $cdSplit['cd_status_id'] ?? null;
+
+        // 2. Lifetime cap on wallet overflow
+        $capBlocked = 0.00;
+        $actualWallet = 0.00;
+        if ($walletPortion > 0) {
+            $capCheck = CapEngine::canEarn($sponsorId, $walletPortion);
+            $actualWallet = $capCheck['allowed'];
+            $capBlocked = $capCheck['blocked'];
+
+            if ($capBlocked > 0) {
+                self::recordCapBlocked($sponsorId, $capBlocked, 'direct_referral', $newUserId);
+            }
         }
 
-        $actualBonus = $capCheck['allowed'];
-        $blocked     = $capCheck['blocked'];
+        // 3. Record commission with GROSS amount
+        $desc = 'Direct referral bonus';
+        if ($cdPortion > 0) {
+            $desc .= sprintf(' — %s to CD', fmt_money($cdPortion));
+            if ($actualWallet > 0) {
+                $desc .= sprintf(', %s to wallet', fmt_money($actualWallet));
+            }
+        }
 
         $pdo = db();
         $pdo->prepare("
             INSERT INTO commissions
               (user_id, type, amount, cap_deduction, source_user_id, description, status)
-            VALUES (?, 'direct_referral', ?, ?, ?, 'Direct referral bonus', 'credited')
-        ")->execute([$sponsorId, $actualBonus, $blocked, $newUserId]);
+            VALUES (?, 'direct_referral', ?, ?, ?, ?, 'credited')
+        ")->execute([$sponsorId, $bonus, $capBlocked, $newUserId, $desc]);
 
         $commId = (int)$pdo->lastInsertId();
-        Ewallet::credit($sponsorId, $actualBonus, $commId, 'commission', 'Direct referral bonus');
 
-        // v2: Record against lifetime cap
-        CapEngine::recordEarning($sponsorId, $actualBonus, 'direct_referral');
+        // 4. Credit e-wallet + cap blocked
+        if ($actualWallet > 0) {
+            Ewallet::credit($sponsorId, $actualWallet, $commId, 'commission', 'Direct referral bonus');
+        }
+        if ($capBlocked > 0) {
+            self::recordCapBlocked($sponsorId, $capBlocked, 'direct_referral', $newUserId);
+        }
+
+        // 5. CD ledger
+        if ($cdPortion > 0 && $cdStatusId) {
+            CdStatus::recordLedger(
+                $sponsorId, $cdStatusId, $commId, 'direct_referral',
+                $bonus, $cdPortion, $actualWallet, $newUserId
+            );
+        }
+
+        // 6. Record cap
+        if ($actualWallet > 0) {
+            CapEngine::recordEarning($sponsorId, $actualWallet, 'direct_referral');
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -217,17 +251,33 @@ class Commission
             $bonus = (float)($levels[$lvl] ?? 0);
 
             if ($bonus > 0) {
-                // v2: Check lifetime cap before crediting each level
-                $capCheck = CapEngine::canEarn($cur, $bonus);
+                // 1. CD split BEFORE lifetime cap
+                $cdSplit = CdStatus::fillBucket($cur, $bonus);
+                $cdPortion = $cdSplit['cd'];
+                $walletPortion = $cdSplit['wallet'];
+                $cdStatusId = $cdSplit['cd_status_id'] ?? null;
 
-                if ($capCheck['allowed'] <= 0) {
-                    // Cap reached at this level — record blocked, stop climbing
-                    self::recordCapBlocked($cur, $bonus, 'indirect_referral', $newUserId, $lvl);
-                    break; // Stop — higher levels won't get paid either
+                // 2. Lifetime cap on wallet overflow
+                $capBlocked = 0.00;
+                $actualWallet = 0.00;
+                if ($walletPortion > 0) {
+                    $capCheck = CapEngine::canEarn($cur, $walletPortion);
+                    $actualWallet = $capCheck['allowed'];
+                    $capBlocked = $capCheck['blocked'];
+
+                    if ($capBlocked > 0) {
+                        self::recordCapBlocked($cur, $capBlocked, 'indirect_referral', $newUserId, $lvl);
+                    }
                 }
 
-                $actualBonus = $capCheck['allowed'];
-                $blocked     = $capCheck['blocked'];
+                // 3. Record commission with GROSS amount
+                $desc = "Unilevel Level {$lvl} Bonus";
+                if ($cdPortion > 0) {
+                    $desc .= sprintf(' — %s to CD', fmt_money($cdPortion));
+                    if ($actualWallet > 0) {
+                        $desc .= sprintf(', %s to wallet', fmt_money($actualWallet));
+                    }
+                }
 
                 $pdo->prepare("
                     INSERT INTO commissions
@@ -235,25 +285,35 @@ class Commission
                     VALUES (?, 'indirect_referral', ?, ?, ?, ?, ?, 'credited')
                 ")->execute([
                     $cur,
-                    $actualBonus,
-                    $blocked,
+                    $bonus,
+                    $capBlocked,
                     $newUserId,
                     $lvl,
-                    "Unilevel Level {$lvl} Bonus"
+                    $desc
                 ]);
 
                 $commId = (int)$pdo->lastInsertId();
 
-                Ewallet::credit(
-                    $cur,
-                    $actualBonus,
-                    $commId,
-                    'commission',
-                    "Unilevel Level {$lvl} Bonus"
-                );
+                // 4. Credit e-wallet + cap blocked
+                if ($actualWallet > 0) {
+                    Ewallet::credit($cur, $actualWallet, $commId, 'commission', "Unilevel Level {$lvl} Bonus");
+                }
+                if ($capBlocked > 0) {
+                    self::recordCapBlocked($cur, $capBlocked, 'indirect_referral', $newUserId, $lvl);
+                }
 
-                // v2: Record against lifetime cap
-                CapEngine::recordEarning($cur, $actualBonus, 'indirect_referral');
+                // 5. CD ledger
+                if ($cdPortion > 0 && $cdStatusId) {
+                    CdStatus::recordLedger(
+                        $cur, $cdStatusId, $commId, 'indirect_referral',
+                        $bonus, $cdPortion, $actualWallet, $newUserId
+                    );
+                }
+
+                // 6. Record cap
+                if ($actualWallet > 0) {
+                    CapEngine::recordEarning($cur, $actualWallet, 'indirect_referral');
+                }
             }
 
             // Move up using ONLY sponsor_id
@@ -289,35 +349,66 @@ class Commission
         $pdo = db();
         $perPair = $pairs > 0 ? fmt_money($amount / $pairs) : '₱0.00';
 
-        // v2: Check cap before crediting
-        $capCheck = CapEngine::canEarn($userId, $amount);
-        $actualAmount = $capCheck['allowed'];
-        $blocked      = $capCheck['blocked'];
+        // 1. CD split happens BEFORE lifetime cap
+        $cdSplit = CdStatus::fillBucket($userId, $amount);
+        $cdPortion = $cdSplit['cd'];
+        $walletPortion = $cdSplit['wallet'];
+        $cdStatusId = $cdSplit['cd_status_id'] ?? null;
 
-        if ($actualAmount <= 0) {
-            // Fully blocked by cap — record as such
-            self::recordCapBlocked($userId, $amount, 'pairing', $sourceId, null, $pairs);
-            return;
+        // 2. Lifetime cap check on wallet overflow only
+        $capBlocked = 0.00;
+        $actualWallet = 0.00;
+        if ($walletPortion > 0) {
+            $capCheck = CapEngine::canEarn($userId, $walletPortion);
+            $actualWallet = $capCheck['allowed'];
+            $capBlocked = $capCheck['blocked'];
         }
 
+        // 3. Build description
+        $desc = "{$pairs} pair(s) × {$perPair}";
+        if ($cdPortion > 0) {
+            $desc .= sprintf(' — %s to CD', fmt_money($cdPortion));
+            if ($actualWallet > 0) {
+                $desc .= sprintf(', %s to wallet', fmt_money($actualWallet));
+            }
+        }
+
+        // 4. Record commission with GROSS amount
         $pdo->prepare("
             INSERT INTO commissions
               (user_id, type, amount, cap_deduction, source_user_id, pairs_count, description, status)
             VALUES (?, 'pairing', ?, ?, ?, ?, ?, 'credited')
         ")->execute([
             $userId,
-            $actualAmount,
-            $blocked,
+            $amount,        // GROSS amount recorded
+            $capBlocked,
             $sourceId,
             $pairs,
-            "{$pairs} pair(s) × {$perPair}"
+            $desc
         ]);
 
         $commId = (int)$pdo->lastInsertId();
-        Ewallet::credit($userId, $actualAmount, $commId, 'commission', "Pairing bonus — {$pairs} pair(s)");
 
-        // v2: Record against lifetime cap
-        CapEngine::recordEarning($userId, $actualAmount, 'pairing');
+        // 5. Credit e-wallet + cap blocked
+        if ($actualWallet > 0) {
+            Ewallet::credit($userId, $actualWallet, $commId, 'commission', "Pairing bonus — {$pairs} pair(s)");
+        }
+        if ($capBlocked > 0) {
+            self::recordCapBlocked($userId, $capBlocked, 'pairing', $sourceId, null, $pairs);
+        }
+
+        // 6. CD ledger audit trail
+        if ($cdPortion > 0 && $cdStatusId) {
+            CdStatus::recordLedger(
+                $userId, $cdStatusId, $commId, 'pairing',
+                $amount, $cdPortion, $actualWallet, $sourceId
+            );
+        }
+
+        // 7. Record cap against lifetime cap (on what actually reached wallet)
+        if ($actualWallet > 0) {
+            CapEngine::recordEarning($userId, $actualWallet, 'pairing');
+        }
     }
 
     private static function recordFlush(int $userId, int $pairs, int $sourceId): void

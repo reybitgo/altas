@@ -35,6 +35,59 @@
       <?php endforeach; ?>
     </div>
 
+    <?php if ($cdStatus || !empty($cdLedger)): ?>
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="card-title">⏳ CD Bucket Ledger</span>
+        <?php if ($cdStatus): ?>
+          <?php
+            $cdTarget = (float)$cdStatus['target_amount'];
+            $cdFilled = (float)$cdStatus['filled_amount'];
+            $cdPct = $cdTarget > 0 ? min(100, ($cdFilled / $cdTarget) * 100) : 0;
+          ?>
+          <span class="badge bg-warning-subtle text-warning"><?= fmt_money($cdFilled) ?> / <?= fmt_money($cdTarget) ?> (<?= number_format($cdPct, 1) ?>%)</span>
+        <?php else: ?>
+          <span class="badge bg-success-subtle text-success">Completed</span>
+        <?php endif; ?>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0" style="font-size:.85rem;">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Gross</th>
+              <th>To CD Bucket</th>
+              <th>To Wallet</th>
+              <th>From</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php if (empty($cdLedger)): ?>
+              <tr><td colspan="6" class="text-center py-3 text-muted">No CD entries yet.</td></tr>
+            <?php else: foreach ($cdLedger as $l): ?>
+              <tr>
+                <td class="td-muted" style="font-size:.72rem;"><?= fmt_datetime($l['created_at']) ?></td>
+                <td>
+                  <?php $tl = match ($l['type']) {
+                    'pairing' => '🤝 Pairing',
+                    'direct_referral' => '👥 Direct',
+                    'indirect_referral' => '🔗 Indirect',
+                    default => $l['type']
+                  }; echo $tl; ?>
+                </td>
+                <td class="font-mono"><?= fmt_money($l['gross_amount']) ?></td>
+                <td class="font-mono text-warning"><?= fmt_money($l['cd_amount']) ?></td>
+                <td class="font-mono text-success"><?= fmt_money($l['withdrawable_amount']) ?></td>
+                <td class="td-muted"><?= $l['source_username'] ? '@' . e($l['source_username']) : '—' ?></td>
+              </tr>
+            <?php endforeach; endif; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <div class="card">
       <div class="card-header">
         <ul class="nav nav-pills card-header-pills gap-1">

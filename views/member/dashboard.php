@@ -102,6 +102,44 @@
       </div>
     <?php endif; ?>
 
+    <?php if (!empty($user['cd_active'])): ?>
+      <?php
+        $cd = CdStatus::getActive($user['id']);
+        if ($cd):
+          $cdTarget = (float)$cd['target_amount'];
+          $cdFilled = (float)$cd['filled_amount'];
+          $cdPct = $cdTarget > 0 ? min(100, ($cdFilled / $cdTarget) * 100) : 0;
+      ?>
+      <div class="card mb-4" style="border:2px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fef3c7);">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+              <div style="font-size:2rem;">⏳</div>
+              <div>
+                <h5 class="fw-700 mb-1">Commission-Deduct Bucket</h5>
+                <p class="text-muted mb-0" style="font-size:.8rem;">
+                  Target: <strong><?= fmt_money($cdTarget) ?></strong> ·
+                  Filled: <strong class="text-warning"><?= fmt_money($cdFilled) ?></strong> ·
+                  Remaining: <strong><?= fmt_money(max(0, $cdTarget - $cdFilled)) ?></strong>
+                </p>
+                <div class="mt-2" style="max-width:300px;">
+                  <div class="cap-bar-track">
+                    <div class="cap-bar-fill" style="width:<?= $cdPct ?>%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div>
+                  </div>
+                  <div class="d-flex justify-content-between" style="font-size:.72rem;">
+                    <span><?= number_format($cdPct, 1) ?>%</span>
+                    <span>DFI paused until full</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <span class="badge bg-warning text-dark" style="font-size:.85rem;padding:.5em 1em;">CD Active</span>
+          </div>
+        </div>
+      </div>
+      <?php endif; ?>
+    <?php endif; ?>
+
     <!-- Welcome row -->
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
       <div>

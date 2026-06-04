@@ -124,6 +124,13 @@ $routes = [
     'admin_toggle_vip'       => ['AdminController',  'toggleVipBypass',      'admin'],
     'admin_toggle_daily_cap' => ['AdminController',  'toggleDailyCapBypass', 'admin'],
 
+    // Commission-Deduct (CD) admin actions
+    'admin_assign_cd'       => ['AdminController',  'assignCd',      'admin'],
+    'admin_complete_cd'     => ['AdminController',  'completeCd',    'admin'],
+    'admin_cancel_cd'       => ['AdminController',  'cancelCd',      'admin'],
+    'admin_edit_cd_target'  => ['AdminController',  'editCdTarget',  'admin'],
+    'api_cd_status'      => ['MemberController', 'apiCdStatus', 'member'],
+
     // E-Wallet Transfer & Top-Up
     'ewallet_transfer'       => ['MemberController', 'ewalletTransfer',     'any'],
     'do_ewallet_transfer'    => ['MemberController', 'doEwalletTransfer',   'any'],

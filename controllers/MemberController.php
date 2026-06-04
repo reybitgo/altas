@@ -114,6 +114,17 @@ class MemberController
         $page    = max(1, (int)($_GET['pg'] ?? 1));
         $summary = Commission::summary($userId);
         $history = Commission::history($userId, $page, 20, $type);
+        $cdStatus = CdStatus::getActive($userId);
+        $cdHistory = CdStatus::history($userId);
+        $cdLedger = [];
+        if ($cdStatus) {
+            $cdLedger = CdStatus::ledger($userId, (int)$cdStatus['id']);
+        } elseif (!empty($cdHistory)) {
+            $lastCd = $cdHistory[0];
+            if ($lastCd['status'] !== 'cancelled') {
+                $cdLedger = CdStatus::ledger($userId, (int)$lastCd['id']);
+            }
+        }
         require 'views/member/earnings.php';
     }
 
@@ -586,5 +597,29 @@ class MemberController
             flash('error', $result['error']);
         }
         redirect('/?page=ewallet_transfer');
+    }
+
+    public function apiCdStatus(): void
+    {
+        Auth::guard('member');
+        $userId = Auth::id();
+        $cd = CdStatus::getActive($userId);
+
+        if (!$cd) {
+            json_response(['active' => false]);
+            return;
+        }
+
+        $percent = $cd['target_amount'] > 0
+            ? round(((float)$cd['filled_amount'] / (float)$cd['target_amount']) * 100, 1)
+            : 0;
+
+        json_response([
+            'active'      => true,
+            'target'      => (float)$cd['target_amount'],
+            'filled'      => (float)$cd['filled_amount'],
+            'percent'     => $percent,
+            'assigned_at' => $cd['assigned_at'],
+        ]);
     }
 }

@@ -54,6 +54,8 @@ class AdminController
         $commHist = Commission::history($id, 1, 20);
         $ledger   = Ewallet::ledger($id, 1);
         $pairingStatus = User::todayPairingStatus($id);
+        $cdStatus = CdStatus::getActive($id);
+        $cdHistory = CdStatus::history($id);
 
         // v2: Cap & DFI data for admin user view tab
         $capStatus = User::getCapStatus($id);
@@ -640,5 +642,104 @@ class AdminController
         ];
 
         require 'views/admin/ewallet_monitor.php';
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  COMMISSION-DEDUCT (CD) ADMIN ACTIONS
+    // ══════════════════════════════════════════════════════════════════════════
+
+    public function assignCd(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $target = (float)($_POST['target_amount'] ?? 0);
+
+        if ($userId <= 0 || $target <= 0) {
+            flash('error', 'Invalid user or target amount.');
+            redirect('/?page=admin_user_view&id=' . $userId);
+            return;
+        }
+
+        try {
+            CdStatus::assign($userId, $target, Auth::id());
+            flash('success', 'Commission-Deduct status assigned successfully.');
+        } catch (RuntimeException $e) {
+            flash('error', $e->getMessage());
+        }
+
+        redirect('/?page=admin_user_view&id=' . $userId);
+    }
+
+    public function completeCd(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $cd = CdStatus::getActive($userId);
+
+        if (!$cd) {
+            flash('error', 'No active CD found for this user.');
+            redirect('/?page=admin_user_view&id=' . $userId);
+            return;
+        }
+
+        CdStatus::complete((int)$cd['id'], $userId);
+        flash('success', 'CD status marked as completed.');
+        redirect('/?page=admin_user_view&id=' . $userId);
+    }
+
+    public function cancelCd(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $cd = CdStatus::getActive($userId);
+
+        if (!$cd) {
+            flash('error', 'No active CD found for this user.');
+            redirect('/?page=admin_user_view&id=' . $userId);
+            return;
+        }
+
+        CdStatus::cancel((int)$cd['id'], $userId, trim($_POST['reason'] ?? ''));
+        flash('success', 'CD status cancelled. Filled amount is forfeited.');
+        redirect('/?page=admin_user_view&id=' . $userId);
+    }
+
+    public function editCdTarget(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $newTarget = (float)($_POST['target_amount'] ?? 0);
+
+        $cd = CdStatus::getActive($userId);
+
+        if (!$cd) {
+            flash('error', 'No active CD found for this user.');
+            redirect('/?page=admin_user_view&id=' . $userId);
+            return;
+        }
+
+        if ($newTarget <= 0) {
+            flash('error', 'Target amount must be greater than zero.');
+            redirect('/?page=admin_user_view&id=' . $userId);
+            return;
+        }
+
+        if ($newTarget < (float)$cd['filled_amount']) {
+            flash('error', 'New target cannot be less than the already filled amount (' . fmt_money((float)$cd['filled_amount']) . ').');
+            redirect('/?page=admin_user_view&id=' . $userId);
+            return;
+        }
+
+        CdStatus::updateTarget($userId, $newTarget);
+        flash('success', 'CD target updated to ' . fmt_money($newTarget) . '.');
+        redirect('/?page=admin_user_view&id=' . $userId);
     }
 }

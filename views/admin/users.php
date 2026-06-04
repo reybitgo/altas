@@ -79,7 +79,13 @@
                   <td class="td-green font-mono fw-bold"><?= fmt_money($m['ewallet_balance']) ?></td>
                   <td class="td-muted font-mono"><?= number_format($m['pairs_paid']) ?></td>
                   <td class="td-muted" style="font-size:.75rem;"><?= fmt_date($m['joined_at']) ?></td>
-                  <td><?php $b = $m['status'] === 'active' ? 'bg-success-subtle text-success' : ($m['status'] === 'suspended' ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning'); ?><span class="badge <?= $b ?>"><?= ucfirst($m['status']) ?></span></td>
+                  <td>
+                    <?php $b = $m['status'] === 'active' ? 'bg-success-subtle text-success' : ($m['status'] === 'suspended' ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning'); ?>
+                    <span class="badge <?= $b ?>"><?= ucfirst($m['status']) ?></span>
+                    <?php if (!empty($m['cd_active'])): ?>
+                      <span class="badge bg-warning-subtle text-warning" style="font-size:.65rem;">⏳ CD</span>
+                    <?php endif; ?>
+                  </td>
                   <td>
                     <div class="d-flex gap-1">
                       <a href="<?= APP_URL ?>/?page=admin_user_view&id=<?= $m['id'] ?>" class="btn btn-sm btn-outline-primary">View</a>

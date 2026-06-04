@@ -63,6 +63,7 @@ class DailyFixedIncome
               AND u.status = 'active'
               AND u.cap_status = 'active'
               AND u.dfi_active = 1
+              AND u.cd_active = 0
               AND u.dfi_days_used < p.daily_fixed_income_days
               AND p.daily_fixed_income > 0
             ORDER BY u.id

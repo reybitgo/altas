@@ -41,6 +41,12 @@ $isMember      = ($user['role'] ?? '') === 'member';
         <span class="bal-label">Balance</span>
         <span class="bal-amount" id="topbarBalance"><?= $topbarBalance ?></span>
       </div>
+      <?php if (!empty($user['cd_active'])): ?>
+        <div class="topbar-balance" style="background:linear-gradient(135deg,#fef3c7,#fffbeb);border-color:rgba(245,158,11,0.3);">
+          <span class="bal-label" style="color:#d97706;">CD</span>
+          <span class="bal-amount" style="color:#d97706;font-size:.8rem;">⏳ Active</span>
+        </div>
+      <?php endif; ?>
     <?php endif; ?>
 
     <a href="<?= APP_URL ?>/?page=<?= Auth::isAdmin() ? 'admin' : 'profile' ?>"

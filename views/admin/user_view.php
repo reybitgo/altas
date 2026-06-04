@@ -73,6 +73,96 @@
       </form>
     </div>
 
+    <!-- CD Status Card (if any) -->
+    <?php if ($cdStatus || !empty($cdHistory) || $user['status'] === 'active'): ?>
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="card-title">⏳ Commission-Deduct Status</span>
+        <?php if ($cdStatus): ?>
+          <span class="badge bg-warning-subtle text-warning">Active</span>
+        <?php elseif (!empty($cdHistory) && $cdHistory[0]['status'] === 'completed'): ?>
+          <span class="badge bg-success-subtle text-success">Completed</span>
+        <?php elseif (!empty($cdHistory) && $cdHistory[0]['status'] === 'cancelled'): ?>
+          <span class="badge bg-danger-subtle text-danger">Cancelled</span>
+        <?php endif; ?>
+      </div>
+      <div class="card-body">
+        <?php if ($cdStatus): ?>
+          <?php
+            $cdTarget = (float)$cdStatus['target_amount'];
+            $cdFilled = (float)$cdStatus['filled_amount'];
+            $cdPct = $cdTarget > 0 ? min(100, ($cdFilled / $cdTarget) * 100) : 0;
+          ?>
+          <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+              <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;">Target</div>
+              <div class="fw-bold"><?= fmt_money($cdTarget) ?></div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;">Filled</div>
+              <div class="fw-bold text-warning"><?= fmt_money($cdFilled) ?></div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;">Remaining</div>
+              <div class="fw-bold"><?= fmt_money(max(0, $cdTarget - $cdFilled)) ?></div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <div class="cap-bar-track">
+              <div class="cap-bar-fill" style="width:<?= $cdPct ?>%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div>
+            </div>
+            <div class="d-flex justify-content-between mt-1" style="font-size:.78rem;">
+              <span><?= number_format($cdPct, 1) ?>%</span>
+              <span>Assigned: <?= fmt_date($cdStatus['assigned_at']) ?></span>
+            </div>
+          </div>
+          <div class="mt-3 d-flex gap-2 justify-content-between align-items-center">
+            <div class="d-flex gap-2">
+              <form method="POST" action="<?= APP_URL ?>/?page=admin_complete_cd" class="m-0">
+                <?= csrf_field() ?><input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                <button type="button" class="btn btn-sm btn-success"
+                  onclick="showConfirm({title:'Complete CD',message:'Mark CD as fully completed for <strong>@<?= e($user['username']) ?></strong>?',confirmText:'Complete',confirmClass:'btn-success',onConfirm:()=>this.closest('form').submit()})">
+                  ✓ Mark Complete
+                </button>
+              </form>
+              <form method="POST" action="<?= APP_URL ?>/?page=admin_cancel_cd" class="m-0">
+                <?= csrf_field() ?><input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                  onclick="showConfirm({title:'Cancel CD',message:'Cancel CD for <strong>@<?= e($user['username']) ?></strong>? Filled amount will be forfeited.',confirmText:'Cancel CD',confirmClass:'btn-danger',onConfirm:()=>this.closest('form').submit()})">
+                  ✕ Cancel
+                </button>
+              </form>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editCdTargetModal">
+              ✏️ Edit Target
+            </button>
+          </div>
+        <?php elseif (!empty($cdHistory)): ?>
+          <?php $lastCd = $cdHistory[0]; ?>
+          <div class="text-muted">Last CD: <?= fmt_money((float)$lastCd['target_amount']) ?> target,
+            <?= fmt_money((float)$lastCd['filled_amount']) ?> filled,
+            <?= ucfirst($lastCd['status']) ?> on <?= fmt_date($lastCd['completed_at'] ?? $lastCd['cancelled_at'] ?? $lastCd['assigned_at']) ?></div>
+        <?php endif; ?>
+
+        <?php if (empty($cdStatus) && $user['status'] === 'active'): ?>
+          <hr class="my-3">
+          <form method="POST" action="<?= APP_URL ?>/?page=admin_assign_cd" class="row g-2 align-items-end">
+            <?= csrf_field() ?>
+            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:.78rem;">CD Target Amount</label>
+              <input type="number" name="target_amount" class="form-control form-control-sm" step="0.01" min="0"
+                value="<?= (float)($user['entry_fee'] ?? 0) ?>" required>
+            </div>
+            <div class="col-auto">
+              <button type="submit" class="btn btn-sm btn-warning">⏳ Assign CD</button>
+            </div>
+          </form>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- KPI row -->
     <div class="row g-3 mb-3">
       <?php foreach (
@@ -86,13 +176,17 @@
       ): ?>
         <?php [$label, $val, $accent, $color] = $card; $subText = $card[4] ?? null; ?>
         <div class="col-6 col-xl-3">
-          <div class="card stat-card">
+          <div class="card stat-card h-100">
             <div class="stat-accent stat-accent-<?= $accent ?>"></div>
-            <div class="card-body pt-4">
-              <div class="stat-label"><?= $label ?></div>
-              <div class="stat-value text-<?= $color ?>" style="font-size:1.25rem;"><?= $val ?></div>
-              <?php if ($subText): ?><div class="stat-sub"><?= $subText ?></div><?php endif; ?>
-              <?php if ($label === 'Pairs Paid / Today'): ?><div class="stat-sub">Cap: <?= $pairingStatus['daily_cap'] ?> / day</div><?php endif; ?>
+            <div class="card-body pt-4 d-flex flex-column">
+              <div>
+                <div class="stat-label"><?= $label ?></div>
+                <div class="stat-value text-<?= $color ?>" style="font-size:1.25rem;"><?= $val ?></div>
+              </div>
+              <div class="mt-auto">
+                <?php if ($subText): ?><div class="stat-sub"><?= $subText ?></div><?php endif; ?>
+                <?php if ($label === 'Pairs Paid / Today'): ?><div class="stat-sub">Cap: <?= $pairingStatus['daily_cap'] ?> / day</div><?php endif; ?>
+              </div>
             </div>
           </div>
         </div>
@@ -469,4 +563,38 @@
     </div>
   </div>
 </div>
+<!-- Edit CD Target Modal -->
+<div class="modal fade" id="editCdTargetModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">✏️ Edit CD Target</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="<?= APP_URL ?>/?page=admin_edit_cd_target">
+        <?= csrf_field() ?>
+        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+        <div class="modal-body">
+          <p class="text-muted mb-3" style="font-size:.85rem;">
+            Current target for <strong>@<?= e($user['username']) ?></strong>:
+            <span class="fw-bold"><?= fmt_money($cdTarget ?? 0) ?></span>
+            &nbsp;·&nbsp; Filled: <span class="fw-bold text-warning"><?= fmt_money($cdFilled ?? 0) ?></span>
+          </p>
+          <div class="mb-3">
+            <label for="cdTargetInput" class="form-label" style="font-size:.85rem;">New Target Amount</label>
+            <input type="number" class="form-control" id="cdTargetInput" name="target_amount"
+              step="0.01" min="<?= ($cdFilled ?? 0) > 0 ? number_format($cdFilled ?? 0, 2, '.', '') : '0.01' ?>"
+              value="<?= number_format($cdTarget ?? 0, 2, '.', '') ?>" required>
+            <div class="form-text" style="font-size:.75rem;">Target cannot be less than the already filled amount.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning btn-sm">💾 Save Target</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <?php require 'views/partials/footer.php'; ?>
