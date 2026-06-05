@@ -36,15 +36,234 @@ spl_autoload_register(function (string $class): void {
     }
 });
 
+// ── Maintenance Bypass ──
+// If ?bypass=TOKEN is present and matches the stored token, set a secure
+// cookie so the admin can browse past maintenance without the token
+// persisting in the URL (logs, history, referrers).
+$bypassToken = setting('maintenance_bypass_token', '');
+$expectedHash = $bypassToken !== '' ? hash('sha256', $bypassToken . '|altas-maint-v1') : '';
+
+if ($bypassToken !== '' && isset($_GET['bypass']) && hash_equals($expectedHash, hash('sha256', $_GET['bypass'] . '|altas-maint-v1'))) {
+    // Token matches — plant the bypass cookie and redirect to clean URL
+    setcookie('af_maint_bypass', $expectedHash, [
+        'expires'  => time() + 3600,
+        'path'     => '/',
+        'httponly' => true,
+        'samesite' => 'Strict',
+    ]);
+    // Strip bypass param from URL to keep it out of history
+    $cleanUri = strtok($_SERVER['REQUEST_URI'], '?');
+    parse_str($_SERVER['QUERY_STRING'] ?? '', $qParams);
+    unset($qParams['bypass']);
+    if (!empty($qParams)) {
+        $cleanUri .= '?' . http_build_query($qParams);
+    }
+    redirect($cleanUri);
+}
+
+$hasBypassCookie = isset($_COOKIE['af_maint_bypass']) && $expectedHash !== '' && hash_equals($expectedHash, $_COOKIE['af_maint_bypass']);
+
 // Maintenance mode
-if (setting('maintenance_mode') === '1' && !Auth::isAdmin()) {
+if (setting('maintenance_mode') === '1' && !Auth::isAdmin() && !$hasBypassCookie) {
     $name = setting('site_name', APP_NAME);
+    $base = rtrim(APP_URL, '/');
+    $frontend = $base . '/frontend';
     http_response_code(503);
-    die("<!doctype html><html><head><meta charset='UTF-8'><title>Maintenance — {$name}</title>
-    <style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f6fb;}
-    .box{text-align:center;padding:40px;max-width:400px;}h1{font-size:24px;}p{color:#6b7a99;}</style>
-    </head><body><div class='box'><div style='font-size:50px;margin-bottom:16px;'>🔧</div>
-    <h1>{$name}</h1><p>We're performing scheduled maintenance. We'll be back shortly.</p></div></body></html>");
+    header('Retry-After: 3600');
+    die("<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>We'll Be Right Back — {$name}</title>
+  <meta name='robots' content='noindex, nofollow'>
+  <link rel='preconnect' href='https://fonts.googleapis.com'>
+  <link href='https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap' rel='stylesheet'>
+  <style>
+    :root {
+      --green-deep: #1a3a1e;
+      --green-mid: #2d6a35;
+      --gold: #d4a017;
+      --gold-light: #f9e9b5;
+      --cream: #faf7f0;
+      --charcoal: #1c1c1c;
+      --muted: #8a9a8c;
+      --serif: 'Playfair Display', Georgia, serif;
+      --sans: 'DM Sans', system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--sans);
+      color: #fff;
+      background: var(--green-deep);
+      -webkit-font-smoothing: antialiased;
+    }
+    .maintenance-hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 20px;
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(to bottom, rgba(26,58,30,0.88) 0%, rgba(26,58,30,0.75) 50%, rgba(26,58,30,0.92) 100%),
+        url('{$frontend}/hero-bg.jpg') center/cover no-repeat;
+    }
+    .maintenance-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\");
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .maintenance-inner {
+      position: relative;
+      z-index: 2;
+      max-width: 640px;
+      animation: fadeUp 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+    .logo-mark {
+      margin-bottom: 2rem;
+    }
+    .logo-mark img {
+      height: 44px;
+      width: auto;
+      filter: brightness(0) invert(1);
+      opacity: 0.95;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(212, 160, 23, 0.18);
+      border: 1px solid rgba(212, 160, 23, 0.35);
+      color: var(--gold-light);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      padding: 0.45rem 1.1rem;
+      border-radius: 999px;
+      margin-bottom: 1.75rem;
+    }
+    .eyebrow .pulse {
+      width: 7px;
+      height: 7px;
+      background: var(--gold);
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse 2s infinite ease-in-out;
+    }
+    h1 {
+      font-family: var(--serif);
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.15;
+      color: #fff;
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.5px;
+    }
+    h1 span { color: var(--gold); }
+    .lead {
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.82);
+      line-height: 1.75;
+      max-width: 520px;
+      margin: 0 auto 2.5rem;
+    }
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 2.5rem;
+    }
+    .feature-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.85);
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 999px;
+      backdrop-filter: blur(4px);
+    }
+    .contact-box {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 1.5rem 2rem;
+      backdrop-filter: blur(10px);
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .contact-box p {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.6;
+      margin-bottom: 0.75rem;
+    }
+    .contact-box a {
+      color: var(--gold);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .contact-box a:hover { text-decoration: underline; }
+    .eta {
+      margin-top: 1rem;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.5px;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(35px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+    @media (max-width: 480px) {
+      .contact-box { padding: 1.25rem 1.25rem; }
+      .features { gap: 0.5rem; }
+      .feature-chip { font-size: 0.72rem; padding: 0.4rem 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <section class='maintenance-hero'>
+    <div class='maintenance-inner'>
+      <div class='logo-mark'>
+        <img src='{$frontend}/logo.png' alt='{$name} logo' onerror=\"this.style.display='none'\">
+      </div>
+      <div class='eyebrow'><span class='pulse'></span> System Upgrade in Progress</div>
+      <h1>Something Better Is<br><span>On the Way</span></h1>
+      <p class='lead'>
+        We are rolling out improvements behind the scenes to make your {$name} experience faster, more secure, and more rewarding. The platform will be back online shortly. Thank you for your patience — great things are worth the wait.
+      </p>
+      <div class='features'>
+        <span class='feature-chip'>🌱 Enhanced Dashboard</span>
+        <span class='feature-chip'>⚡ Faster Payouts</span>
+        <span class='feature-chip'>🔒 Stronger Security</span>
+        <span class='feature-chip'>📊 Real-Time Tracking</span>
+      </div>
+      <div class='contact-box'>
+        <p>If you have an urgent concern about your account, commissions, or withdrawals, our support team is still available:</p>
+        <a href='mailto:support@altasfarm.com'>support@altasfarm.com</a>
+        <div class='eta'>Expected to return shortly. Please check back in a few minutes.</div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>");
 }
 
 // Seat limit — block registration routes entirely when full

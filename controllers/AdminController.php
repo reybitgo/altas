@@ -335,6 +335,7 @@ class AdminController
             'min_payout',
             'contact_email',
             'maintenance_mode',
+            'maintenance_bypass_token',
             'service_fee_gcash',
             'service_fee_maya',
             'service_fee_usdt',

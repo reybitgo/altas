@@ -98,6 +98,15 @@
                   <option value="1" <?= setting('maintenance_mode') === '1' ? 'selected' : '' ?>>On — Members see maintenance page</option>
                 </select>
               </div>
+              <div class="mb-3">
+                <label class="form-label">🔐 Maintenance Bypass Token</label>
+                <input type="text" name="maintenance_bypass_token" class="form-control font-mono" value="<?= e(setting('maintenance_bypass_token', '')) ?>" placeholder="Leave empty to disable bypass">
+                <div class="form-text">
+                  When maintenance is on, append <code>?bypass=<?= e(setting('maintenance_bypass_token') ?: 'YOUR_TOKEN') ?></code> to the login URL to reach the login page. No button is shown on the maintenance screen — this is a hidden backdoor for admins only. Keep this token strong and rotate it periodically.
+                  <br><br>
+                  <strong>Locked out?</strong> If you disabled the bypass token and logged out, access phpMyAdmin (or any database tool) and run <code>UPDATE settings SET value = '0' WHERE key_name = 'maintenance_mode';</code> — or simply clear the <code>maintenance_bypass_token</code> value and use a new token via the URL.
+                </div>
+              </div>
 
               <div class="mb-3">
                 <label class="form-label">🪑 Seat Limit (Hard Member Cap)</label>
