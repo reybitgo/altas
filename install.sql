@@ -92,10 +92,11 @@ CREATE TABLE users (
 -- ─── REGISTRATION CODES ───────────────────────────────────────
 CREATE TABLE reg_codes (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  code        VARCHAR(20)   NOT NULL UNIQUE,
+  code        VARCHAR(24)   NOT NULL UNIQUE,
   package_id  INT UNSIGNED  NOT NULL,
   price       DECIMAL(12,2) NOT NULL,
   status      ENUM('unused','used','expired') NOT NULL DEFAULT 'unused',
+  is_cd       TINYINT(1)    NOT NULL DEFAULT 0,
   used_by     INT UNSIGNED  NULL,
   created_by  INT UNSIGNED  NOT NULL,
   used_at     TIMESTAMP     NULL,

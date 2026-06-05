@@ -141,7 +141,7 @@ if ($isLoggedIn && !$prefillSponsor) {
                       <label class="form-label">Registration Code <span class="text-danger">*</span></label>
                       <div class="input-group">
                         <input type="text" id="reg_code" name="reg_code" class="form-control font-mono"
-                          placeholder="XXXX-XXXX-XXXX" maxlength="14"
+                          placeholder="XXXX-XXXX-XXXX or CD-XXXX-XXXX-XXXX" maxlength="18"
                           style="text-transform:uppercase;letter-spacing:2px;font-size:1rem;" required>
                         <button type="button" class="btn btn-outline-primary" id="validateCodeBtn">Validate</button>
                       </div>
@@ -519,9 +519,20 @@ if ($isLoggedIn && !$prefillSponsor) {
 
   // ── Code formatting & validation ──────────────────────────────
   document.getElementById('reg_code').addEventListener('input', function() {
-    const clean = this.value.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 12);
-    const parts = [clean.slice(0, 4), clean.slice(4, 8), clean.slice(8, 12)].filter(Boolean);
-    this.value = parts.join('-');
+    let raw = this.value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    let formatted = '';
+    if (raw.startsWith('CD')) {
+      // CD code: CD-XXXX-XXXX-XXXX (max 14 chars after CD)
+      const body = raw.slice(2).slice(0, 12);
+      const parts = [body.slice(0, 4), body.slice(4, 8), body.slice(8, 12)].filter(Boolean);
+      formatted = 'CD' + (parts.length ? '-' + parts.join('-') : '');
+    } else {
+      // Regular code: XXXX-XXXX-XXXX
+      const clean = raw.slice(0, 12);
+      const parts = [clean.slice(0, 4), clean.slice(4, 8), clean.slice(8, 12)].filter(Boolean);
+      formatted = parts.join('-');
+    }
+    this.value = formatted;
     resetCodeState();
   });
 
@@ -537,8 +548,10 @@ if ($isLoggedIn && !$prefillSponsor) {
 
   document.getElementById('validateCodeBtn').addEventListener('click', async function() {
     const code = document.getElementById('reg_code').value.trim();
-    if (code.length < 14) {
-      setHint('codeHint', 'Enter a complete code (XXXX-XXXX-XXXX)', false);
+    const isCdCode = code.startsWith('CD-');
+    const minLen = isCdCode ? 17 : 14;
+    if (code.length < minLen) {
+      setHint('codeHint', isCdCode ? 'Enter a complete CD code (CD-XXXX-XXXX-XXXX)' : 'Enter a complete code (XXXX-XXXX-XXXX)', false);
       return;
     }
     this.disabled = true;

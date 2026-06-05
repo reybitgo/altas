@@ -68,6 +68,13 @@
                 <label class="form-label">Expiry Date <span class="text-muted">(optional)</span></label>
                 <input type="date" name="expires_at" class="form-control" min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
               </div>
+              <div class="mb-3">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" name="is_cd" id="isCdToggle" value="1">
+                  <label class="form-check-label" for="isCdToggle">⏳ CD Code — auto-assigns Commission-Deduct on registration</label>
+                </div>
+                <div class="form-text">CD codes are prefixed with <code>CD-</code>. Example: <code>CD-3JW9-KBHK-AXPJ</code></div>
+              </div>
               <!-- Trigger modal confirm INSTEAD of direct submit -->
               <button type="button" class="btn btn-primary w-100" onclick="confirmGenerate()">
                 🎟️ Generate Codes
@@ -128,6 +135,7 @@
             <tr>
               <th>#</th>
               <th>Code</th>
+              <th>Type</th>
               <th>Package</th>
               <th>Price</th>
               <th>Status</th>
@@ -139,7 +147,7 @@
           <tbody>
             <?php if (empty($codes['data'])): ?>
               <tr>
-                <td colspan="8" class="text-center py-5 text-muted">No codes found.</td>
+                <td colspan="9" class="text-center py-5 text-muted">No codes found.</td>
               </tr>
               <?php else: foreach ($codes['data'] as $i => $c): ?>
                 <tr>
@@ -155,6 +163,13 @@
                         📋
                       </button>
                     </div>
+                  </td>
+                  <td>
+                    <?php if (!empty($c['is_cd'])): ?>
+                      <span class="badge bg-warning-subtle text-warning" style="font-size:.65rem;">⏳ CD</span>
+                    <?php else: ?>
+                      <span class="badge bg-secondary-subtle text-secondary" style="font-size:.65rem;">Regular</span>
+                    <?php endif; ?>
                   </td>
                   <td><span class="badge bg-primary-subtle text-primary"><?= e($c['package_name']) ?></span></td>
                   <td class="font-mono fw-bold"><?= fmt_money($c['price']) ?></td>
@@ -233,8 +248,9 @@
       return;
     }
 
+    const isCd = document.getElementById('isCdToggle').checked;
     document.getElementById('genSummary').innerHTML =
-      `Generate <strong>${qty}</strong> code(s) for package <strong>${pkgName}</strong> at <strong>₱${parseFloat(price).toLocaleString('en-PH',{minimumFractionDigits:2})}</strong> each.<br>
+      `Generate <strong>${qty}</strong> ${isCd ? '<span class=\'text-warning\'>CD</span>' : ''} code(s) for package <strong>${pkgName}</strong> at <strong>₱${parseFloat(price).toLocaleString('en-PH',{minimumFractionDigits:2})}</strong> each.<br>
      <span class="text-muted" style="font-size:.8rem;">Total value: ₱${(qty * parseFloat(price)).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>`;
 
     const modal = new bootstrap.Modal(document.getElementById('genConfirmModal'));

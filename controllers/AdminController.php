@@ -253,14 +253,15 @@ class AdminController
         $qty      = min(500, max(1, (int)($_POST['quantity'] ?? 1)));
         $price    = (float)($_POST['price']    ?? 0);
         $expires  = trim($_POST['expires_at']  ?? '');
+        $isCd     = !empty($_POST['is_cd']);
 
         if (!$pkgId || $price <= 0) {
             flash('error', 'Package and price are required.');
             redirect('/?page=admin_codes');
         }
 
-        $generated = Code::generate($pkgId, $qty, $price, $expires ?: null, Auth::id());
-        flash('success', count($generated) . ' code(s) generated successfully.');
+        $generated = Code::generate($pkgId, $qty, $price, $expires ?: null, Auth::id(), $isCd);
+        flash('success', count($generated) . ' code(s) generated' . ($isCd ? ' (CD)' : '') . ' successfully.');
         redirect('/?page=admin_codes');
     }
 

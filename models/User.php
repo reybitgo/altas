@@ -100,6 +100,19 @@ class User
                     UPDATE reg_codes SET status = 'used', used_by = ?, used_at = NOW()
                     WHERE id = ?
                 ")->execute([$newId, $data['reg_code_id']]);
+
+                // Auto-assign CD if the registration code was a CD code
+                $isCd = (int)$pdo->query(
+                    "SELECT is_cd FROM reg_codes WHERE id = {$data['reg_code_id']}"
+                )->fetchColumn();
+                if ($isCd) {
+                    $pkg = Package::find((int)$data['package_id']);
+                    try {
+                        CdStatus::assign($newId, (float)($pkg['entry_fee'] ?? 0), 1);
+                    } catch (RuntimeException $e) {
+                        error_log("Auto-CD assignment failed for new user {$newId}: " . $e->getMessage());
+                    }
+                }
             }
 
             $pdo->commit();
