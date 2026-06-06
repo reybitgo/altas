@@ -67,6 +67,8 @@ CREATE TABLE users (
   dfi_days_used         INT UNSIGNED NOT NULL DEFAULT 0,
   dfi_active            TINYINT(1)   NOT NULL DEFAULT 1,
   cd_active             TINYINT(1)   NOT NULL DEFAULT 0,
+  ewallet_sent_today      DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  ewallet_sent_this_week  DECIMAL(12,2) NOT NULL DEFAULT 0.00,
 
   -- Profile
   full_name         VARCHAR(120) NULL,

@@ -129,6 +129,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
             dfi_days_used         = 0,
             dfi_active            = 1,
             cd_active             = 0,
+            ewallet_sent_today      = 0.00,
+            ewallet_sent_this_week  = 0.00,
             last_login            = NULL
             WHERE role = 'admin'
         ");

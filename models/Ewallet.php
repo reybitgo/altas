@@ -185,16 +185,13 @@ class Ewallet
             $dailyLimit  = (float) setting('ewallet_transfer_daily_limit', '5000.00');
             $weeklyLimit = (float) setting('ewallet_transfer_weekly_limit', '20000.00');
 
-            $sentToday = (float) db()->query("
-                SELECT COALESCE(SUM(amount),0) FROM ewallet_transfers
-                WHERE sender_id = {$senderId} AND status = 'completed' AND DATE(created_at) = CURDATE()
-            ")->fetchColumn();
-
-            $sentThisWeek = (float) db()->query("
-                SELECT COALESCE(SUM(amount),0) FROM ewallet_transfers
-                WHERE sender_id = {$senderId} AND status = 'completed'
-                  AND created_at >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
-            ")->fetchColumn();
+            // Read cached tracking counters (reset daily by cron/fund_transfer_limit_reset.php)
+            $limits = db()->query("
+                SELECT ewallet_sent_today, ewallet_sent_this_week
+                FROM users WHERE id = {$senderId}
+            ")->fetch();
+            $sentToday    = (float) ($limits['ewallet_sent_today'] ?? 0);
+            $sentThisWeek = (float) ($limits['ewallet_sent_this_week'] ?? 0);
 
             if (($sentToday + $amount) > $dailyLimit) {
                 return ['ok' => false, 'error' => 'Daily transfer limit exceeded.', 'transfer_id' => null];
@@ -223,12 +220,23 @@ class Ewallet
             // Transferred funds remain non-withdrawable for the recipient.
             $fromWithdrawable = min($totalDebit, $withdrawableBal);
 
-            $pdo->prepare("
+            // Build update fields — include limit tracking for members
+            $limitFields = '';
+            $limitParams = [];
+            if (!$isAdmin) {
+                $limitFields = ', ewallet_sent_today = ewallet_sent_today + :sentToday, ewallet_sent_this_week = ewallet_sent_this_week + :sentWeek';
+                $limitParams = [':sentToday' => $amount, ':sentWeek' => $amount];
+            }
+
+            $stmt = $pdo->prepare("
                 UPDATE users
                 SET ewallet_balance = ewallet_balance - :amt,
                     withdrawable_balance = withdrawable_balance - :wamt
+                    {$limitFields}
                 WHERE id = :id
-            ")->execute([':amt' => $totalDebit, ':wamt' => $fromWithdrawable, ':id' => $senderId]);
+            ");
+            $executeParams = array_merge([':amt' => $totalDebit, ':wamt' => $fromWithdrawable, ':id' => $senderId], $limitParams);
+            $stmt->execute($executeParams);
 
             // Credit recipient (non-withdrawable)
             $pdo->prepare('UPDATE users SET ewallet_balance = ewallet_balance + ? WHERE id = ?')
