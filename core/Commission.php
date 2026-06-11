@@ -21,6 +21,9 @@ class Commission
         string $position,          // 'left' | 'right'
         bool $incrementCounts = true
     ): void {
+        if (setting('binary_enabled', '1') !== '1') {
+            return;
+        }
         if ($parentId <= 0) return;
         $pdo  = db();
         $cur  = $parentId;

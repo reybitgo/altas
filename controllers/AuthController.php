@@ -225,19 +225,31 @@ class AuthController
             redirect('/?page=register');
         }
 
-        $upline = User::findByUsername($uplineU);
-        if (!$upline) {
-            flash('error', 'Binary upline username not found.');
-            redirect('/?page=register');
-        }
+        // ── Binary placement: auto-resolve when disabled ──
+        if (setting('binary_enabled', '1') !== '1') {
+            $auto = self::findNextBinarySlot((int)$sponsor['id']);
+            if ($auto) {
+                $upline   = User::find($auto['upline_id']);
+                $position = $auto['position'];
+            } else {
+                $upline   = $sponsor;
+                $position = 'left';
+            }
+        } else {
+            $upline = User::findByUsername($uplineU);
+            if (!$upline) {
+                flash('error', 'Binary upline username not found.');
+                redirect('/?page=register');
+            }
 
-        if (!in_array($position, ['left', 'right'])) {
-            flash('error', 'Invalid binary position.');
-            redirect('/?page=register');
-        }
-        if (!User::isSlotFree((int)$upline['id'], $position)) {
-            flash('error', "The {$position} position under @{$uplineU} is already occupied.");
-            redirect('/?page=register');
+            if (!in_array($position, ['left', 'right'])) {
+                flash('error', 'Invalid binary position.');
+                redirect('/?page=register');
+            }
+            if (!User::isSlotFree((int)$upline['id'], $position)) {
+                flash('error', "The {$position} position under @{$uplineU} is already occupied.");
+                redirect('/?page=register');
+            }
         }
 
         // ── Register ──

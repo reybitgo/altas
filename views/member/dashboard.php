@@ -165,9 +165,12 @@
       if ($nonWithdrawable > 0) {
           $balanceSub = fmt_money($withdrawable) . ' withdrawable · ' . fmt_money($nonWithdrawable) . ' locked';
       }
+      $binaryEnabled = setting('binary_enabled', '1') === '1';
       $cards = [
         [$user['ewallet_balance'], 'E-Wallet Balance',   '💰', 'primary', 'primary', $balanceSub, '/?page=payout'],
-        [$summary['total_pairing'],  'Pairing Earnings', '🤝', 'success', 'success', number_format($user['pairs_paid']) . ' pairs lifetime', null],
+        ...($binaryEnabled ? [
+          [$summary['total_pairing'],  'Pairing Earnings', '🤝', 'success', 'success', number_format($user['pairs_paid']) . ' pairs lifetime', null],
+        ] : []),
         [$summary['total_direct'],   'Direct Referral',  '👥', 'orange',  'warning', null, '/?page=genealogy&view=referral'],
         ...(setting('indirect_referral_enabled', '1') === '1' ? [
           [$summary['total_indirect'], 'Indirect Referral', '🔗', 'purple',  'purple',  'Up to 10 levels', null],
@@ -305,6 +308,7 @@
         </div>
       </div>
 
+      <?php if ($binaryEnabled): ?>
       <!-- Binary legs -->
       <div class="col-12 col-md-6">
         <div class="card h-100">
@@ -343,6 +347,7 @@
           </div>
         </div>
       </div>
+      <?php endif; ?>
     </div>
 
     <!-- Recent Activity -->
@@ -359,7 +364,10 @@
           </div>
           <?php else: foreach ($recent as $item):
             $isCredit = $item['status'] === 'credited';
-            $typeMap  = ['pairing' => ['🤝', '#ecfdf5', 'var(--success)'], 'direct_referral' => ['👥', '#fff7ed', 'var(--orange)'], 'daily_fixed_income' => ['📅', '#eff6ff', 'var(--primary)']];
+            $typeMap  = ['direct_referral' => ['👥', '#fff7ed', 'var(--orange)'], 'daily_fixed_income' => ['📅', '#eff6ff', 'var(--primary)']];
+            if ($binaryEnabled) {
+                $typeMap['pairing'] = ['🤝', '#ecfdf5', 'var(--success)'];
+            }
             if (setting('indirect_referral_enabled', '1') === '1') {
                 $typeMap['indirect_referral'] = ['🔗', '#f5f3ff', 'var(--purple)'];
             }

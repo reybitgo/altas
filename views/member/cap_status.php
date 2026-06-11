@@ -77,7 +77,7 @@
           </div>
 
           <!-- Earning phases (only show if there's earnings) -->
-          <?php if ((float)$summary['total_pairing'] > 0): ?>
+          <?php if (setting('binary_enabled', '1') === '1' && (float)$summary['total_pairing'] > 0): ?>
           <div class="timeline-item">
             <div class="timeline-dot" style="background:#12a05c;"></div>
             <div class="timeline-content">
@@ -234,7 +234,7 @@
             <tbody>
               <?php
               $breakdown = [
-                  ['Pairing', (float)$summary['total_pairing']],
+                  ...(setting('binary_enabled', '1') === '1' ? [['Pairing', (float)$summary['total_pairing']]] : []),
                   ['Direct Referral', (float)$summary['total_direct']],
                   ...(setting('indirect_referral_enabled', '1') === '1' ? [['Indirect Referral', (float)$summary['total_indirect']]] : []),
                   ['Daily Fixed Income', (float)($summary['total_dfi'] ?? 0)],

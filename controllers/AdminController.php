@@ -350,6 +350,7 @@ class AdminController
             'reactivation_ewallet_enabled',
             'reactivation_external_enabled',
             'indirect_referral_enabled',
+            'binary_enabled',
             'ewallet_transfer_fee',
             'ewallet_min_transfer',
             'ewallet_transfer_daily_limit',
@@ -362,8 +363,33 @@ class AdminController
         foreach ($allowed as $key) {
             // Checkbox toggles: when unchecked the field is absent from POST,
             // so we explicitly save '0' for these keys when not present.
-            if (in_array($key, ['gcash_enabled', 'maya_enabled', 'dfi_enabled', 'reactivation_ewallet_enabled', 'reactivation_external_enabled', 'indirect_referral_enabled'], true)) {
+            if (in_array($key, ['gcash_enabled', 'maya_enabled', 'dfi_enabled', 'reactivation_ewallet_enabled', 'reactivation_external_enabled', 'indirect_referral_enabled', 'binary_enabled'], true)) {
                 $value = isset($_POST[$key]) && $_POST[$key] === '1' ? '1' : '0';
+
+                // Guard: binary toggle is locked once members exist (can only change on clean system)
+                if ($key === 'binary_enabled') {
+                    $currentValue = (string) db()->query("SELECT value FROM settings WHERE key_name = 'binary_enabled'")->fetchColumn();
+                    if ($value !== $currentValue) {
+                        $memberCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
+                        if ($memberCount > 0) {
+                            flash('error', 'Cannot change binary pairing: ' . $memberCount . ' member(s) already exist in the system. Run reset.php to clear all members first, then toggle binary before anyone registers.');
+                            redirect('/?page=admin_settings');
+                        }
+                    }
+                }
+
+                // Guard: indirect referral toggle is locked once members exist (can only change on clean system)
+                if ($key === 'indirect_referral_enabled') {
+                    $currentValue = (string) db()->query("SELECT value FROM settings WHERE key_name = 'indirect_referral_enabled'")->fetchColumn();
+                    if ($value !== $currentValue) {
+                        $memberCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
+                        if ($memberCount > 0) {
+                            flash('error', 'Cannot change indirect referral: ' . $memberCount . ' member(s) already exist in the system. Run reset.php to clear all members first, then toggle indirect referral before anyone registers.');
+                            redirect('/?page=admin_settings');
+                        }
+                    }
+                }
+
                 $st->execute([$key, $value]);
             } elseif (isset($_POST[$key])) {
                 $st->execute([$key, trim($_POST[$key])]);

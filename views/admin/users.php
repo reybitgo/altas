@@ -53,13 +53,14 @@
       <div class="table-responsive">
         <table class="table table-hover mb-0">
           <thead>
+            <?php $binaryEnabled = setting('binary_enabled', '1') === '1'; ?>
             <tr>
               <th>#</th>
               <th>Username</th>
               <th>Full Name</th>
               <th>Package</th>
               <th>Balance</th>
-              <th>Pairs</th>
+              <?php if ($binaryEnabled): ?><th>Pairs</th><?php endif; ?>
               <th>Joined</th>
               <th>Status</th>
               <th>Actions</th>
@@ -68,7 +69,7 @@
           <tbody>
             <?php if (empty($result['data'])): ?>
               <tr>
-                <td colspan="9" class="text-center py-5 text-muted">No members found.</td>
+                <td colspan="<?= $binaryEnabled ? '9' : '8' ?>" class="text-center py-5 text-muted">No members found.</td>
               </tr>
               <?php else: foreach ($result['data'] as $i => $m): ?>
                 <tr>
@@ -77,7 +78,7 @@
                   <td style="font-size:.825rem;"><?= e($m['full_name'] ?? '—') ?></td>
                   <td><span class="badge bg-primary-subtle text-primary"><?= e($m['package_name'] ?? '—') ?></span></td>
                   <td class="td-green font-mono fw-bold"><?= fmt_money($m['ewallet_balance']) ?></td>
-                  <td class="td-muted font-mono"><?= number_format($m['pairs_paid']) ?></td>
+                  <?php if ($binaryEnabled): ?><td class="td-muted font-mono"><?= number_format($m['pairs_paid']) ?></td><?php endif; ?>
                   <td class="td-muted" style="font-size:.75rem;"><?= fmt_date($m['joined_at']) ?></td>
                   <td>
                     <?php $b = $m['status'] === 'active' ? 'bg-success-subtle text-success' : ($m['status'] === 'suspended' ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning'); ?>

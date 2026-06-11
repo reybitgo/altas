@@ -5,7 +5,10 @@
  * @brief  Member genealogy UI
  */
 ?>
-<?php $pageTitle = $view === 'referral' ? 'Referral Network' : 'Binary Tree'; ?>
+<?php
+$binaryEnabled = setting('binary_enabled', '1') === '1';
+$pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Binary Tree' : 'Referral Network');
+?>
 <?php require 'views/partials/head.php'; ?>
 <?php require 'views/partials/sidebar_member.php'; ?>
 
@@ -245,7 +248,9 @@
   <div class="page-content">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
       <ul class="nav nav-pills mb-0">
+        <?php if ($binaryEnabled): ?>
         <li class="nav-item"><a class="nav-link <?= $view !== 'referral' ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=genealogy&view=binary">🌳 Binary Tree</a></li>
+        <?php endif; ?>
         <li class="nav-item"><a class="nav-link <?= $view === 'referral' ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=genealogy&view=referral">👥 Referral Network</a></li>
       </ul>
       <div class="ms-auto" style="min-width:220px;max-width:360px;width:100%;">

@@ -20,6 +20,7 @@ $isReferralMode = ($isReferralMode ?? false);
 $prefillUpline   = $prefillUpline   ?? '';
 $prefillPosition = $prefillPosition ?? 'left';
 $lockSponsor     = $isReferralMode;
+$binaryEnabled   = setting('binary_enabled', '1') === '1';
 // Auto-prefill sponsor with current user's username for both members AND admins
 if ($isLoggedIn && !$prefillSponsor) {
   $prefillSponsor = $currentUser['username'];
@@ -270,6 +271,7 @@ if ($isLoggedIn && !$prefillSponsor) {
                       <?= $lockSponsor ? 'readonly' : 'autocomplete="off"' ?> required>
                     <div class="form-text" id="sponsorHint"></div>
                   </div>
+                  <?php if ($binaryEnabled): ?>
                   <div class="mb-3">
                     <label class="form-label">Binary Upline Username <span class="text-danger">*</span></label>
                     <input type="text" id="upline_username" name="upline_username"
@@ -299,6 +301,7 @@ if ($isLoggedIn && !$prefillSponsor) {
                     </div>
                     <div class="form-text" id="positionHint"></div>
                   </div>
+                  <?php endif; ?>
                   <div class="d-flex gap-2">
                     <button type="button" class="btn btn-outline-secondary" onclick="goStep(1)">← Back</button>
                     <button type="button" class="btn btn-primary flex-grow-1" id="toStep3Btn">Review →</button>
@@ -339,6 +342,7 @@ if ($isLoggedIn && !$prefillSponsor) {
                           <td>Sponsor</td>
                           <td id="rev_sponsor">—</td>
                         </tr>
+                        <?php if ($binaryEnabled): ?>
                         <tr>
                           <td>Upline</td>
                           <td id="rev_upline">—</td>
@@ -347,12 +351,15 @@ if ($isLoggedIn && !$prefillSponsor) {
                           <td>Position</td>
                           <td id="rev_position">—</td>
                         </tr>
+                        <?php endif; ?>
                       </table>
                     </div>
                   </div>
+                  <?php if ($binaryEnabled): ?>
                   <div class="alert alert-warning py-2 mb-3" style="font-size:.8rem;">
                     ⚠️ Binary position cannot be changed after registration.
                   </div>
+                  <?php endif; ?>
                   <div class="d-flex gap-2">
                     <button type="button" class="btn btn-outline-secondary" onclick="goStep(2)">← Back</button>
                     <button type="submit" class="btn btn-primary flex-grow-1 btn-lg" id="submitBtn">
@@ -397,6 +404,7 @@ if ($isLoggedIn && !$prefillSponsor) {
   const IS_REFERRAL_MODE = <?= $isReferralMode ? 'true' : 'false' ?>;
   const PREFILL_UPLINE = <?= json_encode($prefillUpline) ?>;
   const PREFILL_POSITION = <?= json_encode($prefillPosition) ?>;
+  const BINARY_ENABLED = <?= $binaryEnabled ? 'true' : 'false' ?>;
 
   let codeData = {},
     selectedPkg = {},
@@ -655,27 +663,29 @@ if ($isLoggedIn && !$prefillSponsor) {
   }
 
   // ── Upline + slot ─────────────────────────────────────────────
-  let upTimer;
-  document.getElementById('upline_username').addEventListener('input', function() {
-    uplineOk = false;
-    slotData = {};
-    clearTimeout(upTimer);
-    const v = this.value.trim();
-    if (!v) {
-      setHint('uplineHint', '', null);
-      document.getElementById('slotStatus').classList.add('d-none');
-      resetPosBtns();
-      return;
-    }
-    setHint('uplineHint', 'Checking…', null);
-    upTimer = setTimeout(() => checkUpline(v), 600);
-  });
-
-  document.querySelectorAll('[name=binary_position]').forEach(r => {
-    r.addEventListener('change', function() {
-      checkPos(this.value);
+  if (BINARY_ENABLED) {
+    let upTimer;
+    document.getElementById('upline_username').addEventListener('input', function() {
+      uplineOk = false;
+      slotData = {};
+      clearTimeout(upTimer);
+      const v = this.value.trim();
+      if (!v) {
+        setHint('uplineHint', '', null);
+        document.getElementById('slotStatus').classList.add('d-none');
+        resetPosBtns();
+        return;
+      }
+      setHint('uplineHint', 'Checking…', null);
+      upTimer = setTimeout(() => checkUpline(v), 600);
     });
-  });
+
+    document.querySelectorAll('[name=binary_position]').forEach(r => {
+      r.addEventListener('change', function() {
+        checkPos(this.value);
+      });
+    });
+  }
 
   async function checkUpline(v) {
     const pos = IS_REFERRAL_MODE ? PREFILL_POSITION : (document.querySelector('[name=binary_position]:checked')?.value || '');
@@ -756,18 +766,20 @@ if ($isLoggedIn && !$prefillSponsor) {
       return;
     }
     if (LOCKED_SPONSOR) sponsorOk = true;
-    if (!uplineOk) {
-      setHint('uplineHint', 'Please enter a valid upline.', false);
-      return;
-    }
-    if (!pos) {
-      setHint('positionHint', 'Please select a position.', false);
-      return;
-    }
-    const free = pos === 'left' ? slotData.left_free : slotData.right_free;
-    if (!free) {
-      setHint('positionHint', 'Selected position is taken. Choose another.', false);
-      return;
+    if (BINARY_ENABLED) {
+      if (!uplineOk) {
+        setHint('uplineHint', 'Please enter a valid upline.', false);
+        return;
+      }
+      if (!pos) {
+        setHint('positionHint', 'Please select a position.', false);
+        return;
+      }
+      const free = pos === 'left' ? slotData.left_free : slotData.right_free;
+      if (!free) {
+        setHint('positionHint', 'Selected position is taken. Choose another.', false);
+        return;
+      }
     }
 
     // Populate review
@@ -788,10 +800,12 @@ if ($isLoggedIn && !$prefillSponsor) {
     if (revUser) revUser.textContent = '@' + document.getElementById('username').value;
     const revSponsor = document.getElementById('rev_sponsor');
     if (revSponsor) revSponsor.textContent = '@' + sponsorVal;
-    const revUpline = document.getElementById('rev_upline');
-    if (revUpline) revUpline.textContent = '@' + document.getElementById('upline_username').value;
-    const revPos = document.getElementById('rev_position');
-    if (revPos) revPos.textContent = pos.charAt(0).toUpperCase() + pos.slice(1);
+    if (BINARY_ENABLED) {
+      const revUpline = document.getElementById('rev_upline');
+      if (revUpline) revUpline.textContent = '@' + document.getElementById('upline_username').value;
+      const revPos = document.getElementById('rev_position');
+      if (revPos) revPos.textContent = pos.charAt(0).toUpperCase() + pos.slice(1);
+    }
     goStep(3);
   });
 
@@ -805,6 +819,9 @@ if ($isLoggedIn && !$prefillSponsor) {
   // ── Init ──────────────────────────────────────────────────────
   if (LOCKED_SPONSOR) {
     sponsorOk = true;
+  }
+  if (!BINARY_ENABLED) {
+    uplineOk = true;
   }
   if (IS_REFERRAL_MODE) {
     // Pre-validate sponsor and upline for referral mode

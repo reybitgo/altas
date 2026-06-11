@@ -351,6 +351,7 @@ INSERT INTO settings (key_name, value) VALUES
   ('ewallet_transfer_daily_limit',  '5000.00'),
   ('ewallet_transfer_weekly_limit', '20000.00'),
   ('indirect_referral_enabled',   '1'),
+  ('binary_enabled',              '1'),
   ('seat_limit',                  '0');
 
 -- Demo registration code (package 1, price 10500)

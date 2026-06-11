@@ -2,7 +2,7 @@
 
 /**
  * @file   views/admin/packages.php
- * @brief  Package management UI (v2 with Capping + DFI)
+ * @brief  Package management UI — full-width table + modal form
  */
 ?>
 <?php $pageTitle = 'Packages'; ?>
@@ -12,224 +12,319 @@
   <?php require 'views/partials/topbar.php'; ?>
   <div class="page-content">
     <?= render_flash() ?>
-    <div class="row g-3">
-      <!-- Package list -->
-      <div class="col-12 col-lg-5">
-        <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="card-title">📦 All Packages</span>
-            <a href="<?= APP_URL ?>/?page=admin_packages" class="btn btn-primary btn-sm">+ New</a>
-          </div>
-          <div class="table-responsive">
-            <table class="table table-hover mb-0">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Entry</th>
-                  <th>Pair</th>
-                  <th>Cap</th>
-                  <th>DFI</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php if (empty($packages)): ?>
-                  <tr>
-                    <td colspan="7" class="text-center py-4 text-muted">No packages yet.</td>
-                  </tr>
-                  <?php else: foreach ($packages as $pkg):
-                    $lifetimeCap = (float)$pkg['entry_fee'] * (float)$pkg['lifetime_cap_multiplier'];
-                    $hasDfi = (float)$pkg['daily_fixed_income'] > 0;
-                  ?>
-                    <tr>
-                      <td class="fw-bold"><?= e($pkg['name']) ?></td>
-                      <td class="font-mono"><?= fmt_money($pkg['entry_fee']) ?></td>
-                      <td class="td-green font-mono"><?= fmt_money($pkg['pairing_bonus']) ?></td>
-                      <td>
-                        <div class="font-mono" style="font-size:.75rem;"><?= fmt_money($lifetimeCap) ?></div>
-                        <div class="text-muted" style="font-size:.65rem;"><?= $pkg['lifetime_cap_multiplier'] ?>× entry</div>
-                      </td>
-                      <td>
-                        <?php if ($hasDfi): ?>
-                          <div class="font-mono" style="font-size:.75rem;color:var(--pink);">₱<?= number_format($pkg['daily_fixed_income'], 0) ?>/d</div>
-                          <div class="text-muted" style="font-size:.65rem;"><?= $pkg['daily_fixed_income_days'] ?> days</div>
-                        <?php else: ?>
-                          <span class="text-muted" style="font-size:.75rem;">—</span>
-                        <?php endif; ?>
-                      </td>
-                      <td><span class="badge <?= $pkg['status'] === 'active' ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' ?>"><?= ucfirst($pkg['status']) ?></span></td>
-                      <td><a href="<?= APP_URL ?>/?page=admin_packages&edit=<?= $pkg['id'] ?>" class="btn btn-sm btn-outline-primary">Edit</a></td>
-                    </tr>
-                <?php endforeach;
-                endif; ?>
-              </tbody>
-            </table>
-          </div>
+
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div>
+        <h4 class="mb-0">Packages</h4>
+        <p class="text-muted mb-0" style="font-size:.8rem;">Manage entry plans, bonuses, capping & DFI</p>
+      </div>
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#packageModal" onclick="resetPackageForm()">
+        + New Package
+      </button>
+    </div>
+
+    <!-- Stats Row -->
+    <?php
+    $totalPkg = count($packages);
+    $activePkg = count(array_filter($packages, fn($p) => $p['status'] === 'active'));
+    $binaryEnabled = setting('binary_enabled', '1') === '1';
+    ?>
+    <div class="row g-2 mb-3">
+      <div class="col-6 col-md-3">
+        <div class="card p-3">
+          <div class="text-muted" style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Total Plans</div>
+          <div class="fw-bold fs-5"><?= $totalPkg ?></div>
         </div>
       </div>
-
-      <!-- Create / Edit form -->
-      <div class="col-12 col-lg-7">
-        <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="card-title"><?= ($editPkg ?? null) ? '✏️ Edit Package' : '➕ New Package' ?></span>
-            <?php if ($editPkg ?? null): ?><a href="<?= APP_URL ?>/?page=admin_packages" class="btn btn-sm btn-outline-secondary">✕ Cancel</a><?php endif; ?>
-          </div>
-          <div class="card-body">
-            <form method="POST" action="<?= APP_URL ?>/?page=admin_save_package">
-              <?= csrf_field() ?>
-              <?php if ($editPkg ?? null): ?><input type="hidden" name="package_id" value="<?= ($editPkg['id'] ?? '') ?>"><?php endif; ?>
-
-              <!-- Basic Info -->
-              <div class="mb-3">
-                <label class="form-label">Package Name <span class="text-danger">*</span></label>
-                <input type="text" name="name" class="form-control" value="<?= e($editPkg['name'] ?? '') ?>" placeholder="e.g. Starter, Pro, Elite" required>
-              </div>
-
-              <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                  <label class="form-label">Entry Fee (₱) <span class="text-danger">*</span></label>
-                  <input type="number" name="entry_fee" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['entry_fee'] ?? '') ?>" placeholder="10000.00" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Pairing Bonus (₱) <span class="text-danger">*</span></label>
-                  <input type="number" name="pairing_bonus" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['pairing_bonus'] ?? '') ?>" placeholder="2000.00" required>
-                  <div class="form-text">Per pair paid out</div>
-                </div>
-              </div>
-
-              <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                  <label class="form-label">Daily Pair Cap <span class="text-danger">*</span></label>
-                  <input type="number" name="daily_pair_cap" class="form-control" inputmode="numeric" min="1" max="100" value="<?= e($editPkg['daily_pair_cap'] ?? 3) ?>" required>
-                  <div class="form-text">Flush-out limit per member per day</div>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Direct Referral Bonus (₱)</label>
-                  <input type="number" name="direct_ref_bonus" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['direct_ref_bonus'] ?? 0) ?>" placeholder="500.00">
-                  <div class="form-text">Paid once to sponsor on join</div>
-                </div>
-              </div>
-
-              <!-- ═══ LIFETIME INCOME CAPPING (v2) ═══ -->
-              <div class="mb-3" style="border:1px solid var(--purple-border);border-radius:12px;padding:1rem;background:linear-gradient(135deg,var(--surface-1) 0%,#161d30 100%);">
-                <div class="d-flex align-items-center gap-2 mb-3" style="color:var(--purple);">
-                  <i class="bi bi-shield-lock-fill"></i>
-                  <span style="font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;">Lifetime Income Capping</span>
-                </div>
-
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <label class="form-label" style="color:var(--purple);">Cap Multiplier</label>
-                    <div class="input-group">
-                      <input type="number" name="lifetime_cap_multiplier" class="form-control" inputmode="decimal" min="1" max="20" step="0.01" value="<?= e($editPkg['lifetime_cap_multiplier'] ?? 3.00) ?>" required>
-                      <span class="input-group-text">× entry fee</span>
-                    </div>
-                    <div class="form-text">Lifetime cap = Entry Fee × Multiplier</div>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" style="color:var(--purple);">Auto-Cap Preview</label>
-                    <div class="form-control" style="background:var(--surface-3);border-color:var(--purple-border);color:var(--purple);font-family:var(--font-mono);font-weight:700;" id="capPreview">
-                      <?php if ($editPkg ?? null): ?>
-                        <?= fmt_money((float)($editPkg['entry_fee'] ?? 0) * (float)($editPkg['lifetime_cap_multiplier'] ?? 3.00)) ?>
-                      <?php else: ?>
-                        ₱0.00
-                      <?php endif; ?>
-                    </div>
-                    <div class="form-text">Calculated automatically</div>
-                  </div>
-                </div>
-
-                <div class="row g-3 mt-1">
-                  <div class="col-md-6">
-                    <label class="form-label" style="color:var(--purple);">Reactivation Fee (₱)</label>
-                    <input type="number" name="reactivation_fee" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['reactivation_fee'] ?? 0) ?>" placeholder="10000.00">
-                    <div class="form-text">Fee to reactivate after capping</div>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" style="color:var(--purple);">Reactivation Window (days)</label>
-                    <input type="number" name="reactivation_window_days" class="form-control" inputmode="numeric" min="1" max="365" value="<?= e($editPkg['reactivation_window_days'] ?? 15) ?>">
-                    <div class="form-text">Days to reactivate before permanent deactivation</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- ═══ DAILY FIXED INCOME (v2) ═══ -->
-              <div class="mb-3" style="border:1px solid var(--pink-border);border-radius:12px;padding:1rem;background:linear-gradient(135deg,var(--surface-1) 0%,#161d30 100%);">
-                <div class="d-flex align-items-center gap-2 mb-3" style="color:var(--pink);">
-                  <i class="bi bi-calendar-week-fill"></i>
-                  <span style="font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;">Daily Fixed Income</span>
-                </div>
-
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <label class="form-label" style="color:var(--pink);">Daily Fixed Income (₱/day)</label>
-                    <input type="number" name="daily_fixed_income" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['daily_fixed_income'] ?? 0) ?>" placeholder="100.00">
-                    <div class="form-text">Set 0 to disable DFI for this package</div>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" style="color:var(--pink);">Max DFI Days</label>
-                    <input type="number" name="daily_fixed_income_days" class="form-control" inputmode="numeric" min="1" max="1000" value="<?= e($editPkg['daily_fixed_income_days'] ?? 90) ?>">
-                    <div class="form-text">Maximum days of fixed income per member</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Status -->
-              <div class="mb-3">
-                <label class="form-label">Status</label>
-                <select name="status" class="form-select">
-                  <option value="active" <?= (($editPkg['status'] ?? 'active') === 'active')  ? 'selected' : '' ?>>Active</option>
-                  <option value="inactive" <?= (($editPkg['status'] ?? '') === 'inactive')       ? 'selected' : '' ?>>Inactive</option>
-                </select>
-              </div>
-
-              <?php if (setting('indirect_referral_enabled', '1') === '1'): ?>
-                <!-- Indirect Referral Levels -->
-                <div class="mb-3">
-                  <label class="form-label fw-bold">🔗 Indirect Referral Bonuses (10 Levels)</label>
-                  <div class="row g-2">
-                    <?php $lvls = $editPkg['indirect_levels'] ?? [];
-                    for ($lvl = 1; $lvl <= 10; $lvl++): ?>
-                      <div class="col-6 col-md-4 col-lg-6 col-xl-4">
-                        <label class="form-label" style="font-size:.72rem;">Level <?= $lvl ?></label>
-                        <div class="input-group input-group-sm">
-                          <span class="input-group-text">₱</span>
-                          <input type="number" name="indirect_<?= $lvl ?>" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($lvls[$lvl] ?? 0) ?>" placeholder="0.00">
-                        </div>
-                      </div>
-                    <?php endfor; ?>
-                  </div>
-                  <div class="form-text mt-1">Set 0 to disable a level. Paid once to each upline sponsor on member join.</div>
-                </div>
-              <?php endif; ?>
-
-              <button type="submit" class="btn btn-primary w-100 btn-lg">
-                <?= ($editPkg ?? null) ? '💾 Update Package' : '➕ Create Package' ?>
-              </button>
-            </form>
-          </div>
+      <div class="col-6 col-md-3">
+        <div class="card p-3">
+          <div class="text-muted" style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Active</div>
+          <div class="fw-bold fs-5 text-success"><?= $activePkg ?></div>
         </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card p-3">
+          <div class="text-muted" style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Inactive</div>
+          <div class="fw-bold fs-5 text-secondary"><?= $totalPkg - $activePkg ?></div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card p-3">
+          <div class="text-muted" style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Binary</div>
+          <div class="fw-bold fs-5"><?= $binaryEnabled ? '<span class="text-success">On</span>' : '<span class="text-secondary">Off</span>' ?></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full-width Packages Table -->
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="pkgTable">
+          <thead style="background:#f8fafc;">
+            <tr>
+              <th style="padding-left:1.25rem;">Package</th>
+              <th class="text-end">Entry Fee</th>
+              <?php if ($binaryEnabled): ?><th class="text-end">Pairing</th><?php endif; ?>
+              <th class="text-end">Direct Ref</th>
+              <th class="text-end">Lifetime Cap</th>
+              <th class="text-center">DFI</th>
+              <th class="text-center">Status</th>
+              <th class="text-end" style="padding-right:1.25rem;width:100px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php if (empty($packages)): ?>
+              <tr>
+                <td colspan="<?= $binaryEnabled ? '8' : '7' ?>" class="text-center py-5 text-muted">
+                  <div style="font-size:2rem;opacity:.3;margin-bottom:.5rem;">📦</div>
+                  <div>No packages yet.</div>
+                  <div style="font-size:.8rem;">Click <strong>+ New Package</strong> to create your first plan.</div>
+                </td>
+              </tr>
+            <?php else: ?>
+              <?php foreach ($packages as $pkg):
+                $lifetimeCap = (float)$pkg['entry_fee'] * (float)$pkg['lifetime_cap_multiplier'];
+                $hasDfi = (float)$pkg['daily_fixed_income'] > 0;
+              ?>
+                <tr>
+                  <td style="padding-left:1.25rem;">
+                    <div class="fw-semibold"><?= e($pkg['name']) ?></div>
+                    <div class="text-muted" style="font-size:.7rem;">ID: <?= (int)$pkg['id'] ?></div>
+                  </td>
+                  <td class="text-end font-mono"><?= fmt_money($pkg['entry_fee']) ?></td>
+                  <?php if ($binaryEnabled): ?>
+                    <td class="text-end font-mono" style="color:var(--success);"><?= fmt_money($pkg['pairing_bonus']) ?></td>
+                  <?php endif; ?>
+                  <td class="text-end font-mono"><?= fmt_money($pkg['direct_ref_bonus']) ?></td>
+                  <td class="text-end">
+                    <div class="font-mono"><?= fmt_money($lifetimeCap) ?></div>
+                    <div class="text-muted" style="font-size:.65rem;"><?= $pkg['lifetime_cap_multiplier'] ?>×</div>
+                  </td>
+                  <td class="text-center">
+                    <?php if ($hasDfi): ?>
+                      <div class="font-mono" style="font-size:.8rem;color:#db2777;">₱<?= number_format($pkg['daily_fixed_income'], 0) ?>/d</div>
+                      <div class="text-muted" style="font-size:.65rem;"><?= (int)$pkg['daily_fixed_income_days'] ?> days</div>
+                    <?php else: ?>
+                      <span class="text-muted" style="font-size:.8rem;">—</span>
+                    <?php endif; ?>
+                  </td>
+                  <td class="text-center">
+                    <?php if ($pkg['status'] === 'active'): ?>
+                      <span class="badge bg-success-subtle text-success" style="font-size:.72rem;">● Active</span>
+                    <?php else: ?>
+                      <span class="badge bg-secondary-subtle text-secondary" style="font-size:.72rem;">○ Inactive</span>
+                    <?php endif; ?>
+                  </td>
+                  <td class="text-end" style="padding-right:1.25rem;">
+                    <a href="<?= APP_URL ?>/?page=admin_packages&edit=<?= (int)$pkg['id'] ?>" class="btn btn-sm btn-outline-primary">Edit</a>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     PACKAGE MODAL  (Create / Edit)
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="packageModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="packageModalTitle">➕ New Package</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="<?= APP_URL ?>/?page=admin_save_package" id="packageForm">
+          <?= csrf_field() ?>
+          <input type="hidden" name="package_id" id="packageId" value="<?= e($editPkg['id'] ?? '') ?>">
+
+          <!-- Basic Info -->
+          <div class="mb-3">
+            <label class="form-label">Package Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" id="pkgName" class="form-control" value="<?= e($editPkg['name'] ?? '') ?>" placeholder="e.g. Starter, Pro, Elite" required>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Entry Fee (₱) <span class="text-danger">*</span></label>
+              <input type="number" name="entry_fee" id="pkgEntryFee" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['entry_fee'] ?? '') ?>" placeholder="10000.00" required>
+            </div>
+            <?php if ($binaryEnabled): ?>
+            <div class="col-md-6">
+              <label class="form-label">Pairing Bonus (₱) <span class="text-danger">*</span></label>
+              <input type="number" name="pairing_bonus" id="pkgPairing" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['pairing_bonus'] ?? '') ?>" placeholder="2000.00" required>
+              <div class="form-text">Per pair paid out</div>
+            </div>
+            <?php endif; ?>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <?php if ($binaryEnabled): ?>
+            <div class="col-md-6">
+              <label class="form-label">Daily Pair Cap <span class="text-danger">*</span></label>
+              <input type="number" name="daily_pair_cap" id="pkgPairCap" class="form-control" inputmode="numeric" min="1" max="100" value="<?= e($editPkg['daily_pair_cap'] ?? 3) ?>" required>
+              <div class="form-text">Flush-out limit per member per day</div>
+            </div>
+            <?php endif; ?>
+            <div class="col-md-6">
+              <label class="form-label">Direct Referral Bonus (₱)</label>
+              <input type="number" name="direct_ref_bonus" id="pkgDirectRef" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['direct_ref_bonus'] ?? 0) ?>" placeholder="500.00">
+              <div class="form-text">Paid once to sponsor on join</div>
+            </div>
+          </div>
+
+          <!-- Lifetime Capping -->
+          <div class="rounded p-3 mb-3" style="background:linear-gradient(135deg,#faf5ff 0%,#f3e8ff 100%);border:1px solid #e9d5ff;">
+            <div class="d-flex align-items-center gap-2 mb-3" style="color:#7c3aed;">
+              <span style="font-size:1rem;">🛡️</span>
+              <span style="font-size:.82rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;">Lifetime Income Capping</span>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" style="color:#7c3aed;font-size:.8rem;font-weight:600;">Cap Multiplier</label>
+                <div class="input-group">
+                  <input type="number" name="lifetime_cap_multiplier" id="pkgCapMult" class="form-control" inputmode="decimal" min="1" max="20" step="0.01" value="<?= e($editPkg['lifetime_cap_multiplier'] ?? 3.00) ?>" required>
+                  <span class="input-group-text">× entry</span>
+                </div>
+                <div class="form-text">Lifetime cap = Entry Fee × Multiplier</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" style="color:#7c3aed;font-size:.8rem;font-weight:600;">Auto-Cap Preview</label>
+                <div class="form-control font-mono fw-bold" style="background:#f5f3ff;border-color:#ddd6fe;color:#7c3aed;" id="capPreview">
+                  <?= ($editPkg ?? null) ? fmt_money((float)($editPkg['entry_fee'] ?? 0) * (float)($editPkg['lifetime_cap_multiplier'] ?? 3.00)) : '₱0.00' ?>
+                </div>
+              </div>
+            </div>
+            <div class="row g-3 mt-1">
+              <div class="col-md-6">
+                <label class="form-label" style="color:#7c3aed;font-size:.8rem;font-weight:600;">Reactivation Fee (₱)</label>
+                <input type="number" name="reactivation_fee" id="pkgReactivationFee" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['reactivation_fee'] ?? 0) ?>" placeholder="10000.00">
+                <div class="form-text">Fee to reactivate after capping</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" style="color:#7c3aed;font-size:.8rem;font-weight:600;">Reactivation Window (days)</label>
+                <input type="number" name="reactivation_window_days" id="pkgReactivationWindow" class="form-control" inputmode="numeric" min="1" max="365" value="<?= e($editPkg['reactivation_window_days'] ?? 15) ?>">
+                <div class="form-text">Days before permanent deactivation</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daily Fixed Income -->
+          <div class="rounded p-3 mb-3" style="background:linear-gradient(135deg,#fdf2f8 0%,#fce7f3 100%);border:1px solid #fbcfe8;">
+            <div class="d-flex align-items-center gap-2 mb-3" style="color:#db2777;">
+              <span style="font-size:1rem;">📅</span>
+              <span style="font-size:.82rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;">Daily Fixed Income</span>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" style="color:#db2777;font-size:.8rem;font-weight:600;">Daily Fixed Income (₱/day)</label>
+                <input type="number" name="daily_fixed_income" id="pkgDfi" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['daily_fixed_income'] ?? 0) ?>" placeholder="100.00">
+                <div class="form-text">Set 0 to disable DFI for this package</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" style="color:#db2777;font-size:.8rem;font-weight:600;">Max DFI Days</label>
+                <input type="number" name="daily_fixed_income_days" id="pkgDfiDays" class="form-control" inputmode="numeric" min="1" max="1000" value="<?= e($editPkg['daily_fixed_income_days'] ?? 90) ?>">
+                <div class="form-text">Maximum days of fixed income</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select name="status" id="pkgStatus" class="form-select">
+              <option value="active" <?= (($editPkg['status'] ?? 'active') === 'active') ? 'selected' : '' ?>>🟢 Active</option>
+              <option value="inactive" <?= (($editPkg['status'] ?? '') === 'inactive') ? 'selected' : '' ?>>⚪ Inactive</option>
+            </select>
+          </div>
+
+          <?php if (setting('indirect_referral_enabled', '1') === '1'): ?>
+            <!-- Indirect Referral Levels -->
+            <div class="mb-0">
+              <label class="form-label fw-bold">🔗 Indirect Referral Bonuses (10 Levels)</label>
+              <div class="row g-2">
+                <?php $lvls = $editPkg['indirect_levels'] ?? [];
+                for ($lvl = 1; $lvl <= 10; $lvl++): ?>
+                  <div class="col-6 col-md-4">
+                    <label class="form-label" style="font-size:.72rem;">Level <?= $lvl ?></label>
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text">₱</span>
+                      <input type="number" name="indirect_<?= $lvl ?>" id="indirect_<?= $lvl ?>" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($lvls[$lvl] ?? 0) ?>" placeholder="0.00">
+                    </div>
+                  </div>
+                <?php endfor; ?>
+              </div>
+              <div class="form-text mt-1">Set 0 to disable a level. Paid once to each upline sponsor on member join.</div>
+            </div>
+          <?php endif; ?>
+        </form>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid #f1f5f9;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary" form="packageForm" id="pkgSubmitBtn">
+          <?= ($editPkg ?? null) ? '💾 Update Package' : '➕ Create Package' ?>
+        </button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  // Auto-update cap preview when entry fee or multiplier changes
-  document.querySelector('input[name="entry_fee"]').addEventListener('input', updateCapPreview);
-  document.querySelector('input[name="lifetime_cap_multiplier"]').addEventListener('input', updateCapPreview);
+  // ── Cap preview live update ──
+  const entryInput = document.getElementById('pkgEntryFee');
+  const multInput  = document.getElementById('pkgCapMult');
+  const previewEl  = document.getElementById('capPreview');
 
   function updateCapPreview() {
-    const entry = parseFloat(document.querySelector('input[name="entry_fee"]').value) || 0;
-    const mult = parseFloat(document.querySelector('input[name="lifetime_cap_multiplier"]').value) || 0;
-    const cap = entry * mult;
-    document.getElementById('capPreview').textContent = '₱' + cap.toLocaleString('en-PH', {
+    const entry = parseFloat(entryInput?.value) || 0;
+    const mult  = parseFloat(multInput?.value)  || 0;
+    previewEl.textContent = '₱' + (entry * mult).toLocaleString('en-PH', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
   }
+
+  if (entryInput) entryInput.addEventListener('input', updateCapPreview);
+  if (multInput)  multInput.addEventListener('input', updateCapPreview);
+
+  // ── Reset form for "New Package" ──
+  function resetPackageForm() {
+    const form = document.getElementById('packageForm');
+    form.reset();
+    document.getElementById('packageModalTitle').textContent = '➕ New Package';
+    document.getElementById('packageId').value = '';
+    document.getElementById('pkgSubmitBtn').textContent = '➕ Create Package';
+    previewEl.textContent = '₱0.00';
+    // Reset indirect levels
+    for (let i = 1; i <= 10; i++) {
+      const el = document.getElementById('indirect_' + i);
+      if (el) el.value = '0.00';
+    }
+  }
+
+  // ── Auto-open modal when editing (URL has ?edit=ID) ──
+  <?php if ($editPkg): ?>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modalEl = document.getElementById('packageModal');
+    const modal = new bootstrap.Modal(modalEl);
+    document.getElementById('packageModalTitle').textContent = '✏️ Edit Package';
+    document.getElementById('pkgSubmitBtn').textContent = '💾 Update Package';
+    modal.show();
+  });
+  <?php endif; ?>
+
+  // ── Loading state on submit ──
+  document.getElementById('packageForm').addEventListener('submit', function() {
+    const btn = document.getElementById('pkgSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving…';
+  });
 </script>
 
 <?php require 'views/partials/footer.php'; ?>

@@ -29,8 +29,10 @@ $membersNow = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member
 $seatsLeft  = max(0, $seatLimit - $membersNow);
 $isFull     = $seatsLeft <= 0;
 
+$binaryEnabled = setting('binary_enabled', '1') === '1';
+
 // Commission stream count for copywriting
-$streamCount = 2 + ($indirectEnabled ? 1 : 0) + ($dfiEnabled ? 1 : 0);
+$streamCount = ($binaryEnabled ? 1 : 0) + 1 + ($indirectEnabled ? 1 : 0) + ($dfiEnabled ? 1 : 0);
 
 // Build payout methods list
 $payoutMethods = ['USDT TRC20'];
@@ -43,7 +45,8 @@ $payoutMethodsText = implode(', ', $payoutMethods);
 $telegramUrl = '';  // e.g. 'https://t.me/yourchannel' or ''
 
 // SEO description helper
-$streamWords = ['binary pairing', 'direct referral'];
+$streamWords = ['direct referral'];
+if ($binaryEnabled) array_unshift($streamWords, 'binary pairing');
 if ($indirectEnabled) $streamWords[] = 'unilevel';
 if ($dfiEnabled)      $streamWords[] = 'daily fixed income';
 $streamText = implode(', ', $streamWords);
@@ -596,10 +599,12 @@ $streamOxford = count($streamWords) > 2
         <a href="#how" class="btn-outline" style="color:#fff;border-color:rgba(255,255,255,.6);">Learn How It Works</a>
       </div>
       <div class="hero-stats">
+        <?php if ($binaryEnabled && $featuredPkg): ?>
         <div>
-          <div class="hero-stat-val"><?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?></div>
+          <div class="hero-stat-val"><?= fmt_money($featuredPkg['pairing_bonus']) ?></div>
           <div class="hero-stat-label">Per Pair Bonus</div>
         </div>
+        <?php endif; ?>
         <?php if ($indirectEnabled): ?>
           <div>
             <div class="hero-stat-val">10</div>
@@ -734,7 +739,7 @@ $streamOxford = count($streamWords) > 2
     <div class="container">
       <div class="tag tag-green" style="background:rgba(76,175,80,.15);color:rgba(255,255,255,.7);">Simple Process</div>
       <h2 class="section-title">How <?= e($siteName) ?> Works</h2>
-      <p class="section-lead">Easy steps from your first registration to your first withdrawal. The structure is binary — your income grows as both sides of your tree fill, within a defined daily cap and a community that stops at <?= number_format($seatLimit) ?>.</p>
+      <p class="section-lead">Easy steps from your first registration to your first withdrawal.<?= $binaryEnabled ? ' The structure is binary — your income grows as both sides of your tree fill, within a defined daily cap and' : '' ?> a community that stops at <?= number_format($seatLimit) ?>.</p>
       <div class="steps-grid">
         <div class="step-card fade-up">
           <div class="step-num">01</div>
@@ -746,7 +751,7 @@ $streamOxford = count($streamWords) > 2
           <div class="step-num">02</div>
           <div class="step-icon">📝</div>
           <div class="step-title">Register &amp; Place</div>
-          <div class="step-desc">Create your account, choose your sponsor, and select your binary position — left or right leg. Your seat among the <?= number_format($seatLimit) ?> is confirmed on registration.</div>
+          <div class="step-desc">Create your account, choose your sponsor<?= $binaryEnabled ? ', and select your binary position — left or right leg' : '' ?>. Your seat among the <?= number_format($seatLimit) ?> is confirmed on registration.</div>
         </div>
         <div class="step-card fade-up">
           <div class="step-num">03</div>
@@ -754,12 +759,14 @@ $streamOxford = count($streamWords) > 2
           <div class="step-title">Build Your Team</div>
           <div class="step-desc">Share your referral link and bring in your network. Every direct referral earns you <?= $featuredPkg ? fmt_money($featuredPkg['direct_ref_bonus']) : '₱—' ?> — credited the moment they register.</div>
         </div>
+        <?php if ($binaryEnabled): ?>
         <div class="step-card fade-up">
           <div class="step-num">04</div>
           <div class="step-icon">💸</div>
           <div class="step-title">Earn Pair Bonuses</div>
           <div class="step-desc">When a left-right pair forms anywhere beneath you, <?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?> fires to your wallet in real time. Daily pairs are capped at <?= $featuredPkg ? $featuredPkg['daily_pair_cap'] : '—' ?> to keep the system sustainable.</div>
         </div>
+        <?php endif; ?>
         <?php if ($indirectEnabled): ?>
           <div class="step-card fade-up">
             <div class="step-num">05</div>
@@ -769,7 +776,14 @@ $streamOxford = count($streamWords) > 2
           </div>
         <?php endif; ?>
         <div class="step-card fade-up">
-          <div class="step-num"><?= $indirectEnabled ? '06' : '05' ?></div>
+          <div class="step-num">
+            <?php
+              $stepNum = 4;
+              if ($binaryEnabled) $stepNum++;
+              if ($indirectEnabled) $stepNum++;
+              echo str_pad((string)$stepNum, 2, '0', STR_PAD_LEFT);
+            ?>
+          </div>
           <div class="step-icon">₮</div>
           <div class="step-title">Withdraw Earnings</div>
           <div class="step-desc">All earnings settle via <?= $payoutMethodsText ?>. Whether you are in the Philippines or abroad, your wallet receives the same way — no remittance fees, no cut, no geography.</div>
@@ -785,16 +799,18 @@ $streamOxford = count($streamWords) > 2
     <div class="container">
       <div class="plan-header">
         <div class="tag">Compensation Plan</div>
-        <h2 class="section-title">Three Streams. One Entry.</h2>
-        <p class="section-lead">Every member enters at the same level and accesses all <?= $streamCount ?> income streams from day one. The binary, the referral<?= $indirectEnabled ? ', and the unilevel' : '' ?><?= $dfiEnabled ? ($indirectEnabled ? ', plus daily fixed income' : ', plus daily fixed income') : '' ?> — none of them locked behind a higher tier.</p>
+        <h2 class="section-title"><?= $streamCount ?> Stream<?= $streamCount > 1 ? 's' : '' ?>. One Entry.</h2>
+        <p class="section-lead">Every member enters at the same level and accesses all <?= $streamCount ?> income streams from day one.<?= $binaryEnabled ? ' The binary, the' : ' The' ?> referral<?= $indirectEnabled ? ', and the unilevel' : '' ?><?= $dfiEnabled ? ($indirectEnabled ? ', plus daily fixed income' : ', plus daily fixed income') : '' ?> — none of them locked behind a higher tier.</p>
       </div>
       <div class="plan-grid">
+        <?php if ($binaryEnabled && $featuredPkg): ?>
         <div class="plan-card fade-up">
           <div class="plan-card-icon">🤝</div>
           <div class="plan-card-title">Binary Pairing Bonus</div>
-          <div class="plan-card-amount"><?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?></div>
-          <div class="plan-card-desc">Earned every time a left-right pair forms anywhere in your binary downline. Capped at <?= $featuredPkg ? $featuredPkg['daily_pair_cap'] : '—' ?> pairs per day — a ceiling that keeps payouts consistent and the network stable.</div>
+          <div class="plan-card-amount"><?= fmt_money($featuredPkg['pairing_bonus']) ?></div>
+          <div class="plan-card-desc">Earned every time a left-right pair forms anywhere in your binary downline. Capped at <?= $featuredPkg['daily_pair_cap'] ?> pairs per day — a ceiling that keeps payouts consistent and the network stable.</div>
         </div>
+        <?php endif; ?>
         <div class="plan-card featured fade-up">
           <div class="plan-card-icon">👥</div>
           <div class="plan-card-title">Direct Referral Bonus</div>
@@ -871,13 +887,13 @@ $streamOxford = count($streamWords) > 2
               <div class="pkg-title">The <?= e($siteName) ?> Seat</div>
               <p class="pkg-desc">Your entry into the network. One seat, one package, backed by a real Philippine poultry operation. All earning streams are active from the moment you register.</p>
               <ul class="pkg-features">
-                <li>Full binary tree placement — left or right leg of your choice</li>
-                <li><?= fmt_money($pkg['pairing_bonus']) ?> per binary pair · capped at <?= $pkg['daily_pair_cap'] ?> pairs per day</li>
+                <?php if ($binaryEnabled): ?><li>Full binary tree placement — left or right leg of your choice</li>
+                <li><?= fmt_money($pkg['pairing_bonus']) ?> per binary pair · capped at <?= $pkg['daily_pair_cap'] ?> pairs per day</li><?php endif; ?>
                 <li><?= fmt_money($pkg['direct_ref_bonus']) ?> direct referral bonus per recruit</li>
                 <?php if ($indirectEnabled): ?><li>10-level unilevel generational bonuses</li><?php endif; ?>
                 <?php if ($dfiEnabled): ?><li><?= fmt_money($pkg['daily_fixed_income']) ?> daily fixed income for <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>
                 <li>Lifetime income cap: <?= $pkg['lifetime_cap_multiplier'] ?>× entry fee</li>
-                <li>Real-time dashboard — binary tree, wallet, full history</li>
+                <li>Real-time dashboard — wallet, full history<?= $binaryEnabled ? ', binary tree' : '' ?></li>
               </ul>
               <div class="payout-methods">
                 <span style="font-size:.75rem;color:var(--muted);margin-right:.5rem;">Payouts:</span>
@@ -905,7 +921,7 @@ $streamOxford = count($streamWords) > 2
                 <div class="pkg-badge">🐣 <?= e($pkg['name']) ?></div>
                 <div class="pkg-price" style="font-size:1.75rem;margin:.5rem 0;"><?= fmt_money($pkg['entry_fee']) ?> <small style="font-size:.5em;">one-time</small></div>
                 <ul class="pkg-features" style="margin:1rem 0;padding-left:1.2rem;font-size:.85rem;">
-                  <li><?= fmt_money($pkg['pairing_bonus']) ?> per pair · cap <?= $pkg['daily_pair_cap'] ?>/day</li>
+                  <?php if ($binaryEnabled): ?><li><?= fmt_money($pkg['pairing_bonus']) ?> per pair · cap <?= $pkg['daily_pair_cap'] ?>/day</li><?php endif; ?>
                   <li><?= fmt_money($pkg['direct_ref_bonus']) ?> direct referral</li>
                   <?php if ($indirectEnabled): ?><li>10-level unilevel bonuses</li><?php endif; ?>
                   <?php if ($dfiEnabled): ?><li><?= fmt_money($pkg['daily_fixed_income']) ?>/day DFI · <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>

@@ -133,6 +133,11 @@ class MemberController
         Auth::guard('member');
         $user     = Auth::user();
         $view     = $_GET['view'] ?? 'binary'; // 'binary' | 'referral'
+
+        if ($view === 'binary' && setting('binary_enabled', '1') !== '1') {
+            redirect('/?page=genealogy&view=referral');
+        }
+
         $indirect = [];
         $direct   = [];
         if ($view === 'referral') {
@@ -149,6 +154,11 @@ class MemberController
     public function apiBinaryTree(): void
     {
         Auth::guard('member');
+        if (setting('binary_enabled', '1') !== '1') {
+            header('Content-Type: application/json');
+            echo json_encode(['nodes' => [], 'links' => []]);
+            return;
+        }
         $rootId = isset($_GET['root']) ? (int)$_GET['root'] : Auth::id();
         $depth  = min(4, max(1, (int)($_GET['depth'] ?? 3)));
         json_response(self::buildTreeNode($rootId, $depth));

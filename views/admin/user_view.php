@@ -170,8 +170,10 @@
           ['E-Wallet Balance', fmt_money($user['ewallet_balance']),              'primary', 'primary',
            fmt_money((float)($user['withdrawable_balance'] ?? 0)) . ' withdrawable · ' . fmt_money(max(0, (float)$user['ewallet_balance'] - (float)($user['withdrawable_balance'] ?? 0))) . ' internal'],
           ['Total Earned',     fmt_money($summary['total_earned']),              'success', 'success'],
-          ['Pairs Paid / Today', $pairingStatus['pairs_paid'] . ' / ' . $pairingStatus['pairs_paid_today'], 'orange', 'warning'],
-          ['Pairs Flushed',    number_format($pairingStatus['pairs_flushed']),   'danger', 'danger'],
+          ...(setting('binary_enabled', '1') === '1' ? [
+            ['Pairs Paid / Today', $pairingStatus['pairs_paid'] . ' / ' . $pairingStatus['pairs_paid_today'], 'orange', 'warning'],
+            ['Pairs Flushed',    number_format($pairingStatus['pairs_flushed']),   'danger', 'danger'],
+          ] : []),
         ] as $card
       ): ?>
         <?php [$label, $val, $accent, $color] = $card; $subText = $card[4] ?? null; ?>
@@ -185,7 +187,7 @@
               </div>
               <div class="mt-auto">
                 <?php if ($subText): ?><div class="stat-sub"><?= $subText ?></div><?php endif; ?>
-                <?php if ($label === 'Pairs Paid / Today'): ?><div class="stat-sub">Cap: <?= $pairingStatus['daily_cap'] ?> / day</div><?php endif; ?>
+                <?php if (setting('binary_enabled', '1') === '1' && $label === 'Pairs Paid / Today'): ?><div class="stat-sub">Cap: <?= $pairingStatus['daily_cap'] ?> / day</div><?php endif; ?>
               </div>
             </div>
           </div>
@@ -242,6 +244,7 @@
                 <td>Sponsor</td>
                 <td><?= ($user['sponsor_username'] ?? null) ? '<a href="' . APP_URL . '/?page=admin_user_view&id=' . $user['sponsor_id'] . '">@' . e($user['sponsor_username']) . '</a>' : '—' ?></td>
               </tr>
+              <?php if (setting('binary_enabled', '1') === '1'): ?>
               <tr>
                 <td>Upline</td>
                 <td><?= ($user['binary_parent_username'] ?? null) ? '@' . e($user['binary_parent_username']) . ' (' . $user['binary_position'] . ')' : '—' ?></td>
@@ -250,6 +253,7 @@
                 <td>Pairing Bonus</td>
                 <td><?= fmt_money($user['pairing_bonus'] ?? 0) ?> / pair</td>
               </tr>
+              <?php endif; ?>
               <tr>
                 <td>Daily Cap</td>
                 <td><?= $user['daily_pair_cap'] ?? 0 ?> pairs / day</td>
