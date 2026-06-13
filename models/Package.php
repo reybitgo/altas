@@ -60,6 +60,7 @@ class Package
         $fields = [
             'name'                     => $data['name'],
             'entry_fee'                => (float)($data['entry_fee'] ?? 0),
+            'package_pv_rate'          => (float)($data['package_pv_rate'] ?? 100.00),
             'pairing_bonus'            => (float)($data['pairing_bonus'] ?? 0),
             'daily_pair_cap'           => (int)($data['daily_pair_cap'] ?? 3),
             'direct_ref_bonus'         => (float)($data['direct_ref_bonus'] ?? 0),
@@ -114,6 +115,17 @@ class Package
     }
 
     // ── v2 Helpers ─────────────────────────────────────────────────────────
+
+    /**
+     * Calculate the Package PV for a given package.
+     * Package PV = entry_fee × (package_pv_rate / 100)
+     */
+    public static function packagePv(int $packageId): float
+    {
+        $pkg = self::find($packageId);
+        if (!$pkg) return 0.00;
+        return (float)$pkg['entry_fee'] * ((float)$pkg['package_pv_rate'] / 100);
+    }
 
     /**
      * Calculate the lifetime income cap for a user based on their package.

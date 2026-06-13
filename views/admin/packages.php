@@ -155,21 +155,22 @@
               <label class="form-label">Entry Fee (₱) <span class="text-danger">*</span></label>
               <input type="number" name="entry_fee" id="pkgEntryFee" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['entry_fee'] ?? '') ?>" placeholder="10000.00" required>
             </div>
-            <?php if ($binaryEnabled): ?>
             <div class="col-md-6">
-              <label class="form-label">Pairing Bonus (₱) <span class="text-danger">*</span></label>
-              <input type="number" name="pairing_bonus" id="pkgPairing" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['pairing_bonus'] ?? '') ?>" placeholder="2000.00" required>
-              <div class="form-text">Per pair paid out</div>
+              <label class="form-label">Package PV Rate (%)</label>
+              <div class="input-group">
+                <input type="number" name="package_pv_rate" id="pkgPvRate" class="form-control" inputmode="decimal" min="0" max="1000" step="0.01" value="<?= e($editPkg['package_pv_rate'] ?? 100.00) ?>">
+                <span class="input-group-text">%</span>
+              </div>
+              <div class="form-text">Package PV = <span id="pkgPvPreview" class="font-mono">₱0.00</span></div>
             </div>
-            <?php endif; ?>
           </div>
 
           <div class="row g-3 mb-3">
             <?php if ($binaryEnabled): ?>
             <div class="col-md-6">
-              <label class="form-label">Daily Pair Cap <span class="text-danger">*</span></label>
-              <input type="number" name="daily_pair_cap" id="pkgPairCap" class="form-control" inputmode="numeric" min="1" max="100" value="<?= e($editPkg['daily_pair_cap'] ?? 3) ?>" required>
-              <div class="form-text">Flush-out limit per member per day</div>
+              <label class="form-label">Pairing Bonus (₱) <span class="text-danger">*</span></label>
+              <input type="number" name="pairing_bonus" id="pkgPairing" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['pairing_bonus'] ?? '') ?>" placeholder="2000.00" required>
+              <div class="form-text">Per pair paid out</div>
             </div>
             <?php endif; ?>
             <div class="col-md-6">
@@ -178,6 +179,16 @@
               <div class="form-text">Paid once to sponsor on join</div>
             </div>
           </div>
+
+          <?php if ($binaryEnabled): ?>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Daily Pair Cap <span class="text-danger">*</span></label>
+              <input type="number" name="daily_pair_cap" id="pkgPairCap" class="form-control" inputmode="numeric" min="1" max="100" value="<?= e($editPkg['daily_pair_cap'] ?? 3) ?>" required>
+              <div class="form-text">Flush-out limit per member per day</div>
+            </div>
+          </div>
+          <?php endif; ?>
 
           <!-- Lifetime Capping -->
           <div class="rounded p-3 mb-3" style="background:linear-gradient(135deg,#faf5ff 0%,#f3e8ff 100%);border:1px solid #e9d5ff;">
@@ -293,6 +304,22 @@
   if (entryInput) entryInput.addEventListener('input', updateCapPreview);
   if (multInput)  multInput.addEventListener('input', updateCapPreview);
 
+  // ── Package PV preview live update ──
+  const pvRateInput = document.getElementById('pkgPvRate');
+  const pvPreviewEl = document.getElementById('pkgPvPreview');
+
+  function updatePackagePVPreview() {
+    const entry = parseFloat(entryInput?.value) || 0;
+    const rate  = parseFloat(pvRateInput?.value) || 0;
+    pvPreviewEl.textContent = '₱' + (entry * (rate / 100)).toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  if (entryInput)    entryInput.addEventListener('input', updatePackagePVPreview);
+  if (pvRateInput)   pvRateInput.addEventListener('input', updatePackagePVPreview);
+
   // ── Reset form for "New Package" ──
   function resetPackageForm() {
     const form = document.getElementById('packageForm');
@@ -301,6 +328,7 @@
     document.getElementById('packageId').value = '';
     document.getElementById('pkgSubmitBtn').textContent = '➕ Create Package';
     previewEl.textContent = '₱0.00';
+    updatePackagePVPreview();
     // Reset indirect levels
     for (let i = 1; i <= 10; i++) {
       const el = document.getElementById('indirect_' + i);
@@ -315,6 +343,7 @@
     const modal = new bootstrap.Modal(modalEl);
     document.getElementById('packageModalTitle').textContent = '✏️ Edit Package';
     document.getElementById('pkgSubmitBtn').textContent = '💾 Update Package';
+    updatePackagePVPreview();
     modal.show();
   });
   <?php endif; ?>

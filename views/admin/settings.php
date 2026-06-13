@@ -145,10 +145,25 @@
               </div>
 
               <!-- Cap Multiplier -->
-              <div class="mb-0">
+              <div class="mb-3">
                 <label class="form-label">Default Lifetime Cap Multiplier</label>
                 <input type="number" name="default_cap_multiplier" class="form-control" min="0" step="0.01" value="<?= e(setting('default_cap_multiplier', '3.00')) ?>">
                 <div class="form-text">Lifetime cap = entry fee × multiplier</div>
+              </div>
+
+              <!-- PV per Peso Rate -->
+              <div class="rounded p-3" style="background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);border:1px solid #c7d2fe;">
+                <div class="d-flex align-items-center gap-2 mb-2" style="color:#4f46e5;">
+                  <span style="font-size:.9rem;">💎</span>
+                  <span style="font-size:.82rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;">PV Conversion Rate</span>
+                </div>
+                <label class="form-label" style="color:#4f46e5;font-size:.8rem;font-weight:600;">PV per Peso Rate</label>
+                <div class="input-group">
+                  <span class="input-group-text">₱</span>
+                  <input type="number" name="pv_per_peso_rate" class="form-control font-mono" inputmode="decimal" min="0.0001" step="0.0001" value="<?= e(setting('pv_per_peso_rate', '1.0000')) ?>">
+                  <span class="input-group-text">per 1 PV</span>
+                </div>
+                <div class="form-text">Pesos paid per 1 PV when converting PV-based bonuses. Example: 1.0000 means 1 PV = ₱1.00</div>
               </div>
             </div>
           </div>

@@ -178,12 +178,13 @@ class AdminController
 
         $id   = (int)($_POST['package_id'] ?? 0);
         $data = [
-            'name'             => trim($_POST['name']             ?? ''),
-            'entry_fee'        => (float)($_POST['entry_fee']      ?? 0),
-            'pairing_bonus'    => (float)($_POST['pairing_bonus']  ?? 0),
-            'daily_pair_cap'   => (int)($_POST['daily_pair_cap']   ?? 3),
-            'direct_ref_bonus' => (float)($_POST['direct_ref_bonus'] ?? 0),
-            'status'           => $_POST['status'] ?? 'active',
+            'name'              => trim($_POST['name']              ?? ''),
+            'entry_fee'         => (float)($_POST['entry_fee']      ?? 0),
+            'package_pv_rate'   => (float)($_POST['package_pv_rate'] ?? 100.00),
+            'pairing_bonus'     => (float)($_POST['pairing_bonus']  ?? 0),
+            'daily_pair_cap'    => (int)($_POST['daily_pair_cap']   ?? 3),
+            'direct_ref_bonus'  => (float)($_POST['direct_ref_bonus'] ?? 0),
+            'status'            => $_POST['status'] ?? 'active',
             'indirect_levels'  => [],
             // NEW v2 fields
             'lifetime_cap_multiplier'  => (float)($_POST['lifetime_cap_multiplier']  ?? 3.00),
@@ -204,6 +205,10 @@ class AdminController
 
         if (!$data['name'] || $data['entry_fee'] <= 0) {
             flash('error', 'Package name and entry fee are required.');
+            redirect($backUrl);
+        }
+        if ($data['package_pv_rate'] < 0 || $data['package_pv_rate'] > 1000) {
+            flash('error', 'Package PV rate must be between 0 and 1000.');
             redirect($backUrl);
         }
 
@@ -356,6 +361,7 @@ class AdminController
             'ewallet_transfer_daily_limit',
             'ewallet_transfer_weekly_limit',
             'seat_limit',
+            'pv_per_peso_rate',
         ];
         $pdo = db();
         $st  = $pdo->prepare("INSERT INTO settings (key_name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
