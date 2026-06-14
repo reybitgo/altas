@@ -45,6 +45,34 @@ CREATE TABLE package_indirect_levels (
   UNIQUE KEY uq_pkg_level (package_id, level)
 ) ENGINE=InnoDB;
 
+-- ─── PRODUCTS (Phase 5) ───────────────────────────────────────
+CREATE TABLE products (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(120)     NOT NULL,
+  price       DECIMAL(12,2)    NOT NULL,
+  pv_value    DECIMAL(14,2)    NOT NULL,
+  status      ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ─── REPEAT PURCHASES (Phase 5) ───────────────────────────────
+CREATE TABLE repeat_purchases (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  member_id     INT UNSIGNED     NOT NULL,
+  product_id    INT UNSIGNED     NOT NULL,
+  quantity      INT UNSIGNED     NOT NULL DEFAULT 1,
+  total_pv      DECIMAL(14,2)    NOT NULL,
+  total_price   DECIMAL(12,2)    NOT NULL,
+  status        ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  approved_by   INT UNSIGNED     NULL,
+  approved_at   TIMESTAMP        NULL,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (member_id)  REFERENCES users(id)    ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+  FOREIGN KEY (approved_by) REFERENCES users(id)   ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 -- ─── USERS ────────────────────────────────────────────────────
 CREATE TABLE users (
   id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -399,7 +427,8 @@ INSERT INTO settings (key_name, value) VALUES
   ('indirect_referral_enabled',   '1'),
   ('binary_enabled',              '1'),
   ('seat_limit',                  '0'),
-  ('pv_per_peso_rate',            '1.0000');
+  ('pv_per_peso_rate',            '1.0000'),
+  ('personal_pv_requirement',     '0.0000');
 
 -- Demo registration code (package 1, price 10500)
 INSERT INTO reg_codes (code, package_id, price, created_by)

@@ -16,6 +16,7 @@ $view    = $_GET['view'] ?? '';
 $nav = [
   ['page' => 'dashboard', 'icon' => '🏠', 'label' => 'Dashboard',        'pages' => ['dashboard']],
   ['page' => 'earnings',  'icon' => '💰', 'label' => 'Earnings',         'pages' => ['earnings']],
+  ['page' => 'repeat_purchases', 'icon' => '🛒', 'label' => 'Repeat Purchases', 'pages' => ['repeat_purchases']],
   ['page' => 'cap_status', 'icon' => '🛡️', 'label' => 'Lifetime Cap',     'pages' => ['cap_status']],
   ['page' => 'dfi_history', 'icon' => '📅', 'label' => 'DFI History',      'pages' => ['dfi_history']],
   'SEPARATOR:Network',

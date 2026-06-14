@@ -28,6 +28,7 @@ class Commission
         $pdo  = db();
         $cur  = $parentId;
         $side = $position;
+        $visited = [$newUserId => true];
 
         // New member's package PV determines how much PV is added to each ancestor leg.
         $newUserRow = $pdo->prepare('SELECT status, package_id FROM users WHERE id = ?');
@@ -38,92 +39,22 @@ class Commission
         $packagePv       = Package::packagePv((int)($newUser['package_id'] ?? 0));
 
         while ($cur !== null) {
+            if (isset($visited[$cur])) break;
+            $visited[$cur] = true;
 
             // 1. Add package PV to the correct ancestor leg.
             //    Legacy left_count/right_count are kept in sync for reporting only.
             if ($incrementCounts) {
-                $pvCol    = ($side === 'left') ? 'left_pv' : 'right_pv';
                 $countCol = ($side === 'left') ? 'left_count' : 'right_count';
-
-                if ($packagePv > 0) {
-                    $pdo->prepare("UPDATE users SET {$pvCol} = {$pvCol} + :pv WHERE id = :id")
-                        ->execute([':pv' => $packagePv, ':id' => $cur]);
-                }
                 $pdo->prepare("UPDATE users SET {$countCol} = {$countCol} + 1 WHERE id = ?")
                     ->execute([$cur]);
-            }
 
-            // Skip capped/perminact members entirely — no pairing bonuses for them
-            if (!CapEngine::isActiveForPairs($cur)) {
-                $upRow = $pdo->prepare(
-                    'SELECT binary_parent_id, binary_position FROM users WHERE id = ?'
-                );
-                $upRow->execute([$cur]);
-                $up = $upRow->fetch();
-                $side = $up['binary_position'] ?? null;
-                $cur  = isset($up['binary_parent_id']) ? (int)$up['binary_parent_id'] : null;
-                if (!$cur) break;
-                continue;
-            }
-
-            // 2. Read fresh state (after PV increment) with package info
-            $st = $pdo->prepare("
-                SELECT u.id, u.package_id, u.left_pv, u.right_pv,
-                       u.paired_pv, u.paired_pv_today,
-                       u.daily_cap_bypass,
-                       p.pairing_pv_pct, p.daily_pair_pv_cap
-                FROM   users u
-                LEFT JOIN packages p ON p.id = u.package_id
-                WHERE  u.id = ? AND u.status = 'active'
-                  AND  p.pairing_pv_pct > 0
-            ");
-            $st->execute([$cur]);
-            $ancestor = $st->fetch();
-
-            // Only fire pairing bonuses if the NEW user is active.
-            // Pending users increment leg PV but don't trigger payouts.
-            if ($newUserIsActive && $ancestor) {
-                $available  = min((float)$ancestor['left_pv'], (float)$ancestor['right_pv']);
-                $processed  = (float)$ancestor['paired_pv'];
-                $newPaired  = max(0.00, $available - $processed);
-
-                if ($newPaired > 0.00) {
-                    if (!empty($ancestor['daily_cap_bypass'])) {
-                        $capRemaining = $newPaired; // unlimited daily cap
-                    } else {
-                        $capRemaining = (float)$ancestor['daily_pair_pv_cap'] - (float)$ancestor['paired_pv_today'];
-                    }
-                    $payNow   = min($newPaired, max(0.00, $capRemaining));
-                    $flushNow = $newPaired - $payNow;
-
-                    // Credit earned paired PV immediately
-                    if ($payNow > 0.00) {
-                        $bonus = Package::pairingBonus($payNow, (int)$ancestor['package_id']);
-                        self::creditPairing($cur, $bonus, $payNow, $newUserId);
-                    }
-
-                    // Record flushed PV (money permanently lost)
-                    if ($flushNow > 0.00) {
-                        self::recordFlushPV($cur, $flushNow, $newUserId);
-                    }
-
-                    // Update PV counters in one atomic statement
-                    $pdo->prepare("
-                        UPDATE users
-                        SET paired_pv       = paired_pv       + :pay,
-                            flushed_pv      = flushed_pv      + :flush,
-                            paired_pv_today = paired_pv_today + :pay2
-                        WHERE id = :id
-                    ")->execute([
-                        ':pay'   => $payNow,
-                        ':flush' => $flushNow,
-                        ':pay2'  => $payNow,
-                        ':id'    => $cur,
-                    ]);
+                if ($packagePv > 0) {
+                    self::applyBinaryPv($cur, $side, $packagePv, $newUserId, 'registration');
                 }
             }
 
-            // 3. Move to this ancestor's own parent
+            // Move to this ancestor's own parent
             $upRow = $pdo->prepare(
                 'SELECT binary_parent_id, binary_position FROM users WHERE id = ?'
             );
@@ -133,6 +64,127 @@ class Commission
             $side = $up['binary_position'] ?? null;
             $cur  = isset($up['binary_parent_id']) ? (int)$up['binary_parent_id'] : null;
             if (!$cur) break;
+        }
+    }
+
+    /**
+     * Phase 5: Add arbitrary PV to the binary tree from a source member
+     * (used for product/repeat-purchase PV) and trigger pairing bonuses.
+     */
+    public static function processBinaryPV(int $sourceUserId, float $pvAmount): void
+    {
+        if (setting('binary_enabled', '1') !== '1') {
+            return;
+        }
+        if ($pvAmount <= 0.00) return;
+
+        $pdo = db();
+        $st  = $pdo->prepare('SELECT binary_parent_id, binary_position FROM users WHERE id = ?');
+        $st->execute([$sourceUserId]);
+        $row = $st->fetch();
+        if (!$row) return;
+
+        $cur  = isset($row['binary_parent_id']) ? (int)$row['binary_parent_id'] : null;
+        $side = $row['binary_position'] ?? null;
+        $visited = [$sourceUserId => true];
+
+        while ($cur !== null) {
+            if (isset($visited[$cur])) break;
+            $visited[$cur] = true;
+
+            self::applyBinaryPv($cur, $side, $pvAmount, $sourceUserId, 'repeat_purchase');
+
+            $st->execute([$cur]);
+            $row = $st->fetch();
+            $side = $row['binary_position'] ?? null;
+            $cur  = isset($row['binary_parent_id']) ? (int)$row['binary_parent_id'] : null;
+            if (!$cur) break;
+        }
+    }
+
+    /**
+     * Add PV to one ancestor leg, then pair any newly matched PV.
+     * Records pv_transactions for binary leg, paired and flushed amounts.
+     */
+    private static function applyBinaryPv(
+        int $ancestorId,
+        ?string $side,
+        float $pvAmount,
+        int $sourceUserId,
+        string $sourceType
+    ): void {
+        if ($ancestorId <= 0 || !$side || $pvAmount <= 0.00) {
+            return;
+        }
+
+        $pdo = db();
+        $pvCol = ($side === 'left') ? 'left_pv' : 'right_pv';
+        $pdo->prepare("UPDATE users SET {$pvCol} = {$pvCol} + :pv WHERE id = :id")
+            ->execute([':pv' => $pvAmount, ':id' => $ancestorId]);
+
+        self::recordPvTransaction(
+            $ancestorId,
+            ($side === 'left') ? 'binary_left' : 'binary_right',
+            $pvAmount,
+            $sourceUserId,
+            $sourceType
+        );
+
+        // Capped/perminact members earn no pairs, but their leg PV still accumulates.
+        if (!CapEngine::isActiveForPairs($ancestorId)) {
+            return;
+        }
+
+        $st = $pdo->prepare("
+            SELECT u.id, u.package_id, u.left_pv, u.right_pv,
+                   u.paired_pv, u.paired_pv_today,
+                   u.daily_cap_bypass,
+                   p.pairing_pv_pct, p.daily_pair_pv_cap
+            FROM   users u
+            LEFT JOIN packages p ON p.id = u.package_id
+            WHERE  u.id = ? AND u.status = 'active'
+              AND  p.pairing_pv_pct > 0
+        ");
+        $st->execute([$ancestorId]);
+        $ancestor = $st->fetch();
+        if (!$ancestor) return;
+
+        $available = min((float)$ancestor['left_pv'], (float)$ancestor['right_pv']);
+        $processed = (float)$ancestor['paired_pv'];
+        $newPaired = max(0.00, $available - $processed);
+
+        if ($newPaired > 0.00) {
+            if (!empty($ancestor['daily_cap_bypass'])) {
+                $capRemaining = $newPaired;
+            } else {
+                $capRemaining = (float)$ancestor['daily_pair_pv_cap'] - (float)$ancestor['paired_pv_today'];
+            }
+            $payNow   = min($newPaired, max(0.00, $capRemaining));
+            $flushNow = $newPaired - $payNow;
+
+            if ($payNow > 0.00) {
+                $bonus = Package::pairingBonus($payNow, (int)$ancestor['package_id']);
+                self::creditPairing($ancestorId, $bonus, $payNow, $sourceUserId);
+                self::recordPvTransaction($ancestorId, 'binary_paired', $payNow, $sourceUserId, $sourceType);
+            }
+
+            if ($flushNow > 0.00) {
+                self::recordFlushPV($ancestorId, $flushNow, $sourceUserId);
+                self::recordPvTransaction($ancestorId, 'binary_flushed', $flushNow, $sourceUserId, $sourceType);
+            }
+
+            $pdo->prepare("
+                UPDATE users
+                SET paired_pv       = paired_pv       + :pay,
+                    flushed_pv      = flushed_pv      + :flush,
+                    paired_pv_today = paired_pv_today + :pay2
+                WHERE id = :id
+            ")->execute([
+                ':pay'   => $payNow,
+                ':flush' => $flushNow,
+                ':pay2'  => $payNow,
+                ':id'    => $ancestorId,
+            ]);
         }
     }
 
@@ -352,8 +404,73 @@ class Commission
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    //  PRODUCT / REPEAT-PURCHASE PV (Phase 5)
+    //  Distributes product PV to personal, group and binary PV on approval.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    public static function processProductPV(int $purchaseId): void
+    {
+        $pdo = db();
+        $st = $pdo->prepare("
+            SELECT rp.*, p.name AS product_name, p.pv_value
+            FROM   repeat_purchases rp
+            JOIN   products p ON p.id = rp.product_id
+            WHERE  rp.id = ? AND rp.status = 'approved'
+        ");
+        $st->execute([$purchaseId]);
+        $purchase = $st->fetch();
+        if (!$purchase) return;
+
+        $memberId = (int)$purchase['member_id'];
+        $totalPv  = (float)$purchase['total_pv'];
+        if ($totalPv <= 0.00) return;
+
+        $buyer = User::find($memberId);
+        if (!$buyer || $buyer['status'] !== 'active') return;
+
+        // 1. Buyer receives Personal PV
+        $pdo->prepare('UPDATE users SET personal_pv = personal_pv + ? WHERE id = ?')
+            ->execute([$totalPv, $memberId]);
+        self::recordPvTransaction($memberId, 'product_personal', $totalPv, $memberId, 'repeat_purchase');
+
+        // 2. Group PV flows up the sponsor chain to active uplines
+        $cur = (int)$buyer['sponsor_id'];
+        $visited = [$memberId => true];
+        while ($cur > 0 && !isset($visited[$cur])) {
+            $upline = User::find($cur);
+            if (!$upline) break;
+
+            if ($upline['status'] === 'active') {
+                $pdo->prepare('UPDATE users SET group_pv = group_pv + ? WHERE id = ?')
+                    ->execute([$totalPv, $cur]);
+                self::recordPvTransaction($cur, 'product_group', $totalPv, $memberId, 'repeat_purchase');
+            }
+
+            $visited[$cur] = true;
+            $cur = (int)$upline['sponsor_id'];
+        }
+
+        // 3. Product PV also flows up the binary tree and may trigger pairing bonuses
+        self::processBinaryPV($memberId, $totalPv);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     //  PRIVATE HELPERS
     // ══════════════════════════════════════════════════════════════════════════
+
+    private static function recordPvTransaction(
+        int $userId,
+        string $type,
+        float $amount,
+        int $sourceUserId,
+        string $sourceType
+    ): void {
+        db()->prepare("
+            INSERT INTO pv_transactions
+              (user_id, type, amount, source_user_id, source_type)
+            VALUES (?, ?, ?, ?, ?)
+        ")->execute([$userId, $type, $amount, $sourceUserId, $sourceType]);
+    }
 
     private static function creditPairing(
         int $userId,

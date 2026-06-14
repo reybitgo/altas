@@ -30,6 +30,7 @@ $lastReset        = setting('last_reset');
           ['Commissions Paid', fmt_money($totalCommissions),                 'success', '🏆', 'All credited bonuses'],
           ['E-Wallet Holdings', fmt_money($totalEwallets),                    'primary', '🏦', 'Sum of all balances'],
           ['Unused Codes',     number_format($codeStat['unused']),           'orange', '🎟️', '<a href="' . APP_URL . '/?page=admin_codes" class="text-decoration-none fw-semibold" style="font-size:.72rem;">Manage →</a>'],
+          ['Pending Purchases', number_format($v2Stats['pending_repeat_purchases']), 'warning', '🛒', '<a href="' . APP_URL . '/?page=admin_repeat_purchases" class="text-decoration-none fw-semibold" style="font-size:.72rem;">Review →</a>'],
           ['Pending Activation', number_format((int)($memberCounts['pending'] ?? 0)), 'warning', '⏳', '<a href="' . APP_URL . '/?page=admin_users&status=pending" class="text-decoration-none fw-semibold" style="font-size:.72rem;">View →</a>'],
           ['Suspended',        number_format((int)$memberCounts['suspended']), 'danger', '🚫', '<a href="' . APP_URL . '/?page=admin_users&status=suspended" class="text-decoration-none fw-semibold" style="font-size:.72rem;">View →</a>'],
           ['Capped Members',     number_format($v2Stats['capped']),             'warning', '⚠️', '<a href="' . APP_URL . '/?page=admin_cap_monitor&status=capped" class="text-decoration-none fw-semibold" style="font-size:.72rem;">View →</a>'],

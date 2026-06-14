@@ -200,8 +200,8 @@
     <div class="row g-3 mb-3">
       <?php
       $pvCards = [
-        [$user['personal_pv'] ?? 0, 'Personal PV', '🛒', '#7c3aed', 'Personal sales PV from downline product purchases'],
-        [$user['group_pv']    ?? 0, 'Group PV',    '🌐', '#0891b2', 'Group sales PV from downline purchases'],
+        [$user['personal_pv'] ?? 0, 'Personal PV', '🛒', '#7c3aed', 'Your own product purchase PV'],
+        [$user['group_pv']    ?? 0, 'Group PV',    '🌐', '#0891b2', 'Product PV from your downline purchases'],
       ];
       foreach ($pvCards as [$val, $label, $icon, $color, $sub]): ?>
         <div class="col-6 col-xl-4">

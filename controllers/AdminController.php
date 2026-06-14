@@ -22,6 +22,7 @@ class AdminController
             'perminact'     => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role='member' AND cap_status='perminact'")->fetchColumn(),
             'react_revenue' => (float)$pdo->query("SELECT COALESCE(SUM(amount_paid),0) FROM reactivations WHERE status='completed'")->fetchColumn(),
             'dfi_today'     => (float)$pdo->query("SELECT COALESCE(SUM(amount),0) FROM daily_fixed_income_log WHERE DATE(created_at)=CURDATE()")->fetchColumn(),
+            'pending_repeat_purchases' => (int)$pdo->query("SELECT COUNT(*) FROM repeat_purchases WHERE status='pending'")->fetchColumn(),
         ];
 
         require 'views/admin/dashboard.php';
@@ -276,6 +277,114 @@ class AdminController
         redirect('/?page=admin_packages');
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    //  PRODUCTS (Phase 5)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    public function products(): void
+    {
+        Auth::guard('admin');
+        $products = Product::all();
+        $editProduct = null;
+        if (isset($_GET['edit'])) {
+            $editProduct = Product::find((int)$_GET['edit']);
+        }
+        require 'views/admin/products.php';
+    }
+
+    public function saveProduct(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $id   = (int)($_POST['product_id'] ?? 0);
+        $data = [
+            'name'     => trim($_POST['name'] ?? ''),
+            'price'    => (float)($_POST['price'] ?? 0),
+            'pv_value' => (float)($_POST['pv_value'] ?? 0),
+            'status'   => $_POST['status'] ?? 'active',
+        ];
+
+        $backUrl = $id
+            ? '/?page=admin_products&edit=' . $id
+            : '/?page=admin_products';
+
+        if (!$data['name'] || $data['price'] <= 0) {
+            flash('error', 'Product name and price are required.');
+            redirect($backUrl);
+        }
+        if ($data['pv_value'] < 0) {
+            flash('error', 'PV value cannot be negative.');
+            redirect($backUrl);
+        }
+
+        Product::save($data, $id ?: null);
+        flash('success', $id ? 'Product updated.' : 'Product created.');
+        redirect('/?page=admin_products');
+    }
+
+    public function deleteProduct(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            flash('error', 'Invalid product ID.');
+            redirect('/?page=admin_products');
+        }
+
+        if (Product::delete($id)) {
+            flash('success', 'Product deleted.');
+        } else {
+            flash('error', 'Cannot delete product: it has existing repeat-purchase records.');
+        }
+        redirect('/?page=admin_products');
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  REPEAT PURCHASES (Phase 5)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    public function repeatPurchases(): void
+    {
+        Auth::guard('admin');
+        $status = $_GET['status'] ?? 'pending';
+        $page   = max(1, (int)($_GET['pg'] ?? 1));
+        $result = $status === 'pending'
+            ? RepeatPurchase::pending($page, 25)
+            : RepeatPurchase::all($page, 25);
+        require 'views/admin/repeat_purchases.php';
+    }
+
+    public function approveRepeatPurchase(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $id = (int)($_POST['id'] ?? 0);
+        if (RepeatPurchase::approve($id, Auth::id())) {
+            flash('success', 'Purchase approved and PV distributed.');
+        } else {
+            flash('error', 'Could not approve purchase.');
+        }
+        redirect('/?page=admin_repeat_purchases');
+    }
+
+    public function rejectRepeatPurchase(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $id = (int)($_POST['id'] ?? 0);
+        if (RepeatPurchase::reject($id, Auth::id())) {
+            flash('success', 'Purchase rejected.');
+        } else {
+            flash('error', 'Could not reject purchase.');
+        }
+        redirect('/?page=admin_repeat_purchases');
+    }
+
     // ── Registration Codes ────────────────────────────────────────────────────
 
     public function codes(): void
@@ -403,6 +512,7 @@ class AdminController
             'ewallet_transfer_weekly_limit',
             'seat_limit',
             'pv_per_peso_rate',
+            'personal_pv_requirement',
         ];
         $pdo = db();
         $st  = $pdo->prepare("INSERT INTO settings (key_name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");

@@ -128,6 +128,39 @@ class MemberController
         require 'views/member/earnings.php';
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    //  REPEAT PURCHASES (Phase 5)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    public function repeatPurchases(): void
+    {
+        Auth::guard('member');
+        $user   = Auth::user();
+        $page   = max(1, (int)($_GET['pg'] ?? 1));
+        $products = Product::active();
+        $history  = RepeatPurchase::forMember($user['id'], $page, 20);
+        require 'views/member/repeat_purchases.php';
+    }
+
+    public function doRepeatPurchase(): void
+    {
+        Auth::guard('member');
+        csrf_verify();
+
+        $user      = Auth::user();
+        $productId = (int)($_POST['product_id'] ?? 0);
+        $quantity  = max(1, (int)($_POST['quantity'] ?? 1));
+
+        try {
+            RepeatPurchase::create($user['id'], $productId, $quantity);
+            flash('success', 'Purchase request submitted. It will be reviewed by an admin.');
+        } catch (Throwable $e) {
+            flash('error', $e->getMessage());
+        }
+
+        redirect('/?page=repeat_purchases');
+    }
+
     public function genealogy(): void
     {
         Auth::guard('member');

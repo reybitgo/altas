@@ -317,6 +317,10 @@ $routes = [
     'api_cap_status'     => ['MemberController', 'apiCapStatus',      'member'],
     'api_dfi_status'     => ['MemberController', 'apiDfiStatus',      'member'],
 
+    // Phase 5: Repeat-purchase products
+    'repeat_purchases'   => ['MemberController', 'repeatPurchases',   'member'],
+    'do_repeat_purchase' => ['MemberController', 'doRepeatPurchase',  'member'],
+
     // ── Admin ─────────────────────────────────────────
     'admin'              => ['AdminController',  'dashboard',       'admin'],
     'admin_users'        => ['AdminController',  'users',           'admin'],
@@ -324,6 +328,12 @@ $routes = [
     'admin_toggle_user'  => ['AdminController',  'toggleUser',      'admin'],
     'admin_packages'     => ['AdminController',  'packages',        'admin'],
     'admin_save_package' => ['AdminController',  'savePackage',     'admin'],
+    'admin_products'     => ['AdminController',  'products',        'admin'],
+    'admin_save_product' => ['AdminController',  'saveProduct',     'admin'],
+    'admin_delete_product' => ['AdminController',  'deleteProduct', 'admin'],
+    'admin_repeat_purchases'         => ['AdminController',  'repeatPurchases',        'admin'],
+    'admin_approve_repeat_purchase'  => ['AdminController',  'approveRepeatPurchase',  'admin'],
+    'admin_reject_repeat_purchase'   => ['AdminController',  'rejectRepeatPurchase',   'admin'],
     'admin_codes'        => ['AdminController',  'codes',           'admin'],
     'admin_gen_codes'    => ['AdminController',  'generateCodes',   'admin'],
     'admin_export_codes' => ['AdminController',  'exportCodes',     'admin'],
