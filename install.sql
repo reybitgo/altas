@@ -377,12 +377,12 @@ VALUES (
 -- Default starter package (v2 defaults)
 INSERT INTO packages (
   name, entry_fee, package_pv_rate, pairing_pv_pct, daily_pair_pv_cap,
-  pairing_bonus, daily_pair_cap, direct_ref_pv_pct, direct_ref_bonus,
+  direct_ref_pv_pct,
   lifetime_cap_multiplier, reactivation_fee, reactivation_window_days,
   daily_fixed_income, daily_fixed_income_days, dfi_pv_pct, status
 ) VALUES (
   'Starter', 10000.00, 100.00, 20.00, 30000.00,
-  2000.00, 3, 5.00, 500.00,
+  5.00,
   3.00, 10000.00, 15,
   100.00, 90, 0.00, 'active'
 );

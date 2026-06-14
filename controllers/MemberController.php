@@ -129,7 +129,7 @@ class MemberController
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  REPEAT PURCHASES (Phase 5)
+    //  REPEAT PURCHASES
     // ══════════════════════════════════════════════════════════════════════════
 
     public function repeatPurchases(): void
@@ -367,7 +367,7 @@ class MemberController
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  PHASE 4: REACTIVATION (stubs — full UI in Phase 4)
+    //  REACTIVATION
     // ══════════════════════════════════════════════════════════════════════════
 
     /**

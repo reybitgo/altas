@@ -69,13 +69,14 @@ URL: `http://yourdomain.com/mlm/`
 
 | Event | What fires | When |
 |-------|-----------|------|
-| New member registers | Direct referral → sponsor | Instant |
-| New member registers | Indirect referral → 10 upline sponsors | Instant |
-| New member forms a pair | Pairing bonus → each ancestor in binary tree | Instant |
-| Daily cap exceeded | Pairs flushed (lost forever) | Instant |
-| **Midnight cron** | Reset `pairs_paid_today = 0` | Daily |
+| New member registers | Direct referral → sponsor (% of package PV) | Instant |
+| New member registers | Indirect referral → 10 upline sponsors (% of package PV) | Instant |
+| New member forms a pair | Pairing bonus → each qualifying ancestor (% of paired PV) | Instant |
+| Repeat purchase approved | Product PV → buyer personal PV, group PV up sponsor chain, binary PV up placement tree | Instant |
+| Daily cap exceeded | Excess paired PV flushed (lost forever) | Instant |
+| **Midnight cron** | Reset daily pair counters, flush PV logs, reset personal PV monthly | Daily |
 
-The cron **only resets the daily pair counter**. All money logic is real-time.
+All commission logic is real-time. The midnight cron resets daily/monthly counters only.
 
 ---
 
@@ -88,15 +89,18 @@ mlm/
 ├── .htaccess           ← Apache rewrites + security
 ├── config/db.php       ← Database credentials
 ├── core/
-│   ├── Auth.php        ← Session management
-│   ├── Commission.php  ← Real-time commission engine
-│   └── helpers.php     ← Utilities (fmt_money, csrf, etc.)
-├── models/             ← User, Package, Code, Ewallet, Payout
+│   ├── Auth.php           ← Session management
+│   ├── Commission.php     ← Real-time PV-based commission engine
+│   ├── CapEngine.php      ← Lifetime income capping
+│   ├── DailyFixedIncome.php ← DFI payouts (fixed or % of package PV)
+│   ├── Reactivation.php   ← Cap reactivation lifecycle
+│   └── helpers.php        ← Utilities (fmt_money, csrf, etc.)
+├── models/             ← User, Package, Code, Ewallet, Payout, Product, RepeatPurchase
 ├── controllers/        ← AuthController, MemberController, AdminController
 ├── views/
 │   ├── auth/           ← login.php, register.php
-│   ├── member/         ← dashboard, earnings, genealogy, profile, payout
-│   ├── admin/          ← (Phase 5)
+│   ├── member/         ← dashboard, earnings, genealogy, profile, payout, repeat purchases
+│   ├── admin/          ← dashboard, members, packages, settings, payouts, products, repeat purchases
 │   └── partials/       ← sidebar, topbar, head
 ├── assets/css/         ← main, auth, layout, components
 ├── cron/midnight_reset.php
@@ -123,7 +127,8 @@ Admin → Settings → "Run Daily Reset Now"
 
 - [x] Phase 1 — Database schema, config, core engine, all models
 - [x] Phase 2 — Login, 3-step registration, AJAX validation
-- [x] Phase 3 — Member dashboard (all 5 pages)
-- [x] Phase 4 — Midnight reset cron
-- [ ] Phase 5 — Admin dashboard (all pages)
-- [ ] Phase 6 — Security hardening, email, polish
+- [x] Phase 3 — PV-based binary pairing, direct referral, lifetime capping, DFI
+- [x] Phase 4 — PV-based indirect referrals, PV-per-peso conversion
+- [x] Phase 5 — Products & repeat-purchase PV, personal PV gate, monthly PV reset
+- [x] Phase 6 — Optional PV-based DFI (`dfi_pv_pct`)
+- [x] Phase 7 — Legacy cleanup, UI parity, documentation refresh

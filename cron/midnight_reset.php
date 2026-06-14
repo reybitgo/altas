@@ -9,10 +9,10 @@
  * MIDNIGHT RESET CRON (v2)
  * Crontab: 0 0 * * * /usr/bin/php /var/www/html/altasfarm/cron/midnight_reset.php
  *
- * v3 jobs:
+ * Jobs:
  *   1. Reset paired_pv_today = 0 for all members (PV-based daily pair cap).
  *   2. Expire capped members who missed reactivation window.
- *   3. Trigger Daily Fixed Income payout (if Phase 3 deployed).
+ *   3. Trigger Daily Fixed Income payout.
  *
  * All commission calculations are real-time and happen during registration.
  * This script handles scheduled daily batch operations only.
@@ -32,7 +32,7 @@ spl_autoload_register(function (string $class): void {
     }
 });
 
-// ── v2: Conditionally load CapEngine & Reactivation (Phase 2/4) ─────────────
+// ── Load CapEngine & Reactivation ──────────────────────────────────────────
 $capEngineAvailable = false;
 $capEnginePath = __DIR__ . '/../core/CapEngine.php';
 if (file_exists($capEnginePath)) {
@@ -47,7 +47,7 @@ if (file_exists($reactivationPath)) {
     $reactivationAvailable = true;
 }
 
-// ── v3: Load DailyFixedIncome (Phase 3 deployed) ──────────────────────────────
+// ── Load DailyFixedIncome ───────────────────────────────────────────────────
 $dfiAvailable = false;
 $dfiPath = __DIR__ . '/../core/DailyFixedIncome.php';
 if (file_exists($dfiPath)) {

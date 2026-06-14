@@ -185,12 +185,8 @@ class AdminController
             'pairing_pv_pct'    => (float)($_POST['pairing_pv_pct'] ?? 0),
             'daily_pair_pv_cap' => (float)($_POST['daily_pair_pv_cap'] ?? 0),
             'direct_ref_pv_pct' => (float)($_POST['direct_ref_pv_pct'] ?? 0),
-            'direct_ref_bonus'  => (float)($_POST['direct_ref_bonus'] ?? 0),
             'status'            => $_POST['status'] ?? 'active',
             'indirect_levels'  => [],
-            // Legacy count-based fields (kept for reference)
-            'pairing_bonus'     => (float)($_POST['pairing_bonus']  ?? 0),
-            'daily_pair_cap'    => (int)($_POST['daily_pair_cap']   ?? 3),
             // NEW v2 fields
             'lifetime_cap_multiplier'  => (float)($_POST['lifetime_cap_multiplier']  ?? 3.00),
             'reactivation_fee'         => (float)($_POST['reactivation_fee']         ?? 0),
@@ -211,8 +207,6 @@ class AdminController
             if ($existing) {
                 $data['pairing_pv_pct']    = (float)$existing['pairing_pv_pct'];
                 $data['daily_pair_pv_cap'] = (float)$existing['daily_pair_pv_cap'];
-                $data['pairing_bonus']     = (float)$existing['pairing_bonus'];
-                $data['daily_pair_cap']    = (int)$existing['daily_pair_cap'];
             }
         }
 
@@ -284,7 +278,7 @@ class AdminController
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  PRODUCTS (Phase 5)
+    //  PRODUCTS
     // ══════════════════════════════════════════════════════════════════════════
 
     public function products(): void
@@ -349,7 +343,7 @@ class AdminController
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  REPEAT PURCHASES (Phase 5)
+    //  REPEAT PURCHASES
     // ══════════════════════════════════════════════════════════════════════════
 
     public function repeatPurchases(): void

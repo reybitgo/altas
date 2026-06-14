@@ -52,9 +52,9 @@ class Package
      *
      * @param array $data Package data including v2/v3 fields:
      *   - name, entry_fee, package_pv_rate, pairing_pv_pct, daily_pair_pv_cap,
-     *     direct_ref_bonus, status
+     *     direct_ref_pv_pct, status
      *   - lifetime_cap_multiplier, reactivation_fee, reactivation_window_days
-     *   - daily_fixed_income, daily_fixed_income_days
+     *   - daily_fixed_income, daily_fixed_income_days, dfi_pv_pct
      *   - indirect_levels[1..10]
      * @param int|null $id Package ID for update, null for create
      */
@@ -69,10 +69,6 @@ class Package
             'pairing_pv_pct'           => (float)($data['pairing_pv_pct'] ?? 0),
             'daily_pair_pv_cap'        => (float)($data['daily_pair_pv_cap'] ?? 0),
             'direct_ref_pv_pct'        => (float)($data['direct_ref_pv_pct'] ?? 0),
-            'direct_ref_bonus'         => (float)($data['direct_ref_bonus'] ?? 0),
-            // Legacy count-based columns kept for reference
-            'pairing_bonus'            => (float)($data['pairing_bonus'] ?? 0),
-            'daily_pair_cap'           => (int)($data['daily_pair_cap'] ?? 3),
             // v2 fields
             'lifetime_cap_multiplier'  => (float)($data['lifetime_cap_multiplier'] ?? 3.00),
             'reactivation_fee'         => (float)($data['reactivation_fee'] ?? 0),

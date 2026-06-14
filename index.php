@@ -317,7 +317,7 @@ $routes = [
     'api_cap_status'     => ['MemberController', 'apiCapStatus',      'member'],
     'api_dfi_status'     => ['MemberController', 'apiDfiStatus',      'member'],
 
-    // Phase 5: Repeat-purchase products
+    // Repeat-purchase products
     'repeat_purchases'   => ['MemberController', 'repeatPurchases',   'member'],
     'do_repeat_purchase' => ['MemberController', 'doRepeatPurchase',  'member'],
 

@@ -192,9 +192,6 @@ class User
                    p.name              AS package_name,
                    p.pairing_pv_pct,
                    p.daily_pair_pv_cap,
-                   p.pairing_bonus,
-                   p.daily_pair_cap,
-                   p.direct_ref_bonus,
                    sp.username         AS sponsor_username,
                    bp.username         AS binary_parent_username
             FROM   users u
@@ -295,8 +292,6 @@ class User
                 u.right_pv,
                 p.pairing_pv_pct,
                 p.daily_pair_pv_cap,
-                p.pairing_bonus,
-                p.daily_pair_cap,
                 u.lifetime_earned,
                 u.cap_status,
                 (p.entry_fee * p.lifetime_cap_multiplier) AS lifetime_cap
@@ -321,7 +316,6 @@ class User
                 'right_pv'         => 0.00,
                 'pairing_pv_pct'   => 0.00,
                 'daily_pair_pv_cap'=> 0.00,
-                'pairing_bonus'    => 0.00,
                 'daily_cap'        => 0.00,
                 'cap_percent'      => 0.0,
                 'cap_remaining'    => 0.00,
@@ -347,8 +341,7 @@ class User
             'pairs_flushed'    => (int)$row['pairs_flushed'],
             'left_count'       => (int)$row['left_count'],
             'right_count'      => (int)$row['right_count'],
-            'pairing_bonus'    => (float)$row['pairing_bonus'],
-            // PV-based keys (Phase 3)
+            // PV-based keys
             'paired_pv'        => (float)$row['paired_pv'],
             'paired_pv_today'  => $paidToday,
             'flushed_pv'       => (float)$row['flushed_pv'],

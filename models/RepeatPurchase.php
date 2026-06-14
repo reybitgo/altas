@@ -122,7 +122,10 @@ class RepeatPurchase
         ");
         $st->execute([$adminId, $purchaseId]);
 
-        if ($st->rowCount() === 0) {
+        // rowCount() is unreliable with some PDO drivers; verify with a SELECT.
+        $verify = $pdo->prepare("SELECT id FROM repeat_purchases WHERE id = ? AND status = 'approved'");
+        $verify->execute([$purchaseId]);
+        if (!$verify->fetch()) {
             return false;
         }
 

@@ -29,6 +29,23 @@ $featuredPairCap  = $featuredPkg ? (float)$featuredPkg['daily_pair_pv_cap'] : 0.
 $featuredDirectPeso = $featuredPkg
     ? Package::directReferralBonus(Package::packagePv((int)$featuredPkg['id']), (int)$featuredPkg['id'])
     : 0.00;
+$featuredDfiAmount = $featuredPkg
+    ? Package::dailyFixedIncome((int)$featuredPkg['id'])
+    : 0.00;
+
+// Helper: format indirect level percentages with peso equivalents.
+function frontend_indirect_text(array $levels, float $packagePv): string
+{
+    $rate = (float)setting('pv_per_peso_rate', '1.0000');
+    $parts = [];
+    foreach ($levels as $lvl => $pct) {
+        if ((float)$pct > 0) {
+            $peso = $packagePv * ((float)$pct / 100) * $rate;
+            $parts[] = "Level {$lvl}: " . number_format((float)$pct, 2) . '% (≈ ' . fmt_money($peso) . ')';
+        }
+    }
+    return $parts ? implode(' · ', $parts) : 'No configured levels';
+}
 
 // Seat limit
 $seatLimit  = (int) setting('seat_limit', '1000');
@@ -234,19 +251,16 @@ $streamOxford = count($streamWords) > 2
           <div class="faq-a">
             There are <?= $streamCount ?> commission streams:
             <ul style="margin-top:.5rem;">
-              <li><strong>Binary Pairing Bonus (<?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?>):</strong> Earned each time a left-right pair forms anywhere in your binary downline. Capped at <?= $featuredPkg ? $featuredPkg['daily_pair_cap'] : '—' ?> pairs per day.</li>
+              <li><strong>Binary Pairing Bonus (<?= $featuredPkg ? fmt_money($featuredPairPeso) : '₱—' ?>):</strong> Earned each time a left-right pair forms anywhere in your binary downline. Capped at <?= $featuredPkg ? number_format($featuredPairCap, 0) : '—' ?> PV per day.</li>
               <li><strong>Direct Referral Bonus (<?= $featuredPkg ? fmt_money($featuredDirectPeso) : '₱—' ?>):</strong> Credited instantly every time someone you personally referred registers with your code.</li>
               <?php if ($indirectEnabled && $featuredPkg):
                 $lvls = Package::getIndirectLevels($featuredPkg['id']);
-                $lvlParts = [];
-                foreach ($lvls as $lvl => $amt) {
-                  if ($amt > 0) $lvlParts[] = "Level $lvl: " . fmt_money($amt);
-                }
+                $featuredPkgPv = Package::packagePv((int)$featuredPkg['id']);
               ?>
-                <li><strong>Unilevel Bonus:</strong> Generational bonuses paid 10 levels deep — <?= implode(', ', $lvlParts) ?> per registration in that level.</li>
+                <li><strong>Unilevel Bonus:</strong> Generational bonuses paid 10 levels deep — <?= frontend_indirect_text($lvls, $featuredPkgPv) ?> per registration in that level.</li>
               <?php endif; ?>
               <?php if ($dfiEnabled && $featuredPkg): ?>
-                <li><strong>Daily Fixed Income (<?= fmt_money($featuredPkg['daily_fixed_income']) ?>/day):</strong> A fixed daily payout credited for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration, on top of network earnings.</li>
+                <li><strong>Daily Fixed Income (<?= fmt_money($featuredDfiAmount) ?>/day):</strong> A daily payout credited for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration, on top of network earnings.</li>
               <?php endif; ?>
             </ul>
             All commissions are credited to your e-wallet in real time on the triggering event (registration), not on a batch schedule.
@@ -317,13 +331,13 @@ $streamOxford = count($streamWords) > 2
 
         <h3>5. Commissions and Earning Structure</h3>
         <p>Members earn through <?= $streamCount ?> streams:
-          (a) Binary Pairing Bonus of <?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?> per confirmed pair, capped at <?= $featuredPkg ? $featuredPkg['daily_pair_cap'] : '—' ?> pairs per calendar day;
+          (a) Binary Pairing Bonus of <?= $featuredPkg ? fmt_money($featuredPairPeso) : '₱—' ?> per confirmed pair, capped at <?= $featuredPkg ? number_format($featuredPairCap, 0) : '—' ?> PV per calendar day;
           (b) Direct Referral Bonus of <?= $featuredPkg ? fmt_money($featuredDirectPeso) : '₱—' ?> per personally sponsored member;
           <?php if ($indirectEnabled): ?>
             (c) Unilevel Bonus as detailed in the Compensation Plan section of the website;
           <?php endif; ?>
           <?php if ($dfiEnabled && $featuredPkg): ?>
-            <?= $indirectEnabled ? '(d)' : '(c)' ?> Daily Fixed Income of <?= fmt_money($featuredPkg['daily_fixed_income']) ?> per day for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration;
+            <?= $indirectEnabled ? '(d)' : '(c)' ?> Daily Fixed Income of <?= fmt_money($featuredDfiAmount) ?> per day for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration;
           <?php endif; ?>
           Commissions are credited to your platform e-wallet in real time on the triggering event. <?= e($siteName) ?> reserves the right to verify and withhold commissions suspected of being generated through fraud, duplicate accounts, or system manipulation.</p>
 
@@ -608,7 +622,7 @@ $streamOxford = count($streamWords) > 2
       <div class="hero-stats">
         <?php if ($binaryEnabled && $featuredPkg): ?>
         <div>
-          <div class="hero-stat-val"><?= fmt_money($featuredPkg['pairing_bonus']) ?></div>
+          <div class="hero-stat-val"><?= fmt_money($featuredPairPeso) ?></div>
           <div class="hero-stat-label">Per Pair Bonus</div>
         </div>
         <?php endif; ?>
@@ -630,10 +644,10 @@ $streamOxford = count($streamWords) > 2
       <div style="font-family:var(--mono);font-size:2rem;font-weight:500;color:var(--gold);"><?= $featuredPkg ? fmt_money($featuredPkg['entry_fee']) : '₱—' ?></div>
       <div style="height:1px;background:rgba(255,255,255,.1);margin:1rem 0;"></div>
       <div style="font-family:var(--serif);font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:.5rem;">Pair Earned</div>
-      <div style="font-family:var(--mono);font-size:2rem;font-weight:500;color:var(--gold);"><?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?></div>
+      <div style="font-family:var(--mono);font-size:2rem;font-weight:500;color:var(--gold);"><?= $featuredPkg ? fmt_money($featuredPairPeso) : '₱—' ?></div>
       <div style="height:1px;background:rgba(255,255,255,.1);margin:1rem 0;"></div>
       <div style="font-family:var(--serif);font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:.5rem;">Daily Cap</div>
-      <div style="font-family:var(--mono);font-size:2rem;font-weight:500;color:var(--gold);"><?= $featuredPkg ? $featuredPkg['daily_pair_cap'] . '×' : '—' ?></div>
+      <div style="font-family:var(--mono);font-size:2rem;font-weight:500;color:var(--gold);"><?= $featuredPkg ? number_format($featuredPairCap, 0) . ' PV' : '—' ?></div>
     </div>
 
     <div class="hero-illustration fade-up">
@@ -771,7 +785,7 @@ $streamOxford = count($streamWords) > 2
           <div class="step-num">04</div>
           <div class="step-icon">💸</div>
           <div class="step-title">Earn Pair Bonuses</div>
-          <div class="step-desc">When a left-right pair forms anywhere beneath you, <?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?> fires to your wallet in real time. Daily pairs are capped at <?= $featuredPkg ? $featuredPkg['daily_pair_cap'] : '—' ?> to keep the system sustainable.</div>
+          <div class="step-desc">When a left-right pair forms anywhere beneath you, <?= $featuredPkg ? fmt_money($featuredPairPeso) : '₱—' ?> fires to your wallet in real time. Daily pair PV is capped at <?= $featuredPkg ? number_format($featuredPairCap, 0) : '—' ?> to keep the system sustainable.</div>
         </div>
         <?php endif; ?>
         <?php if ($indirectEnabled): ?>
@@ -814,8 +828,8 @@ $streamOxford = count($streamWords) > 2
         <div class="plan-card fade-up">
           <div class="plan-card-icon">🤝</div>
           <div class="plan-card-title">Binary Pairing Bonus</div>
-          <div class="plan-card-amount"><?= fmt_money($featuredPkg['pairing_bonus']) ?></div>
-          <div class="plan-card-desc">Earned every time a left-right pair forms anywhere in your binary downline. Capped at <?= $featuredPkg['daily_pair_cap'] ?> pairs per day — a ceiling that keeps payouts consistent and the network stable.</div>
+          <div class="plan-card-amount"><?= fmt_money($featuredPairPeso) ?></div>
+          <div class="plan-card-desc">Earned every time a left-right pair forms anywhere in your binary downline. Capped at <?= number_format($featuredPairCap, 0) ?> paired PV per day — a ceiling that keeps payouts consistent and the network stable.</div>
         </div>
         <?php endif; ?>
         <div class="plan-card featured fade-up">
@@ -826,33 +840,33 @@ $streamOxford = count($streamWords) > 2
         </div>
         <?php if ($indirectEnabled && $featuredPkg):
           $lvls = Package::getIndirectLevels($featuredPkg['id']);
-          $maxIndirect = !empty($lvls) ? max($lvls) : 0;
+          $featuredPkgPv = Package::packagePv((int)$featuredPkg['id']);
+          $rate = (float)setting('pv_per_peso_rate', '1.0000');
+          $maxIndirectPct = !empty($lvls) ? max($lvls) : 0;
+          $maxIndirectPeso = $featuredPkgPv * ($maxIndirectPct / 100) * $rate;
         ?>
           <div class="plan-card fade-up">
             <div class="plan-card-icon">🔗</div>
             <div class="plan-card-title">Unilevel Bonus</div>
-            <div class="plan-card-amount">Up to <?= fmt_money($maxIndirect) ?></div>
-            <div class="plan-card-desc">Generational bonuses 10 levels deep through your sponsor chain. Passive income that compounds as your wider network grows — within the <?= number_format($seatLimit) ?>-member ceiling.</div>
+            <div class="plan-card-amount">Up to <?= number_format($maxIndirectPct, 2) ?>%</div>
+            <div class="plan-card-desc">Generational bonuses 10 levels deep through your sponsor chain (≈ <?= fmt_money($maxIndirectPeso) ?> per level at the top rate). Passive income that compounds as your wider network grows — within the <?= number_format($seatLimit) ?>-member ceiling.</div>
           </div>
         <?php endif; ?>
         <?php if ($dfiEnabled && $featuredPkg): ?>
           <div class="plan-card fade-up">
             <div class="plan-card-icon">📅</div>
             <div class="plan-card-title">Daily Fixed Income</div>
-            <div class="plan-card-amount"><?= fmt_money($featuredPkg['daily_fixed_income']) ?><small style="font-size:.6em;display:block;color:var(--muted);">/ day</small></div>
-            <div class="plan-card-desc">A fixed daily payout for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration. A predictable baseline on top of your network earnings.</div>
+            <div class="plan-card-amount"><?= fmt_money($featuredDfiAmount) ?><small style="font-size:.6em;display:block;color:var(--muted);">/ day</small></div>
+            <div class="plan-card-desc">A daily payout for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration. A predictable baseline on top of your network earnings.</div>
           </div>
         <?php endif; ?>
       </div>
       <?php if ($indirectEnabled && $featuredPkg):
         $lvls = Package::getIndirectLevels($featuredPkg['id']);
-        $parts = [];
-        foreach ($lvls as $lvl => $amt) {
-          if ($amt > 0) $parts[] = "Level $lvl " . fmt_money($amt);
-        }
+        $featuredPkgPv = Package::packagePv((int)$featuredPkg['id']);
       ?>
         <div class="plan-note">
-          <strong>Unilevel Breakdown:</strong> <?= implode(' · ', $parts) ?> per member registration.
+          <strong>Unilevel Breakdown:</strong> <?= frontend_indirect_text($lvls, $featuredPkgPv) ?> per member registration.
         </div>
       <?php endif; ?>
     </div>
@@ -894,11 +908,18 @@ $streamOxford = count($streamWords) > 2
               <div class="pkg-title">The <?= e($siteName) ?> Seat</div>
               <p class="pkg-desc">Your entry into the network. One seat, one package, backed by a real Philippine poultry operation. All earning streams are active from the moment you register.</p>
               <ul class="pkg-features">
-                <?php if ($binaryEnabled): ?><li>Full binary tree placement — left or right leg of your choice</li>
-                <li><?= fmt_money($pkg['pairing_bonus']) ?> per binary pair · capped at <?= $pkg['daily_pair_cap'] ?> pairs per day</li><?php endif; ?>
+                <?php if ($binaryEnabled):
+                  $pkgPv = Package::packagePv((int)$pkg['id']);
+                  $pkgPairPeso = Package::pairingBonus($pkgPv, (int)$pkg['id']);
+                  $pkgPairCap  = (float)$pkg['daily_pair_pv_cap'];
+                  $pkgDfi      = Package::dailyFixedIncome((int)$pkg['id']);
+                ?>
+                <li>Full binary tree placement — left or right leg of your choice</li>
+                <li><?= fmt_money($pkgPairPeso) ?> per binary pair · capped at <?= number_format($pkgPairCap, 0) ?> PV per day</li>
+                <?php endif; ?>
                 <li><?= fmt_money(Package::directReferralBonus(Package::packagePv((int)$pkg['id']), (int)$pkg['id'])) ?> direct referral bonus per recruit</li>
                 <?php if ($indirectEnabled): ?><li>10-level unilevel generational bonuses</li><?php endif; ?>
-                <?php if ($dfiEnabled): ?><li><?= fmt_money($pkg['daily_fixed_income']) ?> daily fixed income for <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>
+                <?php if ($dfiEnabled): ?><li><?= fmt_money($pkgDfi ?? Package::dailyFixedIncome((int)$pkg['id'])) ?> daily fixed income for <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>
                 <li>Lifetime income cap: <?= $pkg['lifetime_cap_multiplier'] ?>× entry fee</li>
                 <li>Real-time dashboard — wallet, full history<?= $binaryEnabled ? ', binary tree' : '' ?></li>
               </ul>
@@ -928,10 +949,16 @@ $streamOxford = count($streamWords) > 2
                 <div class="pkg-badge">🐣 <?= e($pkg['name']) ?></div>
                 <div class="pkg-price" style="font-size:1.75rem;margin:.5rem 0;"><?= fmt_money($pkg['entry_fee']) ?> <small style="font-size:.5em;">one-time</small></div>
                 <ul class="pkg-features" style="margin:1rem 0;padding-left:1.2rem;font-size:.85rem;">
-                  <?php if ($binaryEnabled): ?><li><?= fmt_money($pkg['pairing_bonus']) ?> per pair · cap <?= $pkg['daily_pair_cap'] ?>/day</li><?php endif; ?>
+                  <?php if ($binaryEnabled):
+                    $pkgPv = Package::packagePv((int)$pkg['id']);
+                    $pkgPairPeso = Package::pairingBonus($pkgPv, (int)$pkg['id']);
+                    $pkgPairCap  = (float)$pkg['daily_pair_pv_cap'];
+                  ?>
+                  <li><?= fmt_money($pkgPairPeso) ?> per pair · cap <?= number_format($pkgPairCap, 0) ?> PV/day</li>
+                  <?php endif; ?>
                   <li><?= fmt_money(Package::directReferralBonus(Package::packagePv((int)$pkg['id']), (int)$pkg['id'])) ?> direct referral</li>
                   <?php if ($indirectEnabled): ?><li>10-level unilevel bonuses</li><?php endif; ?>
-                  <?php if ($dfiEnabled): ?><li><?= fmt_money($pkg['daily_fixed_income']) ?>/day DFI · <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>
+                  <?php if ($dfiEnabled): ?><li><?= fmt_money(Package::dailyFixedIncome((int)$pkg['id'])) ?>/day DFI · <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>
                   <li>Lifetime cap <?= $pkg['lifetime_cap_multiplier'] ?>× fee</li>
                 </ul>
                 <div class="payout-methods" style="margin-bottom:1rem;">
@@ -1000,7 +1027,7 @@ $streamOxford = count($streamWords) > 2
                 <div class="why-icon">📅</div>
                 <div>
                   <div class="why-item-title">Daily Fixed Income</div>
-                  <div class="why-item-desc">Earn a fixed daily amount for up to <?= $featuredPkg['daily_fixed_income_days'] ?> days after joining — a predictable baseline of <?= fmt_money($featuredPkg['daily_fixed_income']) ?>/day on top of your network earnings.</div>
+                  <div class="why-item-desc">Earn a daily amount for up to <?= $featuredPkg['daily_fixed_income_days'] ?> days after joining — a predictable baseline of <?= fmt_money($featuredDfiAmount) ?>/day on top of your network earnings.</div>
                 </div>
               </div>
             <?php endif; ?>

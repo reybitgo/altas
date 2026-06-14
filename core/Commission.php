@@ -7,7 +7,7 @@
 class Commission
 {
     // ══════════════════════════════════════════════════════════════════════════
-    //  BINARY PLACEMENT ENGINE (PV-based — Phase 3)
+    //  BINARY PLACEMENT ENGINE (PV-based)
     //  Called immediately after a new member is inserted or activated.
     //  Walks the binary tree upward, adding the new member's package PV to each
     //  ancestor's leg PV and firing pairing bonuses based on matched PV.
@@ -92,7 +92,11 @@ class Commission
             if (isset($visited[$cur])) break;
             $visited[$cur] = true;
 
-            self::applyBinaryPv($cur, $side, $pvAmount, $sourceUserId, 'repeat_purchase');
+            // Only ancestors who meet the Personal PV gate receive binary PV from
+            // repeat purchases. The PV still flows upward past non-qualifying ancestors.
+            if (self::meetsPersonalPvRequirement($cur)) {
+                self::applyBinaryPv($cur, $side, $pvAmount, $sourceUserId, 'repeat_purchase');
+            }
 
             $st->execute([$cur]);
             $row = $st->fetch();
@@ -189,7 +193,7 @@ class Commission
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  DIRECT REFERRAL BONUS (Phase 4: % of Package PV)
+    //  DIRECT REFERRAL BONUS (% of Package PV)
     //  Fires immediately to the sponsor when their direct recruit registers.
     //  v2: Now subject to lifetime income cap.
     // ══════════════════════════════════════════════════════════════════════════
@@ -271,7 +275,7 @@ class Commission
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  UNILEVEL GENERATIONAL REFERRAL BONUSES (Phase 4: % of Package PV)
+    //  UNILEVEL GENERATIONAL REFERRAL BONUSES (% of Package PV)
     //  Pure Sponsor Chain — No Binary Tree involvement at all
     //  v2: Now subject to lifetime income cap.
     // ══════════════════════════════════════════════════════════════════════════
@@ -404,9 +408,23 @@ class Commission
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  PRODUCT / REPEAT-PURCHASE PV (Phase 5)
+    //  PRODUCT / REPEAT-PURCHASE PV
     //  Distributes product PV to personal, group and binary PV on approval.
     // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Check whether a member satisfies the optional Personal PV gate.
+     * A setting of 0 disables the gate.
+     */
+    private static function meetsPersonalPvRequirement(int $userId): bool
+    {
+        $req = (float)setting('personal_pv_requirement', '0.0000');
+        if ($req <= 0.00) {
+            return true;
+        }
+        $user = User::find($userId);
+        return $user && (float)$user['personal_pv'] >= $req;
+    }
 
     public static function processProductPV(int $purchaseId): void
     {
@@ -433,14 +451,15 @@ class Commission
             ->execute([$totalPv, $memberId]);
         self::recordPvTransaction($memberId, 'product_personal', $totalPv, $memberId, 'repeat_purchase');
 
-        // 2. Group PV flows up the sponsor chain to active uplines
+        // 2. Group PV flows up the sponsor chain to active uplines who meet the
+        //    optional Personal PV requirement.
         $cur = (int)$buyer['sponsor_id'];
         $visited = [$memberId => true];
         while ($cur > 0 && !isset($visited[$cur])) {
             $upline = User::find($cur);
             if (!$upline) break;
 
-            if ($upline['status'] === 'active') {
+            if ($upline['status'] === 'active' && self::meetsPersonalPvRequirement($cur)) {
                 $pdo->prepare('UPDATE users SET group_pv = group_pv + ? WHERE id = ?')
                     ->execute([$totalPv, $cur]);
                 self::recordPvTransaction($cur, 'product_group', $totalPv, $memberId, 'repeat_purchase');
