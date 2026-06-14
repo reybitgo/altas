@@ -60,7 +60,7 @@
               <th>Full Name</th>
               <th>Package</th>
               <th>Balance</th>
-              <?php if ($binaryEnabled): ?><th>Pairs</th><?php endif; ?>
+              <?php if ($binaryEnabled): ?><th>Paired PV</th><?php endif; ?>
               <th>Joined</th>
               <th>Status</th>
               <th>Actions</th>
@@ -78,7 +78,7 @@
                   <td style="font-size:.825rem;"><?= e($m['full_name'] ?? '—') ?></td>
                   <td><span class="badge bg-primary-subtle text-primary"><?= e($m['package_name'] ?? '—') ?></span></td>
                   <td class="td-green font-mono fw-bold"><?= fmt_money($m['ewallet_balance']) ?></td>
-                  <?php if ($binaryEnabled): ?><td class="td-muted font-mono"><?= number_format($m['pairs_paid']) ?></td><?php endif; ?>
+                  <?php if ($binaryEnabled): ?><td class="td-muted font-mono"><?= number_format((float)$m['paired_pv'], 2) ?></td><?php endif; ?>
                   <td class="td-muted" style="font-size:.75rem;"><?= fmt_date($m['joined_at']) ?></td>
                   <td>
                     <?php $b = $m['status'] === 'active' ? 'bg-success-subtle text-success' : ($m['status'] === 'suspended' ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning'); ?>

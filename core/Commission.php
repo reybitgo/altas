@@ -7,11 +7,11 @@
 class Commission
 {
     // ══════════════════════════════════════════════════════════════════════════
-    //  BINARY PLACEMENT ENGINE
-    //  Called immediately after a new member is inserted.
-    //  Walks the binary tree upward, updating leg counts on every ancestor and
-    //  firing pairing bonuses in real time for each ancestor that earns one.
-    //  v2: Capped/perminact members are SKIPPED — they earn no pairs themselves,
+    //  BINARY PLACEMENT ENGINE (PV-based — Phase 3)
+    //  Called immediately after a new member is inserted or activated.
+    //  Walks the binary tree upward, adding the new member's package PV to each
+    //  ancestor's leg PV and firing pairing bonuses based on matched PV.
+    //  Capped/perminact members are SKIPPED — they earn no pairs themselves,
     //      but active ancestors above them continue to earn normally.
     // ══════════════════════════════════════════════════════════════════════════
 
@@ -29,23 +29,32 @@ class Commission
         $cur  = $parentId;
         $side = $position;
 
-        // Pending users increment leg counts but do NOT trigger pairing bonuses.
-        $newUserStatus = $pdo->prepare('SELECT status FROM users WHERE id = ?');
-        $newUserStatus->execute([$newUserId]);
-        $newUserIsActive = ($newUserStatus->fetchColumn() ?? '') === 'active';
+        // New member's package PV determines how much PV is added to each ancestor leg.
+        $newUserRow = $pdo->prepare('SELECT status, package_id FROM users WHERE id = ?');
+        $newUserRow->execute([$newUserId]);
+        $newUser = $newUserRow->fetch();
+        if (!$newUser) return;
+        $newUserIsActive = ($newUser['status'] ?? '') === 'active';
+        $packagePv       = Package::packagePv((int)($newUser['package_id'] ?? 0));
 
         while ($cur !== null) {
 
-            // 1. Increment the correct leg count on this ancestor
+            // 1. Add package PV to the correct ancestor leg.
+            //    Legacy left_count/right_count are kept in sync for reporting only.
             if ($incrementCounts) {
-                $col = ($side === 'left') ? 'left_count' : 'right_count';
-                $pdo->prepare("UPDATE users SET {$col} = {$col} + 1 WHERE id = ?")
+                $pvCol    = ($side === 'left') ? 'left_pv' : 'right_pv';
+                $countCol = ($side === 'left') ? 'left_count' : 'right_count';
+
+                if ($packagePv > 0) {
+                    $pdo->prepare("UPDATE users SET {$pvCol} = {$pvCol} + :pv WHERE id = :id")
+                        ->execute([':pv' => $packagePv, ':id' => $cur]);
+                }
+                $pdo->prepare("UPDATE users SET {$countCol} = {$countCol} + 1 WHERE id = ?")
                     ->execute([$cur]);
             }
 
-            // v2: Skip capped/perminact members entirely — no pairing bonuses for them
+            // Skip capped/perminact members entirely — no pairing bonuses for them
             if (!CapEngine::isActiveForPairs($cur)) {
-                // Move to parent but do NOT process pairs for this capped ancestor
                 $upRow = $pdo->prepare(
                     'SELECT binary_parent_id, binary_position FROM users WHERE id = ?'
                 );
@@ -57,53 +66,53 @@ class Commission
                 continue;
             }
 
-            // 2. Read fresh state (after increment) with package info
+            // 2. Read fresh state (after PV increment) with package info
             $st = $pdo->prepare("
-                SELECT u.id, u.left_count, u.right_count,
-                       u.pairs_paid, u.pairs_flushed, u.pairs_paid_today,
+                SELECT u.id, u.package_id, u.left_pv, u.right_pv,
+                       u.paired_pv, u.paired_pv_today,
                        u.daily_cap_bypass,
-                       p.pairing_bonus, p.daily_pair_cap
+                       p.pairing_pv_pct, p.daily_pair_pv_cap
                 FROM   users u
                 LEFT JOIN packages p ON p.id = u.package_id
                 WHERE  u.id = ? AND u.status = 'active'
-                  AND  p.pairing_bonus IS NOT NULL
+                  AND  p.pairing_pv_pct > 0
             ");
             $st->execute([$cur]);
             $ancestor = $st->fetch();
 
             // Only fire pairing bonuses if the NEW user is active.
-            // Pending users increment leg counts but don't trigger payouts.
+            // Pending users increment leg PV but don't trigger payouts.
             if ($newUserIsActive && $ancestor) {
-                $processed = $ancestor['pairs_paid'] + $ancestor['pairs_flushed'];
-                $available = min($ancestor['left_count'], $ancestor['right_count']);
-                $newPairs  = $available - $processed;
+                $available  = min((float)$ancestor['left_pv'], (float)$ancestor['right_pv']);
+                $processed  = (float)$ancestor['paired_pv'];
+                $newPaired  = max(0.00, $available - $processed);
 
-                if ($newPairs > 0) {
+                if ($newPaired > 0.00) {
                     if (!empty($ancestor['daily_cap_bypass'])) {
-                        $capRemaining = $newPairs; // unlimited daily cap
+                        $capRemaining = $newPaired; // unlimited daily cap
                     } else {
-                        $capRemaining = (int)$ancestor['daily_pair_cap'] - (int)$ancestor['pairs_paid_today'];
+                        $capRemaining = (float)$ancestor['daily_pair_pv_cap'] - (float)$ancestor['paired_pv_today'];
                     }
-                    $payNow       = min($newPairs, max(0, $capRemaining));
-                    $flushNow     = $newPairs - $payNow;
+                    $payNow   = min($newPaired, max(0.00, $capRemaining));
+                    $flushNow = $newPaired - $payNow;
 
-                    // Credit earned pairs immediately — v2: cap-aware
-                    if ($payNow > 0) {
-                        $bonus = $payNow * (float)$ancestor['pairing_bonus'];
+                    // Credit earned paired PV immediately
+                    if ($payNow > 0.00) {
+                        $bonus = Package::pairingBonus($payNow, (int)$ancestor['package_id']);
                         self::creditPairing($cur, $bonus, $payNow, $newUserId);
                     }
 
-                    // Record flushed pairs (money permanently lost)
-                    if ($flushNow > 0) {
-                        self::recordFlush($cur, $flushNow, $newUserId);
+                    // Record flushed PV (money permanently lost)
+                    if ($flushNow > 0.00) {
+                        self::recordFlushPV($cur, $flushNow, $newUserId);
                     }
 
-                    // Update counters in one atomic statement
+                    // Update PV counters in one atomic statement
                     $pdo->prepare("
                         UPDATE users
-                        SET pairs_paid       = pairs_paid       + :pay,
-                            pairs_flushed    = pairs_flushed    + :flush,
-                            pairs_paid_today = pairs_paid_today + :pay2
+                        SET paired_pv       = paired_pv       + :pay,
+                            flushed_pv      = flushed_pv      + :flush,
+                            paired_pv_today = paired_pv_today + :pay2
                         WHERE id = :id
                     ")->execute([
                         ':pay'   => $payNow,
@@ -128,7 +137,7 @@ class Commission
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  DIRECT REFERRAL BONUS
+    //  DIRECT REFERRAL BONUS (Phase 4: % of Package PV)
     //  Fires immediately to the sponsor when their direct recruit registers.
     //  v2: Now subject to lifetime income cap.
     // ══════════════════════════════════════════════════════════════════════════
@@ -145,9 +154,10 @@ class Commission
         }
 
         $pkg = Package::find($packageId);
-        if (!$pkg || (float)$pkg['direct_ref_bonus'] <= 0) return;
+        if (!$pkg || (float)$pkg['direct_ref_pv_pct'] <= 0) return;
 
-        $bonus = (float)$pkg['direct_ref_bonus'];
+        $packagePv = Package::packagePv($packageId);
+        $bonus     = Package::directReferralBonus($packagePv, $packageId);
 
         // 1. CD split BEFORE lifetime cap
         $cdSplit = CdStatus::fillBucket($sponsorId, $bonus);
@@ -209,7 +219,7 @@ class Commission
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  UNILEVEL GENERATIONAL REFERRAL BONUSES
+    //  UNILEVEL GENERATIONAL REFERRAL BONUSES (Phase 4: % of Package PV)
     //  Pure Sponsor Chain — No Binary Tree involvement at all
     //  v2: Now subject to lifetime income cap.
     // ══════════════════════════════════════════════════════════════════════════
@@ -226,6 +236,7 @@ class Commission
         $levels = Package::getIndirectLevels($packageId);
         if (empty($levels)) return;
 
+        $packagePv = Package::packagePv($packageId);
         $pdo = db();
         $cur = $directSponsorId;
         $visited = [$directSponsorId => true];
@@ -251,7 +262,8 @@ class Commission
                 continue;
             }
 
-            $bonus = (float)($levels[$lvl] ?? 0);
+            $pvPct = (float)($levels[$lvl] ?? 0);
+            $bonus = Package::indirectReferralBonus($packagePv, $pvPct);
 
             if ($bonus > 0) {
                 // 1. CD split BEFORE lifetime cap
@@ -346,11 +358,10 @@ class Commission
     private static function creditPairing(
         int $userId,
         float $amount,
-        int $pairs,
+        float $pairedPv,
         int $sourceId
     ): void {
         $pdo = db();
-        $perPair = $pairs > 0 ? fmt_money($amount / $pairs) : '₱0.00';
 
         // 1. CD split happens BEFORE lifetime cap
         $cdSplit = CdStatus::fillBucket($userId, $amount);
@@ -368,7 +379,7 @@ class Commission
         }
 
         // 3. Build description
-        $desc = "{$pairs} pair(s) × {$perPair}";
+        $desc = number_format($pairedPv, 2) . ' PV paired → ' . fmt_money($amount);
         if ($cdPortion > 0) {
             $desc .= sprintf(' — %s to CD', fmt_money($cdPortion));
             if ($actualWallet > 0) {
@@ -386,7 +397,7 @@ class Commission
             $amount,        // GROSS amount recorded
             $capBlocked,
             $sourceId,
-            $pairs,
+            1,              // One pairing event per ancestor per placement
             $desc
         ]);
 
@@ -394,10 +405,10 @@ class Commission
 
         // 5. Credit e-wallet + cap blocked
         if ($actualWallet > 0) {
-            Ewallet::credit($userId, $actualWallet, $commId, 'commission', "Pairing bonus — {$pairs} pair(s)");
+            Ewallet::credit($userId, $actualWallet, $commId, 'commission', number_format($pairedPv, 2) . ' PV pairing bonus');
         }
         if ($capBlocked > 0) {
-            self::recordCapBlocked($userId, $capBlocked, 'pairing', $sourceId, null, $pairs);
+            self::recordCapBlocked($userId, $capBlocked, 'pairing', $sourceId, null, 1);
         }
 
         // 6. CD ledger audit trail
@@ -425,6 +436,23 @@ class Commission
             $sourceId,
             $pairs,
             "{$pairs} pair(s) flushed — daily cap reached"
+        ]);
+    }
+
+    /**
+     * v3: Record PV that was flushed because the daily paired-PV cap was reached.
+     */
+    private static function recordFlushPV(int $userId, float $flushedPv, int $sourceId): void
+    {
+        db()->prepare("
+            INSERT INTO commissions
+              (user_id, type, amount, source_user_id, pairs_count, description, status)
+            VALUES (?, 'pairing', 0.00, ?, ?, ?, 'flushed')
+        ")->execute([
+            $userId,
+            $sourceId,
+            0,
+            number_format($flushedPv, 2) . ' PV flushed — daily cap reached'
         ]);
     }
 

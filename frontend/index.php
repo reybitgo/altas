@@ -22,6 +22,13 @@ $mayaFee         = (float) setting('service_fee_maya', '0');
 $packages   = Package::all(true);
 $pkgCount   = count($packages);
 $featuredPkg = $packages[0] ?? null;
+$featuredPairPeso = $featuredPkg
+    ? Package::pairingBonus(Package::packagePv((int)$featuredPkg['id']), (int)$featuredPkg['id'])
+    : 0.00;
+$featuredPairCap  = $featuredPkg ? (float)$featuredPkg['daily_pair_pv_cap'] : 0.00;
+$featuredDirectPeso = $featuredPkg
+    ? Package::directReferralBonus(Package::packagePv((int)$featuredPkg['id']), (int)$featuredPkg['id'])
+    : 0.00;
 
 // Seat limit
 $seatLimit  = (int) setting('seat_limit', '1000');
@@ -228,7 +235,7 @@ $streamOxford = count($streamWords) > 2
             There are <?= $streamCount ?> commission streams:
             <ul style="margin-top:.5rem;">
               <li><strong>Binary Pairing Bonus (<?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?>):</strong> Earned each time a left-right pair forms anywhere in your binary downline. Capped at <?= $featuredPkg ? $featuredPkg['daily_pair_cap'] : '—' ?> pairs per day.</li>
-              <li><strong>Direct Referral Bonus (<?= $featuredPkg ? fmt_money($featuredPkg['direct_ref_bonus']) : '₱—' ?>):</strong> Credited instantly every time someone you personally referred registers with your code.</li>
+              <li><strong>Direct Referral Bonus (<?= $featuredPkg ? fmt_money($featuredDirectPeso) : '₱—' ?>):</strong> Credited instantly every time someone you personally referred registers with your code.</li>
               <?php if ($indirectEnabled && $featuredPkg):
                 $lvls = Package::getIndirectLevels($featuredPkg['id']);
                 $lvlParts = [];
@@ -311,7 +318,7 @@ $streamOxford = count($streamWords) > 2
         <h3>5. Commissions and Earning Structure</h3>
         <p>Members earn through <?= $streamCount ?> streams:
           (a) Binary Pairing Bonus of <?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?> per confirmed pair, capped at <?= $featuredPkg ? $featuredPkg['daily_pair_cap'] : '—' ?> pairs per calendar day;
-          (b) Direct Referral Bonus of <?= $featuredPkg ? fmt_money($featuredPkg['direct_ref_bonus']) : '₱—' ?> per personally sponsored member;
+          (b) Direct Referral Bonus of <?= $featuredPkg ? fmt_money($featuredDirectPeso) : '₱—' ?> per personally sponsored member;
           <?php if ($indirectEnabled): ?>
             (c) Unilevel Bonus as detailed in the Compensation Plan section of the website;
           <?php endif; ?>
@@ -757,7 +764,7 @@ $streamOxford = count($streamWords) > 2
           <div class="step-num">03</div>
           <div class="step-icon">👥</div>
           <div class="step-title">Build Your Team</div>
-          <div class="step-desc">Share your referral link and bring in your network. Every direct referral earns you <?= $featuredPkg ? fmt_money($featuredPkg['direct_ref_bonus']) : '₱—' ?> — credited the moment they register.</div>
+          <div class="step-desc">Share your referral link and bring in your network. Every direct referral earns you <?= $featuredPkg ? fmt_money($featuredDirectPeso) : '₱—' ?> — credited the moment they register.</div>
         </div>
         <?php if ($binaryEnabled): ?>
         <div class="step-card fade-up">
@@ -814,7 +821,7 @@ $streamOxford = count($streamWords) > 2
         <div class="plan-card featured fade-up">
           <div class="plan-card-icon">👥</div>
           <div class="plan-card-title">Direct Referral Bonus</div>
-          <div class="plan-card-amount"><?= $featuredPkg ? fmt_money($featuredPkg['direct_ref_bonus']) : '₱—' ?></div>
+          <div class="plan-card-amount"><?= $featuredPkg ? fmt_money($featuredDirectPeso) : '₱—' ?></div>
           <div class="plan-card-desc">Credited instantly every time someone you referred registers. Because the community is capped at <?= number_format($seatLimit) ?>, referral slots are finite — your network fills in before the door closes.</div>
         </div>
         <?php if ($indirectEnabled && $featuredPkg):
@@ -889,7 +896,7 @@ $streamOxford = count($streamWords) > 2
               <ul class="pkg-features">
                 <?php if ($binaryEnabled): ?><li>Full binary tree placement — left or right leg of your choice</li>
                 <li><?= fmt_money($pkg['pairing_bonus']) ?> per binary pair · capped at <?= $pkg['daily_pair_cap'] ?> pairs per day</li><?php endif; ?>
-                <li><?= fmt_money($pkg['direct_ref_bonus']) ?> direct referral bonus per recruit</li>
+                <li><?= fmt_money(Package::directReferralBonus(Package::packagePv((int)$pkg['id']), (int)$pkg['id'])) ?> direct referral bonus per recruit</li>
                 <?php if ($indirectEnabled): ?><li>10-level unilevel generational bonuses</li><?php endif; ?>
                 <?php if ($dfiEnabled): ?><li><?= fmt_money($pkg['daily_fixed_income']) ?> daily fixed income for <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>
                 <li>Lifetime income cap: <?= $pkg['lifetime_cap_multiplier'] ?>× entry fee</li>
@@ -922,7 +929,7 @@ $streamOxford = count($streamWords) > 2
                 <div class="pkg-price" style="font-size:1.75rem;margin:.5rem 0;"><?= fmt_money($pkg['entry_fee']) ?> <small style="font-size:.5em;">one-time</small></div>
                 <ul class="pkg-features" style="margin:1rem 0;padding-left:1.2rem;font-size:.85rem;">
                   <?php if ($binaryEnabled): ?><li><?= fmt_money($pkg['pairing_bonus']) ?> per pair · cap <?= $pkg['daily_pair_cap'] ?>/day</li><?php endif; ?>
-                  <li><?= fmt_money($pkg['direct_ref_bonus']) ?> direct referral</li>
+                  <li><?= fmt_money(Package::directReferralBonus(Package::packagePv((int)$pkg['id']), (int)$pkg['id'])) ?> direct referral</li>
                   <?php if ($indirectEnabled): ?><li>10-level unilevel bonuses</li><?php endif; ?>
                   <?php if ($dfiEnabled): ?><li><?= fmt_money($pkg['daily_fixed_income']) ?>/day DFI · <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>
                   <li>Lifetime cap <?= $pkg['lifetime_cap_multiplier'] ?>× fee</li>

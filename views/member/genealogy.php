@@ -626,7 +626,7 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
         .attr('dy', '1.8em')
         .style('fill', d => d.children ? 'rgba(255,255,255,0.8)' : '#64748b')
         .style('display', d => (d.children || d._children) ? null : 'none')
-        .text(d => `L:${d.data.left_count || 0} R:${d.data.right_count || 0}`);
+        .text(d => `L:${(d.data.left_pv || 0).toLocaleString('en-PH', {minimumFractionDigits:0, maximumFractionDigits:0})} PV R:${(d.data.right_pv || 0).toLocaleString('en-PH', {minimumFractionDigits:0, maximumFractionDigits:0})} PV`);
 
       // UPDATE
       const nodeUpdate = node.merge(nodeEnter).transition()
@@ -812,7 +812,7 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
       if (!data.isPlaceholder) {
         html += `<div style="color:rgba(255,255,255,0.7);font-size:0.75rem;line-height:1.4;">`;
         html += `${data.package || 'Member'} · ${data.joined || '—'}<br>`;
-        html += `Left: ${data.left_count || 0} · Right: ${data.right_count || 0}<br>`;
+        html += `Left PV: ${(data.left_pv || 0).toLocaleString('en-PH')} · Right PV: ${(data.right_pv || 0).toLocaleString('en-PH')}<br>`;
         const statusColor = data.status==='active'?'#4ade80':data.status==='pending'?'#fbbf24':'#f87171';
         html += `Status: <span style="color:${statusColor};font-weight:600;">${data.status || 'active'}</span>`;
         html += `</div>`;

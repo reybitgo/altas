@@ -304,11 +304,12 @@ class AuthController
         }
 
         json_response([
-            'valid'        => true,
-            'package_name' => $row['package_name'],
-            'entry_fee'    => fmt_money((float)$row['entry_fee']),
-            'pairing_bonus' => fmt_money((float)$row['pairing_bonus']),
-            'daily_cap'    => $row['daily_pair_cap'],
+            'valid'              => true,
+            'package_name'       => $row['package_name'],
+            'entry_fee'          => fmt_money((float)$row['entry_fee']),
+            'pairing_pv_pct'     => (float)$row['pairing_pv_pct'],
+            'daily_pair_pv_cap'  => (float)$row['daily_pair_pv_cap'],
+            'direct_ref_pv_pct'  => (float)$row['direct_ref_pv_pct'],
         ]);
     }
 
@@ -319,11 +320,12 @@ class AuthController
         $out = [];
         foreach ($packages as $p) {
             $out[] = [
-                'id'            => (int)$p['id'],
-                'name'          => $p['name'],
-                'entry_fee'     => (float)$p['entry_fee'],
-                'pairing_bonus' => (float)$p['pairing_bonus'],
-                'daily_cap'     => (int)$p['daily_pair_cap'],
+                'id'                 => (int)$p['id'],
+                'name'               => $p['name'],
+                'entry_fee'          => (float)$p['entry_fee'],
+                'pairing_pv_pct'     => (float)$p['pairing_pv_pct'],
+                'daily_pair_pv_cap'  => (float)$p['daily_pair_pv_cap'],
+                'direct_ref_pv_pct'  => (float)$p['direct_ref_pv_pct'],
             ];
         }
         json_response(['packages' => $out]);

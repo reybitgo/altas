@@ -10,12 +10,12 @@
 
 Adopt **Points Value (PV)** as the universal internal currency of the system:
 
-- **Package PV** = `entry_fee × package_pv_rate`
 - **Product PV** = configured per product
 - **Bonus conversion** = `pv_amount × percentage × pv_per_peso_rate`
 - **Binary pairing** compares left/right **PV totals**, not member counts
-- **Group PV** flows up the sponsor chain
-- **Personal PV** gates repeat-purchase commissions
+- **Group PV** flows up the sponsor chain from product purchases
+- **Personal PV** is earned by the buyer of a product; it gates repeat-purchase commissions
+- **Package purchases** grant membership but generate **no PV flow**
 
 This plan converts the current system in **self-contained phases**. Each phase is deployable on its own and builds only on previously completed phases.
 
@@ -28,79 +28,68 @@ This plan converts the current system in **self-contained phases**. Each phase i
 **Deliverables:**
 
 1. **Database migrations**
-   - `packages.package_pv_rate` DECIMAL(5,2) DEFAULT 100.00
    - `users.left_pv` DECIMAL(14,2) DEFAULT 0.00
    - `users.right_pv` DECIMAL(14,2) DEFAULT 0.00
    - `users.flushed_pv` DECIMAL(14,2) DEFAULT 0.00
    - `users.personal_pv` DECIMAL(14,2) DEFAULT 0.00
    - `users.group_pv` DECIMAL(14,2) DEFAULT 0.00
-   - `users.total_package_pv` DECIMAL(14,2) DEFAULT 0.00
    - New system setting `pv_per_peso_rate` DECIMAL(10,4) DEFAULT 1.0000
 
-2. **Package admin form (`views/admin/packages.php`)**
-   - Add "Package PV Rate (%)" field
-   - Show calculated "Package PV" preview = entry_fee × rate
-
-3. **System settings (`views/admin/settings.php`)**
+2. **System settings (`views/admin/settings.php`)**
    - Add "PV per Peso Rate" global setting
    - Help text: "Pesos paid per 1 PV when converting bonuses"
 
-4. **Package model (`models/Package.php`)**
-   - Persist `package_pv_rate`
-   - Helper: `Package::packagePv($packageId)` returns entry_fee × rate
+3. **Package model (`models/Package.php`)**
+   - No PV fields on packages yet; packages only have entry fee and existing bonus settings
 
-5. **Backward compatibility**
+4. **Backward compatibility**
    - All existing commission code remains untouched
    - New columns default to 0, so existing data is safe
 
 **Acceptance Criteria:**
-- Admin can save `package_pv_rate` per package
 - Admin can save global `pv_per_peso_rate`
 - No commission amounts change for existing members
 
 ---
 
-## Phase 2 — Package PV Generation & Flow
+## Phase 2 — PV Infrastructure
 
-**Goal:** When a member joins, generate Package PV and flow it through the network.
+**Goal:** Set up the PV tracking infrastructure. **Package purchases do NOT generate any PV flow.** PV movement begins in Phase 5 with product purchases.
 
 **Deliverables:**
 
-1. **On member registration/activation**
-   - Calculate `package_pv = entry_fee × package_pv_rate`
-   - Store in `users.total_package_pv` for the new member
+1. **PV transaction ledger**:
+   ```sql
+   CREATE TABLE pv_transactions (
+     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+     user_id INT UNSIGNED NOT NULL,
+     type ENUM(
+       'product_personal',
+       'product_group',
+       'binary_left',
+       'binary_right',
+       'binary_paired',
+       'binary_flushed'
+     ) NOT NULL,
+     amount DECIMAL(14,2) NOT NULL,
+     source_user_id INT UNSIGNED NULL,
+     source_type ENUM('registration','activation','repeat_purchase') NOT NULL,
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
+   ```
 
-2. **Personal Sales PV**
-   - Package purchase: sponsor receives the PV
-   - Add `personal_pv` to the sponsor (not the buyer)
-   - Record in a new `pv_transactions` ledger:
-     ```sql
-     CREATE TABLE pv_transactions (
-       id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-       user_id INT UNSIGNED NOT NULL,
-       type ENUM('package_personal','package_group','product_personal','product_group','binary_left','binary_right','binary_paired','binary_flushed') NOT NULL,
-       amount DECIMAL(14,2) NOT NULL,
-       source_user_id INT UNSIGNED NULL,
-       source_type ENUM('registration','activation','repeat_purchase') NOT NULL,
-       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-     );
-     ```
+2. **Member dashboard preview**
+   - Display "Personal PV" and "Group PV" cards (read-only)
+   - All values remain 0.00 until Phase 5
 
-3. **Group Sales PV (sponsor chain)**
-   - Walk from buyer's sponsor up to root
-   - Add `package_pv` to each ancestor's `group_pv`
-   - Insert `pv_transactions` rows of type `package_group`
-
-4. **Commission engine hook (read-only for now)**
-   - Add `Commission::processPackagePV($newUserId, $packageId)` called after registration
-   - For Phase 2 this function only records PV; it does NOT pay anything
-
-5. **Member dashboard preview**
-   - Display "Package PV" and "Group PV" cards (read-only)
+3. **No PV flow from packages**
+   - Members do NOT gain Personal PV from their own package purchase
+   - Uplines do NOT gain Group PV from a downline's package purchase
+   - Packages are entry/membership only; PV is generated exclusively by products
 
 **Acceptance Criteria:**
-- After registering a member, sponsor's `personal_pv` and ancestors' `group_pv` update correctly
-- `pv_transactions` contains accurate audit rows
+- `pv_transactions` table exists and is ready for product PV records
+- After registering a member, no PV columns change for anyone
 - Existing peso-based commissions still work exactly as before
 
 ---
@@ -356,8 +345,8 @@ For each phase:
 
 | Phase | What Changes | Commission Impact | Member Impact |
 |-------|--------------|-------------------|---------------|
-| 1 | Schema + admin UI | None | None |
-| 2 | Package PV tracking | None (PV only recorded) | New PV stats visible |
+| 1 | PV schema + settings | None | None |
+| 2 | PV transaction ledger + empty stats | None (no PV movement yet) | PV stats visible (all 0.00 until Phase 5) |
 | 3 | Binary pairing uses PV | Pairing bonus now PV-derived | Earnings may change per package config |
 | 4 | Direct/indirect % of PV | Direct/indirect bonuses PV-derived | Earnings depend on new percentages |
 | 5 | Product/repeat purchase PV | Repeat purchase can trigger pairing/indirect | Product PV contributes to stats/commissions |
@@ -368,4 +357,4 @@ For each phase:
 
 ## Recommended First Step
 
-Start with **Phase 1**: add `package_pv_rate`, `pv_per_peso_rate`, and the user PV columns. This is a safe schema-only change that lets the team begin testing PV previews in the admin without affecting live commissions.
+Start with **Phase 1**: add `pv_per_peso_rate` and the user PV columns. This is a safe schema-only change that lets the team begin testing PV settings without affecting live commissions.

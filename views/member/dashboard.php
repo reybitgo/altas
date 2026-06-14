@@ -169,7 +169,7 @@
       $cards = [
         [$user['ewallet_balance'], 'E-Wallet Balance',   '💰', 'primary', 'primary', $balanceSub, '/?page=payout'],
         ...($binaryEnabled ? [
-          [$summary['total_pairing'],  'Pairing Earnings', '🤝', 'success', 'success', number_format($user['pairs_paid']) . ' pairs lifetime', null],
+          [$summary['total_pairing'],  'Pairing Earnings', '🤝', 'success', 'success', number_format((float)$user['paired_pv'], 2) . ' PV paired lifetime', null],
         ] : []),
         [$summary['total_direct'],   'Direct Referral',  '👥', 'orange',  'warning', null, '/?page=genealogy&view=referral'],
         ...(setting('indirect_referral_enabled', '1') === '1' ? [
@@ -190,6 +190,29 @@
                     <?php else: ?><?= $sub ?><?php endif; ?>
                 </div>
               <?php endif; ?>
+            </div>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+
+    <!-- PV Stats (Phase 2) -->
+    <div class="row g-3 mb-3">
+      <?php
+      $pvCards = [
+        [$user['personal_pv'] ?? 0, 'Personal PV', '🛒', '#7c3aed', 'Personal sales PV from downline product purchases'],
+        [$user['group_pv']    ?? 0, 'Group PV',    '🌐', '#0891b2', 'Group sales PV from downline purchases'],
+      ];
+      foreach ($pvCards as [$val, $label, $icon, $color, $sub]): ?>
+        <div class="col-6 col-xl-4">
+          <div class="card h-100" style="border-left:4px solid <?= $color ?>;">
+            <div class="card-body pt-3">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span style="font-size:1.25rem;"><?= $icon ?></span>
+                <span style="font-size:.78rem;font-weight:700;color:<?= $color ?>;text-transform:uppercase;letter-spacing:.5px;"><?= $label ?></span>
+              </div>
+              <div class="font-mono fw-bold fs-5" style="color:<?= $color ?>;"><?= number_format((float)$val, 2) ?></div>
+              <div class="text-muted" style="font-size:.72rem;"><?= $sub ?></div>
             </div>
           </div>
         </div>
@@ -290,8 +313,8 @@
               <div class="cap-bar-fill <?= $pct >= 100 ? 'full' : '' ?>" style="width:<?= $pct ?>%"></div>
             </div>
             <div class="d-flex justify-content-between" style="font-size:.78rem;color:var(--muted);">
-              <span><strong><?= $status['pairs_paid_today'] ?></strong> earned today</span>
-              <span><strong><?= $status['cap_remaining'] ?></strong> / <?= $status['daily_cap'] ?> remaining</span>
+              <span><strong><?= number_format($status['paired_pv_today'], 2) ?></strong> PV earned today</span>
+              <span><strong><?= number_format($status['cap_remaining'], 2) ?></strong> / <?= number_format($status['daily_pair_pv_cap'], 2) ?> PV remaining</span>
             </div>
             <div class="cap-earned mt-2">
               <span>Earned today</span>
@@ -301,7 +324,7 @@
               Lifetime cap: <strong><?= fmt_money($status['lifetime_earned'] ?? 0) ?></strong> / <?= fmt_money($status['lifetime_cap'] ?? 0) ?>
               <a href="<?= APP_URL ?>/?page=cap_status" style="color:var(--primary);text-decoration:none;">View →</a>
             </div>
-            <?php if ($status['cap_remaining'] === 0): ?>
+            <?php if ($status['cap_remaining'] <= 0.00): ?>
               <div class="alert alert-warning py-2 mb-0 mt-2" style="font-size:.78rem;">⚡ Daily cap reached — resets at midnight</div>
             <?php endif; ?>
           </div>
@@ -321,23 +344,23 @@
               <div class="col-6">
                 <div class="leg-box text-center">
                   <div class="leg-label">↙ Left Leg</div>
-                  <div class="leg-count"><?= number_format($status['left_count']) ?></div>
-                  <div style="font-size:.72rem;color:var(--muted);">members</div>
+                  <div class="leg-count"><?= number_format($status['left_pv'], 2) ?></div>
+                  <div style="font-size:.72rem;color:var(--muted);">PV</div>
                 </div>
               </div>
               <div class="col-6">
                 <div class="leg-box text-center">
                   <div class="leg-label">↘ Right Leg</div>
-                  <div class="leg-count"><?= number_format($status['right_count']) ?></div>
-                  <div style="font-size:.72rem;color:var(--muted);">members</div>
+                  <div class="leg-count"><?= number_format($status['right_pv'], 2) ?></div>
+                  <div style="font-size:.72rem;color:var(--muted);">PV</div>
                 </div>
               </div>
             </div>
             <?php foreach (
               [
-                ['Lifetime pairs paid', number_format($status['pairs_paid']), ''],
-                ['Pairs flushed',       number_format($status['pairs_flushed']), 'color:var(--warning)'],
-                ['Bonus / pair',        fmt_money($status['pairing_bonus']),  'color:var(--success)'],
+                ['Lifetime paired PV', number_format($status['paired_pv'], 2), ''],
+                ['Flushed PV',       number_format($status['flushed_pv'], 2), 'color:var(--warning)'],
+                ['Pairing bonus',    $status['pairing_pv_pct'] . '% of PV',  'color:var(--success)'],
               ] as [$k, $v, $s]
             ): ?>
               <div class="d-flex justify-content-between py-1 border-bottom" style="font-size:.8rem;">

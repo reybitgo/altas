@@ -147,9 +147,8 @@ class User
     {
         $pdo = db();
 
-        // Activate the user AND flush all binary pairs that formed while pending.
-        // This prevents retroactive pairing bonuses — only pairs formed AFTER
-        // activation will earn bonuses.
+        // Activate the user. Pending registrations no longer increment leg PV,
+        // so we start pairing history fresh at activation.
         $pdo->prepare("
             UPDATE users
             SET status = 'active',
@@ -157,6 +156,8 @@ class User
                 reg_code_id = COALESCE(?, reg_code_id),
                 reg_payment_method = ?,
                 joined_at = NOW(),
+                paired_pv = 0.00,
+                flushed_pv = 0.00,
                 pairs_flushed = LEAST(left_count, right_count)
             WHERE id = ? AND status = 'pending'
         ")->execute([$packageId, $regCodeId, $paymentMethod, $userId]);
@@ -188,12 +189,14 @@ class User
     {
         $st = db()->prepare("
             SELECT u.*,
-                   p.name          AS package_name,
+                   p.name              AS package_name,
+                   p.pairing_pv_pct,
+                   p.daily_pair_pv_cap,
                    p.pairing_bonus,
                    p.daily_pair_cap,
                    p.direct_ref_bonus,
-                   sp.username     AS sponsor_username,
-                   bp.username     AS binary_parent_username
+                   sp.username         AS sponsor_username,
+                   bp.username         AS binary_parent_username
             FROM   users u
             LEFT JOIN packages p ON p.id = u.package_id
             LEFT JOIN users sp   ON sp.id = u.sponsor_id
@@ -272,8 +275,8 @@ class User
     }
 
     /**
-     * Get cap-aware pairing status for dashboard.
-     * Extends todayPairingStatus() with cap info.
+     * Get cap-aware PV pairing status for dashboard (Phase 3).
+     * Legacy count keys are kept for backward compatibility with older views.
      */
     public static function todayPairingStatus(int $userId): array
     {
@@ -285,6 +288,13 @@ class User
                 u.pairs_flushed,
                 u.left_count,
                 u.right_count,
+                u.paired_pv,
+                u.paired_pv_today,
+                u.flushed_pv,
+                u.left_pv,
+                u.right_pv,
+                p.pairing_pv_pct,
+                p.daily_pair_pv_cap,
                 p.pairing_bonus,
                 p.daily_pair_cap,
                 u.lifetime_earned,
@@ -304,31 +314,48 @@ class User
                 'pairs_flushed'    => 0,
                 'left_count'       => 0,
                 'right_count'      => 0,
-                'pairing_bonus'    => 0,
-                'daily_cap'        => 0,
-                'cap_percent'      => 0,
-                'cap_remaining'    => 0,
-                'earned_today'     => fmt_money(0),
-                'lifetime_earned'  => 0,
-                'lifetime_cap'     => 0,
+                'paired_pv'        => 0.00,
+                'paired_pv_today'  => 0.00,
+                'flushed_pv'       => 0.00,
+                'left_pv'          => 0.00,
+                'right_pv'         => 0.00,
+                'pairing_pv_pct'   => 0.00,
+                'daily_pair_pv_cap'=> 0.00,
+                'pairing_bonus'    => 0.00,
+                'daily_cap'        => 0.00,
+                'cap_percent'      => 0.0,
+                'cap_remaining'    => 0.00,
+                'earned_today'     => 0.00,
+                'lifetime_earned'  => 0.00,
+                'lifetime_cap'     => 0.00,
                 'cap_status'       => 'perminact',
             ];
         }
 
-        $paidToday = (int)$row['pairs_paid_today'];
-        $dailyCap  = (int)$row['daily_pair_cap'];
-        $bonus     = (float)$row['pairing_bonus'];
+        $paidToday = (float)$row['paired_pv_today'];
+        $dailyCap  = (float)$row['daily_pair_pv_cap'];
+        $pairPct   = (float)$row['pairing_pv_pct'];
+        $pvRate    = (float)setting('pv_per_peso_rate', '1.0000');
         $capPct    = $dailyCap > 0 ? min(100, ($paidToday / $dailyCap) * 100) : 0;
-        $capRem    = max(0, $dailyCap - $paidToday);
-        $earnedToday = $paidToday * $bonus;
+        $capRem    = max(0.00, $dailyCap - $paidToday);
+        $earnedToday = $paidToday * ($pairPct / 100) * $pvRate;
 
         return [
+            // Legacy count-based keys (deprecated)
             'pairs_paid'       => (int)$row['pairs_paid'],
-            'pairs_paid_today' => $paidToday,
+            'pairs_paid_today' => (int)$row['pairs_paid_today'],
             'pairs_flushed'    => (int)$row['pairs_flushed'],
             'left_count'       => (int)$row['left_count'],
             'right_count'      => (int)$row['right_count'],
-            'pairing_bonus'    => $bonus,
+            'pairing_bonus'    => (float)$row['pairing_bonus'],
+            // PV-based keys (Phase 3)
+            'paired_pv'        => (float)$row['paired_pv'],
+            'paired_pv_today'  => $paidToday,
+            'flushed_pv'       => (float)$row['flushed_pv'],
+            'left_pv'          => (float)$row['left_pv'],
+            'right_pv'         => (float)$row['right_pv'],
+            'pairing_pv_pct'   => $pairPct,
+            'daily_pair_pv_cap'=> $dailyCap,
             'daily_cap'        => $dailyCap,
             'cap_percent'      => round($capPct, 1),
             'cap_remaining'    => $capRem,

@@ -181,11 +181,14 @@ class AdminController
             'name'              => trim($_POST['name']              ?? ''),
             'entry_fee'         => (float)($_POST['entry_fee']      ?? 0),
             'package_pv_rate'   => (float)($_POST['package_pv_rate'] ?? 100.00),
-            'pairing_bonus'     => (float)($_POST['pairing_bonus']  ?? 0),
-            'daily_pair_cap'    => (int)($_POST['daily_pair_cap']   ?? 3),
+            'pairing_pv_pct'    => (float)($_POST['pairing_pv_pct'] ?? 0),
+            'daily_pair_pv_cap' => (float)($_POST['daily_pair_pv_cap'] ?? 0),
             'direct_ref_bonus'  => (float)($_POST['direct_ref_bonus'] ?? 0),
             'status'            => $_POST['status'] ?? 'active',
             'indirect_levels'  => [],
+            // Legacy count-based fields (kept for reference)
+            'pairing_bonus'     => (float)($_POST['pairing_bonus']  ?? 0),
+            'daily_pair_cap'    => (int)($_POST['daily_pair_cap']   ?? 3),
             // NEW v2 fields
             'lifetime_cap_multiplier'  => (float)($_POST['lifetime_cap_multiplier']  ?? 3.00),
             'reactivation_fee'         => (float)($_POST['reactivation_fee']         ?? 0),
@@ -196,6 +199,27 @@ class AdminController
 
         for ($lvl = 1; $lvl <= 10; $lvl++) {
             $data['indirect_levels'][$lvl] = (float)($_POST["indirect_{$lvl}"] ?? 0);
+        }
+
+        // When binary is disabled, the pairing/cap inputs are not rendered.
+        // Preserve existing values on edit so they are not silently zeroed.
+        if ($id && !isset($_POST['pairing_pv_pct'])) {
+            $existing = Package::find($id);
+            if ($existing) {
+                $data['pairing_pv_pct']    = (float)$existing['pairing_pv_pct'];
+                $data['daily_pair_pv_cap'] = (float)$existing['daily_pair_pv_cap'];
+                $data['pairing_bonus']     = (float)$existing['pairing_bonus'];
+                $data['daily_pair_cap']    = (int)$existing['daily_pair_cap'];
+            }
+        }
+
+        // When indirect referrals are disabled, the 10-level inputs are not rendered.
+        // Preserve existing percentages on edit.
+        if ($id && !isset($_POST['indirect_1'])) {
+            $existingLevels = Package::getIndirectLevels($id);
+            if (!empty($existingLevels)) {
+                $data['indirect_levels'] = $existingLevels;
+            }
         }
 
         // Build back-URL so validation errors return to the correct form (edit or new)
@@ -211,7 +235,24 @@ class AdminController
             flash('error', 'Package PV rate must be between 0 and 1000.');
             redirect($backUrl);
         }
-
+        if ($data['pairing_pv_pct'] < 0 || $data['pairing_pv_pct'] > 100) {
+            flash('error', 'Pairing bonus percentage must be between 0 and 100.');
+            redirect($backUrl);
+        }
+        if ($data['daily_pair_pv_cap'] < 0) {
+            flash('error', 'Daily pair PV cap cannot be negative.');
+            redirect($backUrl);
+        }
+        if ($data['direct_ref_pv_pct'] < 0 || $data['direct_ref_pv_pct'] > 100) {
+            flash('error', 'Direct referral percentage must be between 0 and 100.');
+            redirect($backUrl);
+        }
+        foreach ($data['indirect_levels'] as $lvl => $pct) {
+            if ($pct < 0 || $pct > 100) {
+                flash('error', "Indirect level {$lvl} percentage must be between 0 and 100.");
+                redirect($backUrl);
+            }
+        }
         // Validate v2 fields
         if ($data['lifetime_cap_multiplier'] < 1) {
             flash('error', 'Lifetime cap multiplier must be at least 1.0.');
@@ -411,11 +452,12 @@ class AdminController
         Auth::guard('admin');
         csrf_verify();
 
-        $affected = db()->exec("UPDATE users SET pairs_paid_today = 0 WHERE role = 'member'");
+        $affected = db()->exec("UPDATE users SET paired_pv_today = 0 WHERE role = 'member'");
+        db()->exec("UPDATE users SET pairs_paid_today = 0 WHERE role = 'member'");
         db()->prepare("UPDATE settings SET value = ? WHERE key_name = 'last_reset'")
             ->execute([date('Y-m-d H:i:s')]);
 
-        $msg = "Daily pair counter reset for {$affected} member(s).";
+        $msg = "Daily paired-PV counter reset for {$affected} member(s).";
 
         // v3: Optional DFI trigger
         if (isset($_POST['trigger_dfi']) && $_POST['trigger_dfi'] === '1') {

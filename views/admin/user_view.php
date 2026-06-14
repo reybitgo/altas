@@ -171,8 +171,8 @@
            fmt_money((float)($user['withdrawable_balance'] ?? 0)) . ' withdrawable · ' . fmt_money(max(0, (float)$user['ewallet_balance'] - (float)($user['withdrawable_balance'] ?? 0))) . ' internal'],
           ['Total Earned',     fmt_money($summary['total_earned']),              'success', 'success'],
           ...(setting('binary_enabled', '1') === '1' ? [
-            ['Pairs Paid / Today', $pairingStatus['pairs_paid'] . ' / ' . $pairingStatus['pairs_paid_today'], 'orange', 'warning'],
-            ['Pairs Flushed',    number_format($pairingStatus['pairs_flushed']),   'danger', 'danger'],
+            ['Paired PV / Today', number_format($pairingStatus['paired_pv'], 2) . ' / ' . number_format($pairingStatus['paired_pv_today'], 2), 'orange', 'warning'],
+            ['Flushed PV',    number_format($pairingStatus['flushed_pv'], 2),   'danger', 'danger'],
           ] : []),
         ] as $card
       ): ?>
@@ -187,8 +187,31 @@
               </div>
               <div class="mt-auto">
                 <?php if ($subText): ?><div class="stat-sub"><?= $subText ?></div><?php endif; ?>
-                <?php if (setting('binary_enabled', '1') === '1' && $label === 'Pairs Paid / Today'): ?><div class="stat-sub">Cap: <?= $pairingStatus['daily_cap'] ?> / day</div><?php endif; ?>
+                <?php if (setting('binary_enabled', '1') && str_starts_with($label, 'Paired PV')): ?><div class="stat-sub">Cap: <?= number_format($pairingStatus['daily_pair_pv_cap'], 2) ?> PV/day</div><?php endif; ?>
               </div>
+            </div>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+
+    <!-- PV Stats (Phase 2) -->
+    <div class="row g-3 mb-3">
+      <?php foreach (
+        [
+          ['Personal PV', number_format((float)($user['personal_pv'] ?? 0), 2), '#7c3aed', 'Personal sales PV from downline product purchases'],
+          ['Group PV',    number_format((float)($user['group_pv'] ?? 0), 2),    '#0891b2', 'Group sales PV from downline'],
+        ] as $card
+      ): ?>
+        <?php [$label, $val, $color, $subText] = $card; ?>
+        <div class="col-6 col-xl-4">
+          <div class="card h-100" style="border-left:4px solid <?= $color ?>;">
+            <div class="card-body pt-3 d-flex flex-column">
+              <div>
+                <div style="font-size:.72rem;font-weight:700;color:<?= $color ?>;text-transform:uppercase;letter-spacing:.5px;"><?= $label ?></div>
+                <div class="font-mono fw-bold fs-5" style="color:<?= $color ?>;"><?= $val ?></div>
+              </div>
+              <div class="mt-auto"><div class="stat-sub"><?= $subText ?></div></div>
             </div>
           </div>
         </div>
@@ -251,25 +274,25 @@
               </tr>
               <tr>
                 <td>Pairing Bonus</td>
-                <td><?= fmt_money($user['pairing_bonus'] ?? 0) ?> / pair</td>
+                <td><?= (float)($user['pairing_pv_pct'] ?? 0) ?>% of paired PV</td>
               </tr>
               <?php endif; ?>
               <tr>
                 <td>Daily Cap</td>
-                <td><?= $user['daily_pair_cap'] ?? 0 ?> pairs / day</td>
+                <td><?= number_format((float)($user['daily_pair_pv_cap'] ?? 0), 2) ?> PV / day</td>
               </tr>
             </table>
             <div class="row g-2 mt-2">
               <div class="col-6">
                 <div class="leg-box text-center">
-                  <div class="leg-label">↙ Left</div>
-                  <div class="leg-count"><?= number_format($user['left_count']) ?></div>
+                  <div class="leg-label">↙ Left PV</div>
+                  <div class="leg-count"><?= number_format((float)$user['left_pv'], 2) ?></div>
                 </div>
               </div>
               <div class="col-6">
                 <div class="leg-box text-center">
-                  <div class="leg-label">↘ Right</div>
-                  <div class="leg-count"><?= number_format($user['right_count']) ?></div>
+                  <div class="leg-label">↘ Right PV</div>
+                  <div class="leg-count"><?= number_format((float)$user['right_pv'], 2) ?></div>
                 </div>
               </div>
             </div>

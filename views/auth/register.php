@@ -165,8 +165,8 @@ if ($isLoggedIn && !$prefillSponsor) {
                                 <div class="fw-bold text-primary"><?= e($pkg['name']) ?></div>
                                 <div style="font-size:.8rem;color:var(--muted);">
                                   Entry: <?= fmt_money((float)$pkg['entry_fee']) ?> ·
-                                  Bonus: <?= fmt_money((float)$pkg['pairing_bonus']) ?> ·
-                                  Cap: <?= (int)$pkg['daily_pair_cap'] ?> pairs/day
+                                  Pairing: <?= (float)$pkg['pairing_pv_pct'] ?>% ·
+                                  Cap: <?= number_format((float)$pkg['daily_pair_pv_cap'], 0) ?> PV/day
                                 </div>
                               </div>
                             </div>
@@ -178,8 +178,8 @@ if ($isLoggedIn && !$prefillSponsor) {
                                 <option value="<?= (int)$pkg['id'] ?>"
                                   data-name="<?= e($pkg['name']) ?>"
                                   data-fee="<?= fmt_money((float)$pkg['entry_fee']) ?>"
-                                  data-bonus="<?= fmt_money((float)$pkg['pairing_bonus']) ?>"
-                                  data-cap="<?= (int)$pkg['daily_pair_cap'] ?>">
+                                  data-bonus="<?= (float)$pkg['pairing_pv_pct'] ?>"
+                                  data-cap="<?= number_format((float)$pkg['daily_pair_pv_cap'], 0) ?>">
                                   <?= e($pkg['name']) ?> — <?= fmt_money((float)$pkg['entry_fee']) ?>
                                 </option>
                               <?php endforeach; ?>
@@ -509,7 +509,7 @@ if ($isLoggedIn && !$prefillSponsor) {
       };
       document.getElementById('pkgCardName').textContent = selectedPkg.name;
       document.getElementById('pkgCardDetails').textContent =
-        'Entry: ' + selectedPkg.fee + ' · Bonus: ' + selectedPkg.bonus + ' · Cap: ' + selectedPkg.cap + ' pairs/day';
+        'Entry: ' + selectedPkg.fee + ' · Pairing: ' + selectedPkg.bonus + '% · Cap: ' + selectedPkg.cap + ' PV/day';
       document.getElementById('packageCard').classList.remove('d-none');
       setHint('packageHint', '✓ Package selected.', true);
       document.getElementById('toStep2Btn').disabled = false;
@@ -576,7 +576,7 @@ if ($isLoggedIn && !$prefillSponsor) {
         codeData = data;
         document.getElementById('pkgName').textContent = data.package_name;
         document.getElementById('pkgDetails').textContent =
-          'Entry: ' + data.entry_fee + ' · Bonus: ' + data.pairing_bonus + ' · Cap: ' + data.daily_cap + ' pairs/day';
+          'Entry: ' + data.entry_fee + ' · Pairing: ' + data.pairing_pv_pct + '% · Cap: ' + data.daily_pair_pv_cap + ' PV/day';
         document.getElementById('packageInfo').classList.remove('d-none');
         document.getElementById('validatedCode').value = code;
         document.getElementById('toStep2Btn').disabled = false;

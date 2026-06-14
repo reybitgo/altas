@@ -21,16 +21,20 @@ class Package
         return db()->query($sql)->fetchAll();
     }
 
+    /**
+     * Return the Phase-4 indirect-referral percentages (pv_pct) per level.
+     * Legacy fixed-peso `bonus` column is no longer used by the engine.
+     */
     public static function getIndirectLevels(int $packageId): array
     {
         $st = db()->prepare(
-            'SELECT level, bonus FROM package_indirect_levels WHERE package_id = ? ORDER BY level'
+            'SELECT level, pv_pct FROM package_indirect_levels WHERE package_id = ? ORDER BY level'
         );
         $st->execute([$packageId]);
         $rows   = $st->fetchAll();
         $result = [];
         foreach ($rows as $r) {
-            $result[(int)$r['level']] = (float)$r['bonus'];
+            $result[(int)$r['level']] = (float)$r['pv_pct'];
         }
         return $result;
     }
@@ -46,8 +50,9 @@ class Package
     /**
      * Save or update a package with all v2 fields.
      *
-     * @param array $data Package data including v2 fields:
-     *   - name, entry_fee, pairing_bonus, daily_pair_cap, direct_ref_bonus, status
+     * @param array $data Package data including v2/v3 fields:
+     *   - name, entry_fee, package_pv_rate, pairing_pv_pct, daily_pair_pv_cap,
+     *     direct_ref_bonus, status
      *   - lifetime_cap_multiplier, reactivation_fee, reactivation_window_days
      *   - daily_fixed_income, daily_fixed_income_days
      *   - indirect_levels[1..10]
@@ -61,9 +66,13 @@ class Package
             'name'                     => $data['name'],
             'entry_fee'                => (float)($data['entry_fee'] ?? 0),
             'package_pv_rate'          => (float)($data['package_pv_rate'] ?? 100.00),
+            'pairing_pv_pct'           => (float)($data['pairing_pv_pct'] ?? 0),
+            'daily_pair_pv_cap'        => (float)($data['daily_pair_pv_cap'] ?? 0),
+            'direct_ref_pv_pct'        => (float)($data['direct_ref_pv_pct'] ?? 0),
+            'direct_ref_bonus'         => (float)($data['direct_ref_bonus'] ?? 0),
+            // Legacy count-based columns kept for reference
             'pairing_bonus'            => (float)($data['pairing_bonus'] ?? 0),
             'daily_pair_cap'           => (int)($data['daily_pair_cap'] ?? 3),
-            'direct_ref_bonus'         => (float)($data['direct_ref_bonus'] ?? 0),
             // v2 fields
             'lifetime_cap_multiplier'  => (float)($data['lifetime_cap_multiplier'] ?? 3.00),
             'reactivation_fee'         => (float)($data['reactivation_fee'] ?? 0),
@@ -96,10 +105,10 @@ class Package
         // Save indirect levels
         $pdo->prepare("DELETE FROM package_indirect_levels WHERE package_id = ?")
             ->execute([$id]);
-        $st = $pdo->prepare("INSERT INTO package_indirect_levels (package_id, level, bonus) VALUES (?, ?, ?)");
+        $st = $pdo->prepare("INSERT INTO package_indirect_levels (package_id, level, pv_pct) VALUES (?, ?, ?)");
         for ($lvl = 1; $lvl <= 10; $lvl++) {
-            $bonus = (float)($data['indirect_levels'][$lvl] ?? 0);
-            $st->execute([$id, $lvl, $bonus]);
+            $pvPct = (float)($data['indirect_levels'][$lvl] ?? 0);
+            $st->execute([$id, $lvl, $pvPct]);
         }
 
         return $id;
@@ -119,12 +128,58 @@ class Package
     /**
      * Calculate the Package PV for a given package.
      * Package PV = entry_fee × (package_pv_rate / 100)
+     * Used as the basis for binary/direct/indirect PV calculations.
+     * It does NOT flow into Personal PV or Group PV.
      */
     public static function packagePv(int $packageId): float
     {
         $pkg = self::find($packageId);
         if (!$pkg) return 0.00;
         return (float)$pkg['entry_fee'] * ((float)$pkg['package_pv_rate'] / 100);
+    }
+
+    /**
+     * Calculate the peso pairing bonus for a given paired PV amount.
+     * Bonus = paired_pv × (pairing_pv_pct / 100) × pv_per_peso_rate
+     */
+    public static function pairingBonus(float $pairedPv, int $packageId): float
+    {
+        $pkg = self::find($packageId);
+        if (!$pkg || (float)$pkg['pairing_pv_pct'] <= 0) return 0.00;
+        $rate = (float)setting('pv_per_peso_rate', '1.0000');
+        return $pairedPv * ((float)$pkg['pairing_pv_pct'] / 100) * $rate;
+    }
+
+    /**
+     * Calculate the peso direct-referral bonus for a given package PV amount.
+     * Bonus = package_pv × (direct_ref_pv_pct / 100) × pv_per_peso_rate
+     */
+    public static function directReferralBonus(float $packagePv, int $packageId): float
+    {
+        $pkg = self::find($packageId);
+        if (!$pkg || (float)$pkg['direct_ref_pv_pct'] <= 0) return 0.00;
+        $rate = (float)setting('pv_per_peso_rate', '1.0000');
+        return $packagePv * ((float)$pkg['direct_ref_pv_pct'] / 100) * $rate;
+    }
+
+    /**
+     * Calculate the peso indirect-referral bonus for a given package PV amount and level %.
+     * Bonus = package_pv × (pv_pct / 100) × pv_per_peso_rate
+     */
+    public static function indirectReferralBonus(float $packagePv, float $pvPct): float
+    {
+        if ($pvPct <= 0) return 0.00;
+        $rate = (float)setting('pv_per_peso_rate', '1.0000');
+        return $packagePv * ($pvPct / 100) * $rate;
+    }
+
+    /**
+     * Daily paired-PV cap for a package.
+     */
+    public static function dailyPairPvCap(int $packageId): float
+    {
+        $pkg = self::find($packageId);
+        return $pkg ? (float)$pkg['daily_pair_pv_cap'] : 0.00;
     }
 
     /**

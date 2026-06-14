@@ -178,6 +178,8 @@ class MemberController
             'joined'      => fmt_date($u['joined_at']),
             'left_count'  => (int)$u['left_count'],
             'right_count' => (int)$u['right_count'],
+            'left_pv'     => (float)$u['left_pv'],
+            'right_pv'    => (float)$u['right_pv'],
             'left'        => null,
             'right'       => null,
             'hasMore'     => false,

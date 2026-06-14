@@ -150,19 +150,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
       $pdo->exec("ALTER TABLE package_indirect_levels AUTO_INCREMENT = 1");
       $logs[] = ['ok', 'Cleared all packages'];
 
-      // Re-seed default Starter package (v2 defaults)
+      // Re-seed default Starter package (v4 defaults)
       $pdo->exec("INSERT INTO packages (
-                id, name, entry_fee, pairing_bonus, daily_pair_cap, direct_ref_bonus,
+                id, name, entry_fee, package_pv_rate, pairing_pv_pct, daily_pair_pv_cap,
+                pairing_bonus, daily_pair_cap, direct_ref_pv_pct, direct_ref_bonus,
                 lifetime_cap_multiplier, reactivation_fee, reactivation_window_days,
                 daily_fixed_income, daily_fixed_income_days, status
             ) VALUES (
-                1, 'Starter', 10000.00, 2000.00, 3, 500.00,
+                1, 'Starter', 10000.00, 100.00, 20.00, 30000.00,
+                2000.00, 3, 5.00, 500.00,
                 3.00, 10000.00, 15,
                 100.00, 90, 'active'
             )");
-      $pdo->exec("INSERT INTO package_indirect_levels (package_id, level, bonus) VALUES
-                (1,1,300),(1,2,200),(1,3,150),(1,4,100),(1,5,100),
-                (1,6,50),(1,7,50),(1,8,50),(1,9,50),(1,10,50)");
+      $pdo->exec("INSERT INTO package_indirect_levels (package_id, level, bonus, pv_pct) VALUES
+                (1,1,300,3.00),(1,2,200,2.00),(1,3,150,1.50),(1,4,100,1.00),(1,5,100,1.00),
+                (1,6,50,0.50),(1,7,50,0.50),(1,8,50,0.50),(1,9,50,0.50),(1,10,50,0.50)");
       $logs[] = ['ok', 'Re-seeded default Starter package'];
       $newCodePkg = 1;
     }

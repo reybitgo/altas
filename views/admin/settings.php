@@ -357,7 +357,7 @@
             </div>
             <div class="card-body">
               <p class="text-muted mb-3" style="font-size:.85rem;line-height:1.7;">
-                The midnight cron resets <code>pairs_paid_today = 0</code> for all members, clearing the daily pairing cap.
+                The midnight cron resets <code>paired_pv_today = 0</code> for all members, clearing the daily paired-PV cap.
               </p>
               <div class="rounded p-3 mb-3" style="background:#f4f6fb;">
                 <div class="text-muted mb-1" style="font-size:.68rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;">Last Reset</div>
@@ -371,7 +371,7 @@
                 <label class="form-check-label" for="triggerDfi" style="font-size:.8rem;">Also trigger DFI payout now</label>
               </div>
               <button type="button" class="btn btn-outline-warning w-100"
-                onclick="showConfirm({title:'Run Daily Reset',message:'Reset pairs_paid_today = 0 for ALL active members now?',confirmText:'⟳ Run Reset',confirmClass:'btn-warning',formId:'manualResetForm'})">
+                onclick="showConfirm({title:'Run Daily Reset',message:'Reset paired_pv_today = 0 for ALL active members now?',confirmText:'⟳ Run Reset',confirmClass:'btn-warning',formId:'manualResetForm'})">
                 ⟳ Run Daily Reset Now
               </button>
             </div>

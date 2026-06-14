@@ -51,7 +51,8 @@ class Code
         $code = strtoupper(trim($code));
         $st   = db()->prepare("
             SELECT r.*, p.name AS package_name, p.entry_fee,
-                   p.pairing_bonus, p.daily_pair_cap, p.direct_ref_bonus
+                   p.pairing_pv_pct, p.daily_pair_pv_cap,
+                   p.direct_ref_pv_pct, p.direct_ref_bonus
             FROM   reg_codes r
             JOIN   packages  p ON p.id = r.package_id
             WHERE  r.code = ? AND r.status = 'unused'

@@ -65,7 +65,7 @@
             <tr>
               <th style="padding-left:1.25rem;">Package</th>
               <th class="text-end">Entry Fee</th>
-              <?php if ($binaryEnabled): ?><th class="text-end">Pairing</th><?php endif; ?>
+              <?php if ($binaryEnabled): ?><th class="text-end">Pairing %</th><?php endif; ?>
               <th class="text-end">Direct Ref</th>
               <th class="text-end">Lifetime Cap</th>
               <th class="text-center">DFI</th>
@@ -94,9 +94,17 @@
                   </td>
                   <td class="text-end font-mono"><?= fmt_money($pkg['entry_fee']) ?></td>
                   <?php if ($binaryEnabled): ?>
-                    <td class="text-end font-mono" style="color:var(--success);"><?= fmt_money($pkg['pairing_bonus']) ?></td>
+                    <?php $pkgPv = Package::packagePv((int)$pkg['id']); $pairPeso = Package::pairingBonus($pkgPv, (int)$pkg['id']); ?>
+                    <td class="text-end">
+                      <div class="font-mono" style="color:var(--success);"><?= (float)$pkg['pairing_pv_pct'] ?>%</div>
+                      <div class="text-muted" style="font-size:.65rem;">≈ <?= fmt_money($pairPeso) ?>/PV</div>
+                    </td>
                   <?php endif; ?>
-                  <td class="text-end font-mono"><?= fmt_money($pkg['direct_ref_bonus']) ?></td>
+                  <?php $pkgPv = Package::packagePv((int)$pkg['id']); $directPeso = Package::directReferralBonus($pkgPv, (int)$pkg['id']); ?>
+                  <td class="text-end">
+                    <div class="font-mono"><?= (float)$pkg['direct_ref_pv_pct'] ?>%</div>
+                    <div class="text-muted" style="font-size:.65rem;">≈ <?= fmt_money($directPeso) ?>/recruit</div>
+                  </td>
                   <td class="text-end">
                     <div class="font-mono"><?= fmt_money($lifetimeCap) ?></div>
                     <div class="text-muted" style="font-size:.65rem;"><?= $pkg['lifetime_cap_multiplier'] ?>×</div>
@@ -161,31 +169,37 @@
                 <input type="number" name="package_pv_rate" id="pkgPvRate" class="form-control" inputmode="decimal" min="0" max="1000" step="0.01" value="<?= e($editPkg['package_pv_rate'] ?? 100.00) ?>">
                 <span class="input-group-text">%</span>
               </div>
-              <div class="form-text">Package PV = <span id="pkgPvPreview" class="font-mono">₱0.00</span></div>
+              <div class="form-text">Package PV basis = <span id="pkgPvPreview" class="font-mono">₱0.00</span> (for binary/direct/indirect)</div>
             </div>
           </div>
 
           <div class="row g-3 mb-3">
             <?php if ($binaryEnabled): ?>
             <div class="col-md-6">
-              <label class="form-label">Pairing Bonus (₱) <span class="text-danger">*</span></label>
-              <input type="number" name="pairing_bonus" id="pkgPairing" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['pairing_bonus'] ?? '') ?>" placeholder="2000.00" required>
-              <div class="form-text">Per pair paid out</div>
+              <label class="form-label">Pairing Bonus (% of paired PV) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="number" name="pairing_pv_pct" id="pkgPairingPct" class="form-control" inputmode="decimal" min="0" max="100" step="0.01" value="<?= e($editPkg['pairing_pv_pct'] ?? '') ?>" required>
+                <span class="input-group-text">%</span>
+              </div>
+              <div class="form-text">1 package PV paired ≈ <span id="pairingPreview" class="font-mono">₱0.00</span></div>
             </div>
             <?php endif; ?>
             <div class="col-md-6">
-              <label class="form-label">Direct Referral Bonus (₱)</label>
-              <input type="number" name="direct_ref_bonus" id="pkgDirectRef" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['direct_ref_bonus'] ?? 0) ?>" placeholder="500.00">
-              <div class="form-text">Paid once to sponsor on join</div>
+              <label class="form-label">Direct Referral (% of Package PV)</label>
+              <div class="input-group">
+                <input type="number" name="direct_ref_pv_pct" id="pkgDirectRefPct" class="form-control" inputmode="decimal" min="0" max="100" step="0.01" value="<?= e($editPkg['direct_ref_pv_pct'] ?? 0) ?>" placeholder="10.00">
+                <span class="input-group-text">%</span>
+              </div>
+              <div class="form-text">≈ <span id="directRefPreview" class="font-mono">₱0.00</span> per direct recruit</div>
             </div>
           </div>
 
           <?php if ($binaryEnabled): ?>
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label class="form-label">Daily Pair Cap <span class="text-danger">*</span></label>
-              <input type="number" name="daily_pair_cap" id="pkgPairCap" class="form-control" inputmode="numeric" min="1" max="100" value="<?= e($editPkg['daily_pair_cap'] ?? 3) ?>" required>
-              <div class="form-text">Flush-out limit per member per day</div>
+              <label class="form-label">Daily Pair Cap (PV) <span class="text-danger">*</span></label>
+              <input type="number" name="daily_pair_pv_cap" id="pkgPairCapPv" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['daily_pair_pv_cap'] ?? '') ?>" required>
+              <div class="form-text">Max paired PV per member per day</div>
             </div>
           </div>
           <?php endif; ?>
@@ -265,13 +279,13 @@
                   <div class="col-6 col-md-4">
                     <label class="form-label" style="font-size:.72rem;">Level <?= $lvl ?></label>
                     <div class="input-group input-group-sm">
-                      <span class="input-group-text">₱</span>
-                      <input type="number" name="indirect_<?= $lvl ?>" id="indirect_<?= $lvl ?>" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($lvls[$lvl] ?? 0) ?>" placeholder="0.00">
+                      <input type="number" name="indirect_<?= $lvl ?>" id="indirect_<?= $lvl ?>" class="form-control" inputmode="decimal" min="0" max="100" step="0.01" value="<?= e($lvls[$lvl] ?? 0) ?>" placeholder="0.00">
+                      <span class="input-group-text">%</span>
                     </div>
                   </div>
                 <?php endfor; ?>
               </div>
-              <div class="form-text mt-1">Set 0 to disable a level. Paid once to each upline sponsor on member join.</div>
+              <div class="form-text mt-1">Set 0 to disable a level. Percentages are applied to the new member's package PV. Pesos depend on the global PV-per-peso rate. Total indirect ≈ <span id="indirectPreview" class="font-mono">₱0.00</span></div>
             </div>
           <?php endif; ?>
         </form>
@@ -304,7 +318,7 @@
   if (entryInput) entryInput.addEventListener('input', updateCapPreview);
   if (multInput)  multInput.addEventListener('input', updateCapPreview);
 
-  // ── Package PV preview live update ──
+  // ── Package PV basis preview live update ──
   const pvRateInput = document.getElementById('pkgPvRate');
   const pvPreviewEl = document.getElementById('pkgPvPreview');
 
@@ -320,6 +334,76 @@
   if (entryInput)    entryInput.addEventListener('input', updatePackagePVPreview);
   if (pvRateInput)   pvRateInput.addEventListener('input', updatePackagePVPreview);
 
+  // ── Pairing bonus preview live update ──
+  const pairingPctInput = document.getElementById('pkgPairingPct');
+  const pairingPreviewEl = document.getElementById('pairingPreview');
+  const pvPerPesoRate = <?= (float)setting('pv_per_peso_rate', '1.0000') ?>;
+
+  function updatePairingPreview() {
+    if (!pairingPreviewEl) return;
+    const entry = parseFloat(entryInput?.value) || 0;
+    const pvRate = parseFloat(pvRateInput?.value) || 0;
+    const pct = parseFloat(pairingPctInput?.value) || 0;
+    const packagePv = entry * (pvRate / 100);
+    const bonus = packagePv * (pct / 100) * pvPerPesoRate;
+    pairingPreviewEl.textContent = '₱' + bonus.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  if (entryInput)      entryInput.addEventListener('input', updatePairingPreview);
+  if (pvRateInput)     pvRateInput.addEventListener('input', updatePairingPreview);
+  if (pairingPctInput) pairingPctInput.addEventListener('input', updatePairingPreview);
+
+  // ── Direct referral preview live update ──
+  const directRefInput = document.getElementById('pkgDirectRefPct');
+  const directRefPreviewEl = document.getElementById('directRefPreview');
+
+  function updateDirectRefPreview() {
+    if (!directRefPreviewEl) return;
+    const entry = parseFloat(entryInput?.value) || 0;
+    const pvRate = parseFloat(pvRateInput?.value) || 0;
+    const pct = parseFloat(directRefInput?.value) || 0;
+    const packagePv = entry * (pvRate / 100);
+    const bonus = packagePv * (pct / 100) * pvPerPesoRate;
+    directRefPreviewEl.textContent = '₱' + bonus.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  if (entryInput)     entryInput.addEventListener('input', updateDirectRefPreview);
+  if (pvRateInput)    pvRateInput.addEventListener('input', updateDirectRefPreview);
+  if (directRefInput) directRefInput.addEventListener('input', updateDirectRefPreview);
+
+  // ── Indirect referral preview live update ──
+  const indirectPreviewEl = document.getElementById('indirectPreview');
+
+  function updateIndirectPreview() {
+    if (!indirectPreviewEl) return;
+    const entry = parseFloat(entryInput?.value) || 0;
+    const pvRate = parseFloat(pvRateInput?.value) || 0;
+    const packagePv = entry * (pvRate / 100);
+    let total = 0;
+    for (let i = 1; i <= 10; i++) {
+      const el = document.getElementById('indirect_' + i);
+      const pct = parseFloat(el?.value) || 0;
+      total += packagePv * (pct / 100) * pvPerPesoRate;
+    }
+    indirectPreviewEl.textContent = '₱' + total.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  if (entryInput)  entryInput.addEventListener('input', updateIndirectPreview);
+  if (pvRateInput) pvRateInput.addEventListener('input', updateIndirectPreview);
+  for (let i = 1; i <= 10; i++) {
+    const el = document.getElementById('indirect_' + i);
+    if (el) el.addEventListener('input', updateIndirectPreview);
+  }
+
   // ── Reset form for "New Package" ──
   function resetPackageForm() {
     const form = document.getElementById('packageForm');
@@ -329,6 +413,9 @@
     document.getElementById('pkgSubmitBtn').textContent = '➕ Create Package';
     previewEl.textContent = '₱0.00';
     updatePackagePVPreview();
+    updatePairingPreview();
+    updateDirectRefPreview();
+    updateIndirectPreview();
     // Reset indirect levels
     for (let i = 1; i <= 10; i++) {
       const el = document.getElementById('indirect_' + i);
@@ -344,6 +431,9 @@
     document.getElementById('packageModalTitle').textContent = '✏️ Edit Package';
     document.getElementById('pkgSubmitBtn').textContent = '💾 Update Package';
     updatePackagePVPreview();
+    updatePairingPreview();
+    updateDirectRefPreview();
+    updateIndirectPreview();
     modal.show();
   });
   <?php endif; ?>
