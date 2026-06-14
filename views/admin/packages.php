@@ -85,7 +85,9 @@
             <?php else: ?>
               <?php foreach ($packages as $pkg):
                 $lifetimeCap = (float)$pkg['entry_fee'] * (float)$pkg['lifetime_cap_multiplier'];
-                $hasDfi = (float)$pkg['daily_fixed_income'] > 0;
+                $hasDfi      = Package::hasDfi((int)$pkg['id']);
+                $dfiAmount   = Package::dailyFixedIncome((int)$pkg['id']);
+                $dfiPvPct    = (float)$pkg['dfi_pv_pct'];
               ?>
                 <tr>
                   <td style="padding-left:1.25rem;">
@@ -111,8 +113,12 @@
                   </td>
                   <td class="text-center">
                     <?php if ($hasDfi): ?>
-                      <div class="font-mono" style="font-size:.8rem;color:#db2777;">₱<?= number_format($pkg['daily_fixed_income'], 0) ?>/d</div>
-                      <div class="text-muted" style="font-size:.65rem;"><?= (int)$pkg['daily_fixed_income_days'] ?> days</div>
+                      <div class="font-mono" style="font-size:.8rem;color:#db2777;"><?= fmt_money($dfiAmount) ?>/d</div>
+                      <?php if ($dfiPvPct > 0): ?>
+                        <div class="text-muted" style="font-size:.65rem;"><?= $dfiPvPct ?>% of PV · <?= (int)$pkg['daily_fixed_income_days'] ?> days</div>
+                      <?php else: ?>
+                        <div class="text-muted" style="font-size:.65rem;"><?= (int)$pkg['daily_fixed_income_days'] ?> days</div>
+                      <?php endif; ?>
                     <?php else: ?>
                       <span class="text-muted" style="font-size:.8rem;">—</span>
                     <?php endif; ?>
@@ -248,14 +254,24 @@
             </div>
             <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label" style="color:#db2777;font-size:.8rem;font-weight:600;">Daily Fixed Income (₱/day)</label>
-                <input type="number" name="daily_fixed_income" id="pkgDfi" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['daily_fixed_income'] ?? 0) ?>" placeholder="100.00">
-                <div class="form-text">Set 0 to disable DFI for this package</div>
+                <label class="form-label" style="color:#db2777;font-size:.8rem;font-weight:600;">DFI (% of Package PV)</label>
+                <div class="input-group">
+                  <input type="number" name="dfi_pv_pct" id="pkgDfiPvPct" class="form-control" inputmode="decimal" min="0" max="100" step="0.01" value="<?= e($editPkg['dfi_pv_pct'] ?? 0) ?>" placeholder="0.00">
+                  <span class="input-group-text">%</span>
+                </div>
+                <div class="form-text">If &gt; 0, overrides fixed amount. ≈ <span id="dfiPvPreview" class="font-mono">₱0.00</span>/day</div>
               </div>
               <div class="col-md-6">
+                <label class="form-label" style="color:#db2777;font-size:.8rem;font-weight:600;">Or Fixed Daily Income (₱/day)</label>
+                <input type="number" name="daily_fixed_income" id="pkgDfi" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['daily_fixed_income'] ?? 0) ?>" placeholder="100.00">
+                <div class="form-text">Used only when DFI % is 0</div>
+              </div>
+            </div>
+            <div class="row g-3 mt-1">
+              <div class="col-md-6">
                 <label class="form-label" style="color:#db2777;font-size:.8rem;font-weight:600;">Max DFI Days</label>
-                <input type="number" name="daily_fixed_income_days" id="pkgDfiDays" class="form-control" inputmode="numeric" min="1" max="1000" value="<?= e($editPkg['daily_fixed_income_days'] ?? 90) ?>">
-                <div class="form-text">Maximum days of fixed income</div>
+                <input type="number" name="daily_fixed_income_days" id="pkgDfiDays" class="form-control" inputmode="numeric" min="0" max="1000" value="<?= e($editPkg['daily_fixed_income_days'] ?? 90) ?>">
+                <div class="form-text">Set 0 to disable DFI for this package</div>
               </div>
             </div>
           </div>
@@ -377,6 +393,27 @@
   if (pvRateInput)    pvRateInput.addEventListener('input', updateDirectRefPreview);
   if (directRefInput) directRefInput.addEventListener('input', updateDirectRefPreview);
 
+  // ── DFI PV preview live update ──
+  const dfiPvPctInput = document.getElementById('pkgDfiPvPct');
+  const dfiPvPreviewEl = document.getElementById('dfiPvPreview');
+
+  function updateDfiPvPreview() {
+    if (!dfiPvPreviewEl) return;
+    const entry = parseFloat(entryInput?.value) || 0;
+    const pvRate = parseFloat(pvRateInput?.value) || 0;
+    const pct = parseFloat(dfiPvPctInput?.value) || 0;
+    const packagePv = entry * (pvRate / 100);
+    const dfi = packagePv * (pct / 100) * pvPerPesoRate;
+    dfiPvPreviewEl.textContent = '₱' + dfi.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  if (entryInput)    entryInput.addEventListener('input', updateDfiPvPreview);
+  if (pvRateInput)   pvRateInput.addEventListener('input', updateDfiPvPreview);
+  if (dfiPvPctInput) dfiPvPctInput.addEventListener('input', updateDfiPvPreview);
+
   // ── Indirect referral preview live update ──
   const indirectPreviewEl = document.getElementById('indirectPreview');
 
@@ -415,6 +452,7 @@
     updatePackagePVPreview();
     updatePairingPreview();
     updateDirectRefPreview();
+    updateDfiPvPreview();
     updateIndirectPreview();
     // Reset indirect levels
     for (let i = 1; i <= 10; i++) {
@@ -433,6 +471,7 @@
     updatePackagePVPreview();
     updatePairingPreview();
     updateDirectRefPreview();
+    updateDfiPvPreview();
     updateIndirectPreview();
     modal.show();
   });

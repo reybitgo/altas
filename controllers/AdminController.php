@@ -184,6 +184,7 @@ class AdminController
             'package_pv_rate'   => (float)($_POST['package_pv_rate'] ?? 100.00),
             'pairing_pv_pct'    => (float)($_POST['pairing_pv_pct'] ?? 0),
             'daily_pair_pv_cap' => (float)($_POST['daily_pair_pv_cap'] ?? 0),
+            'direct_ref_pv_pct' => (float)($_POST['direct_ref_pv_pct'] ?? 0),
             'direct_ref_bonus'  => (float)($_POST['direct_ref_bonus'] ?? 0),
             'status'            => $_POST['status'] ?? 'active',
             'indirect_levels'  => [],
@@ -196,6 +197,7 @@ class AdminController
             'reactivation_window_days' => (int)($_POST['reactivation_window_days']    ?? 15),
             'daily_fixed_income'       => (float)($_POST['daily_fixed_income']       ?? 0),
             'daily_fixed_income_days'  => (int)($_POST['daily_fixed_income_days']    ?? 90),
+            'dfi_pv_pct'               => (float)($_POST['dfi_pv_pct']               ?? 0),
         ];
 
         for ($lvl = 1; $lvl <= 10; $lvl++) {
@@ -267,8 +269,12 @@ class AdminController
             flash('error', 'Daily fixed income cannot be negative.');
             redirect($backUrl);
         }
-        if ($data['daily_fixed_income_days'] < 1) {
-            flash('error', 'Max DFI days must be at least 1.');
+        if ($data['dfi_pv_pct'] < 0 || $data['dfi_pv_pct'] > 100) {
+            flash('error', 'DFI PV percentage must be between 0 and 100.');
+            redirect($backUrl);
+        }
+        if ($data['daily_fixed_income_days'] < 0) {
+            flash('error', 'Max DFI days cannot be negative.');
             redirect($backUrl);
         }
 

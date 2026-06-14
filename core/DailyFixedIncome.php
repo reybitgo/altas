@@ -47,7 +47,7 @@ class DailyFixedIncome
         //   - cap_status = 'active'          (capped / perminact = skipped)
         //   - dfi_active = 1                 (reset on reactivation)
         //   - dfi_days_used < max days       (under day limit)
-        //   - package.daily_fixed_income > 0 (DFI-enabled package)
+        //   - package has fixed DFI or dfi_pv_pct > 0 (DFI-enabled package)
         $st = $pdo->query("
             SELECT
                 u.id,
@@ -55,6 +55,8 @@ class DailyFixedIncome
                 u.dfi_days_used,
                 p.daily_fixed_income,
                 p.daily_fixed_income_days,
+                p.dfi_pv_pct,
+                p.package_pv_rate,
                 p.entry_fee,
                 p.lifetime_cap_multiplier
             FROM users u
@@ -65,16 +67,22 @@ class DailyFixedIncome
               AND u.dfi_active = 1
               AND u.cd_active = 0
               AND u.dfi_days_used < p.daily_fixed_income_days
-              AND p.daily_fixed_income > 0
+              AND (p.daily_fixed_income > 0 OR p.dfi_pv_pct > 0)
+              AND p.daily_fixed_income_days > 0
             ORDER BY u.id
         ");
 
         // ── 3. Process each member ────────────────────────────────────────────
         while ($m = $st->fetch()) {
             $userId    = (int)$m['id'];
-            $dailyRate = (float)$m['daily_fixed_income'];
             $daysUsed  = (int)$m['dfi_days_used'];
             $dayNumber = $daysUsed + 1;
+
+            $packagePv = (float)$m['entry_fee'] * ((float)$m['package_pv_rate'] / 100);
+            $dfiPvPct  = (float)$m['dfi_pv_pct'];
+            $dailyRate = $dfiPvPct > 0.00
+                ? $packagePv * ($dfiPvPct / 100) * (float)setting('pv_per_peso_rate', '1.0000')
+                : (float)$m['daily_fixed_income'];
 
             // 3a. Lifetime cap check
             $capCheck = CapEngine::canEarn($userId, $dailyRate);
@@ -181,7 +189,10 @@ class DailyFixedIncome
                 u.dfi_active,
                 u.cap_status,
                 p.daily_fixed_income,
-                p.daily_fixed_income_days
+                p.daily_fixed_income_days,
+                p.dfi_pv_pct,
+                p.package_pv_rate,
+                p.entry_fee
             FROM users u
             LEFT JOIN packages p ON p.id = u.package_id
             WHERE u.id = ?
@@ -195,12 +206,18 @@ class DailyFixedIncome
                 'days_used'        => 0,
                 'days_remaining'   => 0,
                 'daily_rate'       => 0.00,
+                'daily_rate_pv'    => 0.00,
+                'dfi_pv_pct'       => 0.00,
                 'next_payout_date' => null,
                 'status'           => 'disabled',
             ];
         }
 
-        $dailyRate = (float)$row['daily_fixed_income'];
+        $packagePv = (float)$row['entry_fee'] * ((float)$row['package_pv_rate'] / 100);
+        $dfiPvPct  = (float)$row['dfi_pv_pct'];
+        $dailyRate = $dfiPvPct > 0.00
+            ? $packagePv * ($dfiPvPct / 100) * (float)setting('pv_per_peso_rate', '1.0000')
+            : (float)$row['daily_fixed_income'];
         $daysUsed  = (int)$row['dfi_days_used'];
         $maxDays   = (int)$row['daily_fixed_income_days'];
         $capStatus = $row['cap_status'];
@@ -217,7 +234,7 @@ class DailyFixedIncome
 
         // Determine visual status
         $status = 'disabled';
-        if ($dailyRate <= 0) {
+        if ($dailyRate <= 0 || $maxDays <= 0) {
             $status = 'disabled';
         } elseif ($capStatus === 'capped') {
             $status = 'capped';
@@ -242,6 +259,10 @@ class DailyFixedIncome
             'days_used'        => $daysUsed,
             'days_remaining'   => max(0, $maxDays - $daysUsed),
             'daily_rate'       => $dailyRate,
+            'daily_rate_pv'    => $dfiPvPct > 0.00
+                ? $packagePv * ($dfiPvPct / 100)
+                : ($dailyRate / (float)setting('pv_per_peso_rate', '1.0000')),
+            'dfi_pv_pct'       => $dfiPvPct,
             'next_payout_date' => $nextPayout,
             'status'           => $status,
         ];

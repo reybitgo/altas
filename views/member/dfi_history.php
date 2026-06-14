@@ -9,6 +9,8 @@
 <?php
 $status = $status ?? [
   'daily_rate' => 0,
+  'daily_rate_pv' => 0,
+  'dfi_pv_pct' => 0,
   'days_used' => 0,
   'days_remaining' => 0,
   'total_dfi_earned' => 0,
@@ -46,6 +48,11 @@ if (!isset($history) || !is_array($history)) {
           <div class="col-6 col-md-3">
             <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;">Daily Rate</div>
             <div class="fw-700" style="font-size:1.1rem;"><?= fmt_money($status['daily_rate']) ?></div>
+            <?php if ($status['dfi_pv_pct'] > 0): ?>
+              <div class="text-muted" style="font-size:.7rem;"><?= number_format($status['daily_rate_pv'], 2) ?> PV/day (<?= $status['dfi_pv_pct'] ?>%)</div>
+            <?php else: ?>
+              <div class="text-muted" style="font-size:.7rem;"><?= number_format($status['daily_rate_pv'], 2) ?> PV/day equivalent</div>
+            <?php endif; ?>
           </div>
           <div class="col-6 col-md-3">
             <div class="text-muted" style="font-size:.72rem;font-weight:700;text-transform:uppercase;">Days Used</div>

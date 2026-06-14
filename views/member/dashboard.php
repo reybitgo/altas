@@ -283,6 +283,13 @@
               <span><?= fmt_money($dfiStatus['daily_rate']) ?> / day</span>
               <strong><?= fmt_money($dfiStatus['total_dfi_earned']) ?> total</strong>
             </div>
+            <div class="text-muted mt-1" style="font-size:.72rem;">
+              <?php if ($dfiStatus['dfi_pv_pct'] > 0): ?>
+                ≈ <?= number_format($dfiStatus['daily_rate_pv'], 2) ?> PV/day (<?= $dfiStatus['dfi_pv_pct'] ?>% of package PV)
+              <?php else: ?>
+                ≈ <?= number_format($dfiStatus['daily_rate_pv'], 2) ?> PV/day equivalent
+              <?php endif; ?>
+            </div>
             <?php if ($dfiStatus['status'] !== 'active'): ?>
               <div class="alert alert-warning py-2 mb-0 mt-2" style="font-size:.78rem;">
                 <?= match($dfiStatus['status']) {

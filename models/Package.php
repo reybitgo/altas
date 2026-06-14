@@ -79,6 +79,7 @@ class Package
             'reactivation_window_days' => (int)($data['reactivation_window_days'] ?? 15),
             'daily_fixed_income'       => (float)($data['daily_fixed_income'] ?? 0),
             'daily_fixed_income_days'  => (int)($data['daily_fixed_income_days'] ?? 90),
+            'dfi_pv_pct'               => (float)($data['dfi_pv_pct'] ?? 0),
             'status'                   => $data['status'] ?? 'active',
         ];
 
@@ -193,12 +194,34 @@ class Package
     }
 
     /**
+     * Calculate the peso Daily Fixed Income for a package.
+     * If dfi_pv_pct > 0, use package_pv * pct * pv_per_peso_rate.
+     * Otherwise fall back to the fixed daily_fixed_income amount.
+     */
+    public static function dailyFixedIncome(int $packageId): float
+    {
+        $pkg = self::find($packageId);
+        if (!$pkg) return 0.00;
+
+        $dfiPvPct = (float)$pkg['dfi_pv_pct'];
+        if ($dfiPvPct > 0) {
+            $packagePv = self::packagePv($packageId);
+            $rate      = (float)setting('pv_per_peso_rate', '1.0000');
+            return $packagePv * ($dfiPvPct / 100) * $rate;
+        }
+
+        return (float)$pkg['daily_fixed_income'];
+    }
+
+    /**
      * Check if a package has Daily Fixed Income enabled.
      */
     public static function hasDfi(int $packageId): bool
     {
         $pkg = self::find($packageId);
-        return $pkg && (float)$pkg['daily_fixed_income'] > 0;
+        if (!$pkg) return false;
+        return self::dailyFixedIncome($packageId) > 0.00
+            && (int)$pkg['daily_fixed_income_days'] > 0;
     }
 
     /**
@@ -209,8 +232,8 @@ class Package
         $pkg = self::find($packageId);
         if (!$pkg) return ['enabled' => false, 'amount' => 0, 'days' => 0];
         return [
-            'enabled' => (float)$pkg['daily_fixed_income'] > 0,
-            'amount'  => (float)$pkg['daily_fixed_income'],
+            'enabled' => self::hasDfi($packageId),
+            'amount'  => self::dailyFixedIncome($packageId),
             'days'    => (int)$pkg['daily_fixed_income_days'],
         ];
     }
