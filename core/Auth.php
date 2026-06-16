@@ -89,7 +89,7 @@ class Auth
         if ($user === null) {
             $st = db()->prepare(
                 'SELECT u.*, p.name AS package_name,
-                        p.pairing_pv_pct, p.daily_pair_pv_cap,
+                        p.daily_pair_pv_cap,
                         sp.username AS sponsor_username,
                         bp.username AS binary_parent_username
                  FROM   users u

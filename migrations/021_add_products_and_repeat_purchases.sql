@@ -1,13 +1,16 @@
 -- Migration 021: Phase 5 — Products & Repeat Purchases PV
 
 CREATE TABLE IF NOT EXISTS products (
-  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name        VARCHAR(120)     NOT NULL,
-  price       DECIMAL(12,2)    NOT NULL,
-  pv_value    DECIMAL(14,2)    NOT NULL,
-  status      ENUM('active','inactive') NOT NULL DEFAULT 'active',
-  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name             VARCHAR(120)     NOT NULL,
+  price            DECIMAL(12,2)    NOT NULL,
+  pv_value         DECIMAL(14,2)    NOT NULL,
+  image_url        VARCHAR(255)     NULL DEFAULT NULL COMMENT 'Product image path relative to uploads/',
+  short_description VARCHAR(255)    NULL DEFAULT NULL COMMENT 'Short description shown on product cards',
+  description      TEXT             NULL DEFAULT NULL COMMENT 'Full description shown in product detail modal',
+  status           ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS repeat_purchases (

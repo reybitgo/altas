@@ -322,6 +322,82 @@ function paginate(string $query, array $params, int $page, int $perPage = 20): a
 }
 
 /**
+ * Upload an image to the uploads/ directory.
+ *
+ * @param array       $file     The $_FILES entry.
+ * @param string      $subDir   Sub-directory under uploads/ (e.g. 'products').
+ * @param string      $prefix   Filename prefix (e.g. 'product_3').
+ * @param string|null $oldPath  Optional existing relative path to delete after a successful upload.
+ * @param int         $maxBytes Max file size in bytes (default 5 MB).
+ * @return string|null Relative path stored in DB, or null if no file was uploaded.
+ * @throws InvalidArgumentException|RuntimeException on validation or move failure.
+ */
+function upload_image(array $file, string $subDir, string $prefix, ?string $oldPath = null, int $maxBytes = 5 * 1024 * 1024): ?string
+{
+    if (empty($file['tmp_name']) || (int)($file['error'] ?? 0) === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+
+    if ((int)$file['error'] !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('Image upload failed (error ' . (int)$file['error'] . ').');
+    }
+
+    $mime    = mime_content_type($file['tmp_name']);
+    $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png',
+        'image/gif'  => 'gif',
+        'image/webp' => 'webp',
+    ];
+
+    if (!isset($allowed[$mime])) {
+        throw new InvalidArgumentException('Invalid image type. Allowed: JPEG, PNG, GIF, WebP.');
+    }
+
+    if ((int)$file['size'] > $maxBytes) {
+        throw new InvalidArgumentException('Image must be under ' . round($maxBytes / 1024 / 1024, 1) . ' MB.');
+    }
+
+    $uploadRoot = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR;
+    $dir        = $uploadRoot . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $subDir) . DIRECTORY_SEPARATOR;
+
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+
+    $ext  = $allowed[$mime];
+    $name = $prefix . '_' . time() . '.' . $ext;
+    $dest = $dir . $name;
+
+    if (!move_uploaded_file($file['tmp_name'], $dest)) {
+        throw new RuntimeException('Failed to save uploaded image.');
+    }
+
+    if ($oldPath) {
+        delete_uploaded_file($oldPath);
+    }
+
+    return $subDir . '/' . $name;
+}
+
+/**
+ * Delete an uploaded file relative to the uploads/ directory.
+ */
+function delete_uploaded_file(?string $relativePath): void
+{
+    if (!$relativePath) {
+        return;
+    }
+
+    $uploadRoot = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR;
+    $path       = $uploadRoot . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath);
+
+    if (file_exists($path)) {
+        @unlink($path);
+    }
+}
+
+/**
  * Render pagination links as HTML.
  */
 function pagination_links(array $p, string $baseUrl): string

@@ -65,7 +65,7 @@
             <tr>
               <th style="padding-left:1.25rem;">Package</th>
               <th class="text-end">Entry Fee</th>
-              <?php if ($binaryEnabled): ?><th class="text-end">Pairing %</th><?php endif; ?>
+              <?php if ($binaryEnabled): ?><th class="text-end">Pairing Payout</th><?php endif; ?>
               <th class="text-end">Direct Ref</th>
               <th class="text-end">Lifetime Cap</th>
               <th class="text-center">DFI</th>
@@ -96,10 +96,11 @@
                   </td>
                   <td class="text-end font-mono"><?= fmt_money($pkg['entry_fee']) ?></td>
                   <?php if ($binaryEnabled): ?>
-                    <?php $pkgPv = Package::packagePv((int)$pkg['id']); $pairPeso = Package::pairingBonus($pkgPv, (int)$pkg['id']); ?>
+                    <?php $binaryPv = Package::binaryPackagePv((int)$pkg['id']); $pvRate = (float)setting('pv_per_peso_rate', '1.0000'); $pairPeso = $binaryPv * $pvRate; ?>
                     <td class="text-end">
-                      <div class="font-mono" style="color:var(--success);"><?= (float)$pkg['pairing_pv_pct'] ?>%</div>
-                      <div class="text-muted" style="font-size:.65rem;">≈ <?= fmt_money($pairPeso) ?>/PV</div>
+                      <div class="font-mono" style="color:var(--success);">₱<?= number_format($pvRate, 4) ?></div>
+                      <div class="text-muted" style="font-size:.65rem;">per binary PV (global rate)</div>
+                      <div class="text-muted" style="font-size:.65rem;">≈ <?= fmt_money($pairPeso) ?>/pkg paired</div>
                     </td>
                   <?php endif; ?>
                   <?php $pkgPv = Package::packagePv((int)$pkg['id']); $directPeso = Package::directReferralBonus($pkgPv, (int)$pkg['id']); ?>
@@ -175,19 +176,19 @@
                 <input type="number" name="package_pv_rate" id="pkgPvRate" class="form-control" inputmode="decimal" min="0" max="1000" step="0.01" value="<?= e($editPkg['package_pv_rate'] ?? 100.00) ?>">
                 <span class="input-group-text">%</span>
               </div>
-              <div class="form-text">Package PV basis = <span id="pkgPvPreview" class="font-mono">₱0.00</span> (for binary/direct/indirect)</div>
+              <div class="form-text">Package PV basis = <span id="pkgPvPreview" class="font-mono">₱0.00</span> (direct/indirect/DFI)</div>
             </div>
           </div>
 
           <div class="row g-3 mb-3">
             <?php if ($binaryEnabled): ?>
             <div class="col-md-6">
-              <label class="form-label">Pairing Bonus (% of paired PV) <span class="text-danger">*</span></label>
+              <label class="form-label">Binary PV Rate (%)</label>
               <div class="input-group">
-                <input type="number" name="pairing_pv_pct" id="pkgPairingPct" class="form-control" inputmode="decimal" min="0" max="100" step="0.01" value="<?= e($editPkg['pairing_pv_pct'] ?? '') ?>" required>
+                <input type="number" name="binary_pv_pct" id="pkgBinaryPvPct" class="form-control" inputmode="decimal" min="0" max="1000" step="0.01" value="<?= e($editPkg['binary_pv_pct'] ?? 20.00) ?>">
                 <span class="input-group-text">%</span>
               </div>
-              <div class="form-text">1 package PV paired ≈ <span id="pairingPreview" class="font-mono">₱0.00</span></div>
+              <div class="form-text">Binary PV basis = <span id="binaryPvPreview" class="font-mono">₱0.00</span> (flows to binary tree)</div>
             </div>
             <?php endif; ?>
             <div class="col-md-6">
@@ -350,27 +351,23 @@
   if (entryInput)    entryInput.addEventListener('input', updatePackagePVPreview);
   if (pvRateInput)   pvRateInput.addEventListener('input', updatePackagePVPreview);
 
-  // ── Pairing bonus preview live update ──
-  const pairingPctInput = document.getElementById('pkgPairingPct');
-  const pairingPreviewEl = document.getElementById('pairingPreview');
+  // ── Binary PV basis preview live update ──
+  const binaryPvPctInput = document.getElementById('pkgBinaryPvPct');
+  const binaryPvPreviewEl = document.getElementById('binaryPvPreview');
   const pvPerPesoRate = <?= (float)setting('pv_per_peso_rate', '1.0000') ?>;
 
-  function updatePairingPreview() {
-    if (!pairingPreviewEl) return;
+  function updateBinaryPvPreview() {
+    if (!binaryPvPreviewEl) return;
     const entry = parseFloat(entryInput?.value) || 0;
-    const pvRate = parseFloat(pvRateInput?.value) || 0;
-    const pct = parseFloat(pairingPctInput?.value) || 0;
-    const packagePv = entry * (pvRate / 100);
-    const bonus = packagePv * (pct / 100) * pvPerPesoRate;
-    pairingPreviewEl.textContent = '₱' + bonus.toLocaleString('en-PH', {
+    const pct = parseFloat(binaryPvPctInput?.value) || 0;
+    binaryPvPreviewEl.textContent = '₱' + (entry * (pct / 100)).toLocaleString('en-PH', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
   }
 
-  if (entryInput)      entryInput.addEventListener('input', updatePairingPreview);
-  if (pvRateInput)     pvRateInput.addEventListener('input', updatePairingPreview);
-  if (pairingPctInput) pairingPctInput.addEventListener('input', updatePairingPreview);
+  if (entryInput)       entryInput.addEventListener('input', updateBinaryPvPreview);
+  if (binaryPvPctInput) binaryPvPctInput.addEventListener('input', updateBinaryPvPreview);
 
   // ── Direct referral preview live update ──
   const directRefInput = document.getElementById('pkgDirectRefPct');
@@ -450,7 +447,7 @@
     document.getElementById('pkgSubmitBtn').textContent = '➕ Create Package';
     previewEl.textContent = '₱0.00';
     updatePackagePVPreview();
-    updatePairingPreview();
+    updateBinaryPvPreview();
     updateDirectRefPreview();
     updateDfiPvPreview();
     updateIndirectPreview();
@@ -469,7 +466,7 @@
     document.getElementById('packageModalTitle').textContent = '✏️ Edit Package';
     document.getElementById('pkgSubmitBtn').textContent = '💾 Update Package';
     updatePackagePVPreview();
-    updatePairingPreview();
+    updateBinaryPvPreview();
     updateDirectRefPreview();
     updateDfiPvPreview();
     updateIndirectPreview();

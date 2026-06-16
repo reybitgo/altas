@@ -190,7 +190,6 @@ class User
         $st = db()->prepare("
             SELECT u.*,
                    p.name              AS package_name,
-                   p.pairing_pv_pct,
                    p.daily_pair_pv_cap,
                    sp.username         AS sponsor_username,
                    bp.username         AS binary_parent_username
@@ -290,7 +289,6 @@ class User
                 u.flushed_pv,
                 u.left_pv,
                 u.right_pv,
-                p.pairing_pv_pct,
                 p.daily_pair_pv_cap,
                 u.lifetime_earned,
                 u.cap_status,
@@ -328,11 +326,10 @@ class User
 
         $paidToday = (float)$row['paired_pv_today'];
         $dailyCap  = (float)$row['daily_pair_pv_cap'];
-        $pairPct   = (float)$row['pairing_pv_pct'];
         $pvRate    = (float)setting('pv_per_peso_rate', '1.0000');
         $capPct    = $dailyCap > 0 ? min(100, ($paidToday / $dailyCap) * 100) : 0;
         $capRem    = max(0.00, $dailyCap - $paidToday);
-        $earnedToday = $paidToday * ($pairPct / 100) * $pvRate;
+        $earnedToday = $paidToday * $pvRate;
 
         return [
             // Legacy count-based keys (deprecated)
@@ -347,7 +344,7 @@ class User
             'flushed_pv'       => (float)$row['flushed_pv'],
             'left_pv'          => (float)$row['left_pv'],
             'right_pv'         => (float)$row['right_pv'],
-            'pairing_pv_pct'   => $pairPct,
+            'pairing_pv_pct'   => 0.00,
             'daily_pair_pv_cap'=> $dailyCap,
             'daily_cap'        => $dailyCap,
             'cap_percent'      => round($capPct, 1),

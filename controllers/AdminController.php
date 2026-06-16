@@ -182,7 +182,7 @@ class AdminController
             'name'              => trim($_POST['name']              ?? ''),
             'entry_fee'         => (float)($_POST['entry_fee']      ?? 0),
             'package_pv_rate'   => (float)($_POST['package_pv_rate'] ?? 100.00),
-            'pairing_pv_pct'    => (float)($_POST['pairing_pv_pct'] ?? 0),
+            'binary_pv_pct'     => (float)($_POST['binary_pv_pct']   ?? 20.00),
             'daily_pair_pv_cap' => (float)($_POST['daily_pair_pv_cap'] ?? 0),
             'direct_ref_pv_pct' => (float)($_POST['direct_ref_pv_pct'] ?? 0),
             'status'            => $_POST['status'] ?? 'active',
@@ -200,12 +200,12 @@ class AdminController
             $data['indirect_levels'][$lvl] = (float)($_POST["indirect_{$lvl}"] ?? 0);
         }
 
-        // When binary is disabled, the pairing/cap inputs are not rendered.
+        // When binary is disabled, the binary/cap inputs are not rendered.
         // Preserve existing values on edit so they are not silently zeroed.
-        if ($id && !isset($_POST['pairing_pv_pct'])) {
+        if ($id && !isset($_POST['binary_pv_pct'])) {
             $existing = Package::find($id);
             if ($existing) {
-                $data['pairing_pv_pct']    = (float)$existing['pairing_pv_pct'];
+                $data['binary_pv_pct']     = (float)$existing['binary_pv_pct'];
                 $data['daily_pair_pv_cap'] = (float)$existing['daily_pair_pv_cap'];
             }
         }
@@ -232,8 +232,8 @@ class AdminController
             flash('error', 'Package PV rate must be between 0 and 1000.');
             redirect($backUrl);
         }
-        if ($data['pairing_pv_pct'] < 0 || $data['pairing_pv_pct'] > 100) {
-            flash('error', 'Pairing bonus percentage must be between 0 and 100.');
+        if ($data['binary_pv_pct'] < 0 || $data['binary_pv_pct'] > 1000) {
+            flash('error', 'Binary PV percentage must be between 0 and 1000.');
             redirect($backUrl);
         }
         if ($data['daily_pair_pv_cap'] < 0) {
@@ -297,17 +297,19 @@ class AdminController
         Auth::guard('admin');
         csrf_verify();
 
-        $id   = (int)($_POST['product_id'] ?? 0);
-        $data = [
-            'name'     => trim($_POST['name'] ?? ''),
-            'price'    => (float)($_POST['price'] ?? 0),
-            'pv_value' => (float)($_POST['pv_value'] ?? 0),
-            'status'   => $_POST['status'] ?? 'active',
-        ];
+        $id       = (int)($_POST['product_id'] ?? 0);
+        $backUrl  = $id ? '/?page=admin_products&edit=' . $id : '/?page=admin_products';
+        $existing = $id ? Product::find($id) : null;
 
-        $backUrl = $id
-            ? '/?page=admin_products&edit=' . $id
-            : '/?page=admin_products';
+        $data = [
+            'name'             => trim($_POST['name'] ?? ''),
+            'price'            => (float)($_POST['price'] ?? 0),
+            'pv_value'         => (float)($_POST['pv_value'] ?? 0),
+            'short_description'=> trim($_POST['short_description'] ?? ''),
+            'description'      => trim($_POST['description'] ?? ''),
+            'status'           => $_POST['status'] ?? 'active',
+            'image_url'        => $existing['image_url'] ?? null,
+        ];
 
         if (!$data['name'] || $data['price'] <= 0) {
             flash('error', 'Product name and price are required.');
@@ -316,6 +318,29 @@ class AdminController
         if ($data['pv_value'] < 0) {
             flash('error', 'PV value cannot be negative.');
             redirect($backUrl);
+        }
+
+        // Handle product image upload/removal
+        $removeImage = !empty($_POST['remove_image']);
+
+        if (!empty($_FILES['image']['tmp_name'])) {
+            try {
+                $uploaded = upload_image(
+                    $_FILES['image'],
+                    'products',
+                    'product_' . ($id ?: 'new'),
+                    $removeImage ? null : ($existing['image_url'] ?? null)
+                );
+                if ($uploaded !== null) {
+                    $data['image_url'] = $uploaded;
+                }
+            } catch (Throwable $e) {
+                flash('error', $e->getMessage());
+                redirect($backUrl);
+            }
+        } elseif ($removeImage) {
+            delete_uploaded_file($existing['image_url'] ?? null);
+            $data['image_url'] = null;
         }
 
         Product::save($data, $id ?: null);

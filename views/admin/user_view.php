@@ -273,8 +273,8 @@
                 <td><?= ($user['binary_parent_username'] ?? null) ? '@' . e($user['binary_parent_username']) . ' (' . $user['binary_position'] . ')' : '—' ?></td>
               </tr>
               <tr>
-                <td>Pairing Bonus</td>
-                <td><?= (float)($user['pairing_pv_pct'] ?? 0) ?>% of paired PV</td>
+                <td>PV Conversion Rate</td>
+                <td>₱<?= number_format((float)setting('pv_per_peso_rate', '1.0000'), 4) ?> per PV (global)</td>
               </tr>
               <?php endif; ?>
               <tr>

@@ -116,8 +116,8 @@ This plan converts the current system in **self-contained phases**. Each phase i
    - Paired amount = `min(unpaired_left, unpaired_right)`
 
 4. **Pairing bonus calculation**
-   - Replace `pairing_bonus` fixed peso with `pairing_pv_pct` on packages
-   - Bonus = `paired_pv × (pairing_pv_pct / 100) × pv_per_peso_rate`
+   - Replace per-package `pairing_pv_pct` with a global `pv_per_peso_rate` setting
+   - Bonus = `paired_pv × pv_per_peso_rate`
    - Update `Commission::creditPairing()` to credit peso amount derived from PV
 
 5. **Flush logic**

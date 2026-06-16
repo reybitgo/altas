@@ -7,6 +7,22 @@
 ?>
 <?php $pageTitle = 'Repeat Purchases'; ?>
 <?php require 'views/partials/head.php'; ?>
+<style>
+  .product-thumb-sm {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+  }
+  .product-thumb-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    font-size: 1.1rem;
+  }
+</style>
 <?php require 'views/partials/sidebar_admin.php'; ?>
 <div class="main-content">
   <?php require 'views/partials/topbar.php'; ?>
@@ -54,7 +70,18 @@
                     <div class="fw-semibold">@<?= e($rp['member_username']) ?></div>
                     <div class="text-muted" style="font-size:.7rem;"><?= e($rp['member_full_name'] ?? '') ?></div>
                   </td>
-                  <td><?= e($rp['product_name']) ?></td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <?php if (!empty($rp['product_image'])): ?>
+                        <a href="<?= APP_URL ?>/uploads/<?= e($rp['product_image']) ?>" target="_blank" rel="noopener">
+                          <img src="<?= APP_URL ?>/uploads/<?= e($rp['product_image']) ?>" alt="<?= e($rp['product_name']) ?>" class="product-thumb-sm" loading="lazy">
+                        </a>
+                      <?php else: ?>
+                        <div class="product-thumb-sm product-thumb-placeholder">🛍️</div>
+                      <?php endif; ?>
+                      <span><?= e($rp['product_name']) ?></span>
+                    </div>
+                  </td>
                   <td class="text-end font-mono"><?= (int)$rp['quantity'] ?></td>
                   <td class="text-end font-mono"><?= number_format((float)$rp['total_pv'], 2) ?></td>
                   <td class="text-end font-mono"><?= fmt_money($rp['total_price']) ?></td>

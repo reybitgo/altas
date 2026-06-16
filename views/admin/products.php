@@ -7,6 +7,29 @@
 ?>
 <?php $pageTitle = 'Products'; ?>
 <?php require 'views/partials/head.php'; ?>
+<style>
+  .product-thumb-sm {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+  }
+  .product-thumb-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    font-size: 1.25rem;
+  }
+  .product-thumb-md {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+  }
+</style>
 <?php require 'views/partials/sidebar_admin.php'; ?>
 <div class="main-content">
   <?php require 'views/partials/topbar.php'; ?>
@@ -28,7 +51,8 @@
         <table class="table table-hover align-middle mb-0">
           <thead style="background:#f8fafc;">
             <tr>
-              <th style="padding-left:1.25rem;">Product</th>
+              <th style="padding-left:1.25rem;width:70px;">Image</th>
+              <th>Product</th>
               <th class="text-end">Price</th>
               <th class="text-end">PV Value</th>
               <th class="text-center">Status</th>
@@ -38,7 +62,7 @@
           <tbody>
             <?php if (empty($products)): ?>
               <tr>
-                <td colspan="5" class="text-center py-5 text-muted">
+                <td colspan="6" class="text-center py-5 text-muted">
                   <div style="font-size:2rem;opacity:.3;margin-bottom:.5rem;">🛍️</div>
                   <div>No products yet.</div>
                 </td>
@@ -47,6 +71,15 @@
               <?php foreach ($products as $p): ?>
                 <tr>
                   <td style="padding-left:1.25rem;">
+                    <?php if (!empty($p['image_url'])): ?>
+                      <a href="<?= APP_URL ?>/uploads/<?= e($p['image_url']) ?>" target="_blank" rel="noopener">
+                        <img src="<?= APP_URL ?>/uploads/<?= e($p['image_url']) ?>" alt="<?= e($p['name']) ?>" class="product-thumb-sm" loading="lazy">
+                      </a>
+                    <?php else: ?>
+                      <div class="product-thumb-sm product-thumb-placeholder">🛍️</div>
+                    <?php endif; ?>
+                  </td>
+                  <td>
                     <div class="fw-semibold"><?= e($p['name']) ?></div>
                     <div class="text-muted" style="font-size:.7rem;">ID: <?= (int)$p['id'] ?></div>
                   </td>
@@ -79,20 +112,31 @@
 
 <!-- Product Modal -->
 <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="productModalTitle">➕ New Product</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <form method="POST" action="<?= APP_URL ?>/?page=admin_save_product" id="productForm">
+        <form method="POST" action="<?= APP_URL ?>/?page=admin_save_product" id="productForm" enctype="multipart/form-data">
           <?= csrf_field() ?>
           <input type="hidden" name="product_id" id="productId" value="<?= e($editProduct['id'] ?? '') ?>">
 
           <div class="mb-3">
             <label class="form-label">Product Name <span class="text-danger">*</span></label>
             <input type="text" name="name" id="prodName" class="form-control" value="<?= e($editProduct['name'] ?? '') ?>" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Short Description</label>
+            <textarea name="short_description" id="prodShortDesc" class="form-control" rows="2" maxlength="255" placeholder="Brief line shown on the product card"><?= e($editProduct['short_description'] ?? '') ?></textarea>
+            <div class="form-text">Max 255 characters. Displayed on the member product card.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Full Description</label>
+            <textarea name="description" id="prodDesc" class="form-control" rows="4" placeholder="Detailed description shown in the product popup"><?= e($editProduct['description'] ?? '') ?></textarea>
           </div>
 
           <div class="row g-3 mb-3">
@@ -113,6 +157,23 @@
               <option value="inactive" <?= (($editProduct['status'] ?? '') === 'inactive') ? 'selected' : '' ?>>⚪ Inactive</option>
             </select>
           </div>
+
+          <div class="mb-3">
+            <label class="form-label">Product Image</label>
+            <input type="file" name="image" id="prodImage" class="form-control" accept="image/jpeg,image/png,image/gif,image/webp">
+            <div class="form-text">JPEG, PNG, GIF, WebP. Max 5 MB.</div>
+            <div id="prodImagePreviewWrap" class="mt-2 <?= empty($editProduct['image_url']) ? 'd-none' : '' ?>">
+              <div class="d-flex align-items-center gap-2">
+                <a href="<?= APP_URL ?>/uploads/<?= e($editProduct['image_url'] ?? '') ?>" target="_blank" rel="noopener" id="prodImageLink">
+                  <img id="prodImagePreview" src="<?= APP_URL ?>/uploads/<?= e($editProduct['image_url'] ?? '') ?>" alt="Preview" class="product-thumb-md">
+                </a>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="prodRemoveImage">
+                  <label class="form-check-label" for="prodRemoveImage" style="font-size:.8rem;">Remove current image</label>
+                </div>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
       <div class="modal-footer" style="border-top:1px solid #f1f5f9;">
@@ -129,9 +190,39 @@
   function resetProductForm() {
     const form = document.getElementById('productForm');
     form.reset();
+
+    // Explicitly clear fields so the form is blank even if the page was loaded in edit mode
+    document.getElementById('prodName').value = '';
+    document.getElementById('prodShortDesc').value = '';
+    document.getElementById('prodDesc').value = '';
+    document.getElementById('prodPrice').value = '';
+    document.getElementById('prodPv').value = '';
+    document.getElementById('prodStatus').value = 'active';
+    document.getElementById('prodImage').value = '';
+    document.getElementById('prodRemoveImage').checked = false;
+
     document.getElementById('productModalTitle').textContent = '➕ New Product';
     document.getElementById('productId').value = '';
     document.getElementById('prodSubmitBtn').textContent = '➕ Create Product';
+    const previewWrap = document.getElementById('prodImagePreviewWrap');
+    if (previewWrap) {
+      previewWrap.classList.add('d-none');
+    }
+  }
+
+  const prodImageInput = document.getElementById('prodImage');
+  if (prodImageInput) {
+    prodImageInput.addEventListener('change', function() {
+      const file = this.files[0];
+      const wrap = document.getElementById('prodImagePreviewWrap');
+      const img = document.getElementById('prodImagePreview');
+      const link = document.getElementById('prodImageLink');
+      if (!file || !wrap || !img) return;
+      const url = URL.createObjectURL(file);
+      img.src = url;
+      if (link) link.href = url;
+      wrap.classList.remove('d-none');
+    });
   }
 
   <?php if ($editProduct): ?>

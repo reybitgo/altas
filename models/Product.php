@@ -31,18 +31,25 @@ class Product
     /**
      * Save or update a product.
      *
-     * @param array $data name, price, pv_value, status
+     * @param array $data name, price, pv_value, status, image_url, short_description, description
      */
     public static function save(array $data, ?int $id = null): int
     {
         $pdo = db();
 
         $fields = [
-            'name'     => trim($data['name'] ?? ''),
-            'price'    => (float)($data['price'] ?? 0),
-            'pv_value' => (float)($data['pv_value'] ?? 0),
-            'status'   => $data['status'] ?? 'active',
+            'name'             => trim($data['name'] ?? ''),
+            'price'            => (float)($data['price'] ?? 0),
+            'pv_value'         => (float)($data['pv_value'] ?? 0),
+            'image_url'        => $data['image_url'] ?? null,
+            'short_description'=> trim($data['short_description'] ?? ''),
+            'description'      => trim($data['description'] ?? ''),
+            'status'           => $data['status'] ?? 'active',
         ];
+
+        if ($fields['image_url'] === '') {
+            $fields['image_url'] = null;
+        }
 
         if ($id) {
             $sets = [];
@@ -72,6 +79,12 @@ class Product
         if ($inUse > 0) {
             return false;
         }
+
+        $product = self::find($id);
+        if ($product) {
+            delete_uploaded_file($product['image_url'] ?? null);
+        }
+
         db()->prepare('DELETE FROM products WHERE id = ?')->execute([$id]);
         return true;
     }

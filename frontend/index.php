@@ -22,8 +22,11 @@ $mayaFee         = (float) setting('service_fee_maya', '0');
 $packages   = Package::all(true);
 $pkgCount   = count($packages);
 $featuredPkg = $packages[0] ?? null;
+$featuredBinaryPv = $featuredPkg
+    ? Package::binaryPackagePv((int)$featuredPkg['id'])
+    : 0.00;
 $featuredPairPeso = $featuredPkg
-    ? Package::pairingBonus(Package::packagePv((int)$featuredPkg['id']), (int)$featuredPkg['id'])
+    ? Package::pairingBonus($featuredBinaryPv, (int)$featuredPkg['id'])
     : 0.00;
 $featuredPairCap  = $featuredPkg ? (float)$featuredPkg['daily_pair_pv_cap'] : 0.00;
 $featuredDirectPeso = $featuredPkg
@@ -909,13 +912,13 @@ $streamOxford = count($streamWords) > 2
               <p class="pkg-desc">Your entry into the network. One seat, one package, backed by a real Philippine poultry operation. All earning streams are active from the moment you register.</p>
               <ul class="pkg-features">
                 <?php if ($binaryEnabled):
-                  $pkgPv = Package::packagePv((int)$pkg['id']);
-                  $pkgPairPeso = Package::pairingBonus($pkgPv, (int)$pkg['id']);
+                  $binaryPv    = Package::binaryPackagePv((int)$pkg['id']);
+                  $pkgPairPeso = Package::pairingBonus($binaryPv, (int)$pkg['id']);
                   $pkgPairCap  = (float)$pkg['daily_pair_pv_cap'];
                   $pkgDfi      = Package::dailyFixedIncome((int)$pkg['id']);
                 ?>
                 <li>Full binary tree placement — left or right leg of your choice</li>
-                <li><?= fmt_money($pkgPairPeso) ?> per binary pair · capped at <?= number_format($pkgPairCap, 0) ?> PV per day</li>
+                <li><?= fmt_money($pkgPairPeso) ?> per binary pair · <?= number_format($binaryPv, 0) ?> binary PV per package · capped at <?= number_format($pkgPairCap, 0) ?> PV per day</li>
                 <?php endif; ?>
                 <li><?= fmt_money(Package::directReferralBonus(Package::packagePv((int)$pkg['id']), (int)$pkg['id'])) ?> direct referral bonus per recruit</li>
                 <?php if ($indirectEnabled): ?><li>10-level unilevel generational bonuses</li><?php endif; ?>
@@ -950,11 +953,11 @@ $streamOxford = count($streamWords) > 2
                 <div class="pkg-price" style="font-size:1.75rem;margin:.5rem 0;"><?= fmt_money($pkg['entry_fee']) ?> <small style="font-size:.5em;">one-time</small></div>
                 <ul class="pkg-features" style="margin:1rem 0;padding-left:1.2rem;font-size:.85rem;">
                   <?php if ($binaryEnabled):
-                    $pkgPv = Package::packagePv((int)$pkg['id']);
-                    $pkgPairPeso = Package::pairingBonus($pkgPv, (int)$pkg['id']);
+                    $binaryPv    = Package::binaryPackagePv((int)$pkg['id']);
+                    $pkgPairPeso = Package::pairingBonus($binaryPv, (int)$pkg['id']);
                     $pkgPairCap  = (float)$pkg['daily_pair_pv_cap'];
                   ?>
-                  <li><?= fmt_money($pkgPairPeso) ?> per pair · cap <?= number_format($pkgPairCap, 0) ?> PV/day</li>
+                  <li><?= fmt_money($pkgPairPeso) ?> per pair · <?= number_format($binaryPv, 0) ?> binary PV/pkg · cap <?= number_format($pkgPairCap, 0) ?> PV/day</li>
                   <?php endif; ?>
                   <li><?= fmt_money(Package::directReferralBonus(Package::packagePv((int)$pkg['id']), (int)$pkg['id'])) ?> direct referral</li>
                   <?php if ($indirectEnabled): ?><li>10-level unilevel bonuses</li><?php endif; ?>

@@ -367,7 +367,7 @@
               [
                 ['Lifetime paired PV', number_format($status['paired_pv'], 2), ''],
                 ['Flushed PV',       number_format($status['flushed_pv'], 2), 'color:var(--warning)'],
-                ['Pairing bonus',    $status['pairing_pv_pct'] . '% of PV',  'color:var(--success)'],
+                ['PV conversion',    '₱' . number_format((float)setting('pv_per_peso_rate', '1.0000'), 4) . '/PV',  'color:var(--success)'],
               ] as [$k, $v, $s]
             ): ?>
               <div class="d-flex justify-content-between py-1 border-bottom" style="font-size:.8rem;">

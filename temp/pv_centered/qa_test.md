@@ -45,15 +45,15 @@ This guide walks a complete beginner through verifying every PV behavior end-to-
 
 ### What's New vs. the Old Fixed-Peso System
 
-| Component | Old Way | New Way | Where to Test |
-|-----------|---------|---------|---------------|
-| **Binary pairing** | Counted left/right members | Adds package/product PV to legs | Register members / approve repeat purchases |
-| **Pairing bonus** | Fixed ₱ per pair | `% of paired PV × pv_per_peso_rate` | Admin package form, member dashboard |
-| **Direct referral** | Fixed ₱ amount | `% of package PV × pv_per_peso_rate` | Register under a sponsor |
-| **Indirect/unilevel** | Fixed ₱ per level | `% of package PV per level` | Deep sponsor chains |
-| **DFI** | Fixed ₱/day | Fixed ₱/day OR `% of package PV` | Admin package form, DFI history |
-| **Product purchases** | No PV impact | Personal/group/binary PV flow | Repeat purchase approval |
-| **Personal PV gate** | Not used | Blocks repeat-purchase PV flow for low-PV uplines | Settings + repeat purchase |
+| Component             | Old Way                    | New Way                                           | Where to Test                               |
+| --------------------- | -------------------------- | ------------------------------------------------- | ------------------------------------------- |
+| **Binary pairing**    | Counted left/right members | Adds package/product PV to legs                   | Register members / approve repeat purchases |
+| **Pairing bonus**     | Fixed ₱ per pair           | `% of paired PV × pv_per_peso_rate`               | Admin package form, member dashboard        |
+| **Direct referral**   | Fixed ₱ amount             | `% of package PV × pv_per_peso_rate`              | Register under a sponsor                    |
+| **Indirect/unilevel** | Fixed ₱ per level          | `% of package PV per level`                       | Deep sponsor chains                         |
+| **DFI**               | Fixed ₱/day                | Fixed ₱/day OR `% of package PV`                  | Admin package form, DFI history             |
+| **Product purchases** | No PV impact               | Personal/group/binary PV flow                     | Repeat purchase approval                    |
+| **Personal PV gate**  | Not used                   | Blocks repeat-purchase PV flow for low-PV uplines | Settings + repeat purchase                  |
 
 ### What This Guide Covers
 
@@ -74,31 +74,35 @@ This guide walks a complete beginner through verifying every PV behavior end-to-
 ## 2. Prerequisites
 
 ### Required Access
-- [ ] Admin login credentials (`admin` / `Admin@1234` by default — change immediately in production)
-- [ ] Database access (phpMyAdmin, MySQL CLI, or similar)
-- [ ] Server/terminal access to run cron manually
-- [ ] At least one active member account for testing
+
+- ✅ Admin login credentials (`admin` / `Admin@1234` by default — change immediately in production)
+- ✅ Database access (phpMyAdmin, MySQL CLI, or similar)
+- ✅ Server/terminal access to run cron manually
+- ✅ At least one active member account for testing
 
 ### Required Knowledge
-- [ ] How to run SQL `SELECT`, `UPDATE`, and `INSERT`
-- [ ] How to read PHP error logs
-- [ ] How to use browser DevTools (F12 → Console / Network)
-- [ ] Basic understanding of sponsor chain vs. binary tree
+
+- ✅ How to run SQL `SELECT`, `UPDATE`, and `INSERT`
+- ✅ How to read PHP error logs
+- ✅ How to use browser DevTools (F12 → Console / Network)
+- ✅ Basic understanding of sponsor chain vs. binary tree
 
 ### Required Tools
-| Tool | Purpose | Free? |
-|------|---------|-------|
-| Web browser | UI testing | Yes |
-| Browser DevTools | Check JS/PHP errors | Yes |
-| phpMyAdmin / MySQL CLI | Verify database state | Yes |
-| SSH / terminal | Run cron manually | Yes |
-| Text editor | Inspect code if needed | Yes |
+
+| Tool                   | Purpose                | Free? |
+| ---------------------- | ---------------------- | ----- |
+| Web browser            | UI testing             | Yes   |
+| Browser DevTools       | Check JS/PHP errors    | Yes   |
+| phpMyAdmin / MySQL CLI | Verify database state  | Yes   |
+| SSH / terminal         | Run cron manually      | Yes   |
+| Text editor            | Inspect code if needed | Yes   |
 
 ### System Must Be Ready
-- [ ] All migrations `001` through `022` have been applied
-- [ ] `core/Commission.php`, `core/CapEngine.php`, `core/DailyFixedIncome.php` are deployed
-- [ ] `models/Product.php` and `models/RepeatPurchase.php` are deployed
-- [ ] `pv_per_peso_rate` setting exists (default `1.0000`)
+
+- ✅ All migrations `001` through `022` have been applied
+- ✅ `core/Commission.php`, `core/CapEngine.php`, `core/DailyFixedIncome.php` are deployed
+- ✅ `models/Product.php` and `models/RepeatPurchase.php` are deployed
+- ✅ `pv_per_peso_rate` setting exists (default `1.0000`)
 
 ---
 
@@ -154,7 +158,7 @@ ORDER BY id;
 ### Step 4: Note the Default Package Settings
 
 ```sql
-SELECT id, name, entry_fee, package_pv_rate, pairing_pv_pct, daily_pair_pv_cap,
+SELECT id, name, entry_fee, package_pv_rate, binary_pv_pct, daily_pair_pv_cap,
        direct_ref_pv_pct, lifetime_cap_multiplier, daily_fixed_income,
        daily_fixed_income_days, dfi_pv_pct
 FROM packages
@@ -167,16 +171,16 @@ WHERE status = 'active';
 
 Use this table to predict any test outcome.
 
-| Calculation | Formula |
-|-------------|---------|
-| **Package PV** | `entry_fee × (package_pv_rate / 100)` |
-| **Pairing bonus (peso)** | `paired_pv × (pairing_pv_pct / 100) × pv_per_peso_rate` |
-| **Direct referral (peso)** | `package_pv × (direct_ref_pv_pct / 100) × pv_per_peso_rate` |
-| **Indirect level N (peso)** | `package_pv × (level_n_pv_pct / 100) × pv_per_peso_rate` |
-| **DFI — fixed mode (peso)** | `daily_fixed_income` (used when `dfi_pv_pct = 0`) |
-| **DFI — PV mode (peso)** | `package_pv × (dfi_pv_pct / 100) × pv_per_peso_rate` |
-| **Lifetime cap (peso)** | `entry_fee × lifetime_cap_multiplier` |
-| **Lifetime cap (PV equivalent)** | `cap_peso / pv_per_peso_rate` |
+| Calculation                      | Formula                                                     |
+| -------------------------------- | ----------------------------------------------------------- |
+| **Package PV**                   | `entry_fee × (package_pv_rate / 100)`                       |
+| **Pairing bonus (peso)**         | `paired_pv × pv_per_peso_rate`                              |
+| **Direct referral (peso)**       | `package_pv × (direct_ref_pv_pct / 100) × pv_per_peso_rate` |
+| **Indirect level N (peso)**      | `package_pv × (level_n_pv_pct / 100) × pv_per_peso_rate`    |
+| **DFI — fixed mode (peso)**      | `daily_fixed_income` (used when `dfi_pv_pct = 0`)           |
+| **DFI — PV mode (peso)**         | `package_pv × (dfi_pv_pct / 100) × pv_per_peso_rate`        |
+| **Lifetime cap (peso)**          | `entry_fee × lifetime_cap_multiplier`                       |
+| **Lifetime cap (PV equivalent)** | `cap_peso / pv_per_peso_rate`                               |
 
 ---
 
@@ -189,20 +193,24 @@ Use this table to predict any test outcome.
 **Purpose:** Confirm the global PV conversion rate is saved and used.
 
 **Setup:**
+
 1. Log in as admin.
 2. Go to **Admin → Settings**.
 
 **Steps:**
+
 1. Find the **PV per Peso Rate** field.
 2. Change it to `0.5000` (meaning 1 PV = ₱0.50).
 3. Save.
 4. Check the same field again.
 
 **Expected Result:**
+
 - The field shows `0.5000` after save.
 - No PHP errors or warnings.
 
 **Verify in database:**
+
 ```sql
 SELECT value FROM settings WHERE key_name = 'pv_per_peso_rate';
 -- Expected: 0.5000
@@ -219,16 +227,19 @@ SELECT value FROM settings WHERE key_name = 'pv_per_peso_rate';
 **Purpose:** Confirm the admin package form shows the correct package PV and peso previews.
 
 **Setup:**
+
 1. Log in as admin.
 2. Go to **Admin → Packages**.
 3. Click **New Package** or **Edit** an existing package.
 
 **Steps:**
+
 1. Set **Entry Fee** to `10000.00`.
 2. Set **Package PV Rate** to `100.00`.
 3. Observe the live preview under the PV rate field.
 
 **Expected Result:**
+
 - Preview shows **Package PV basis = ₱10,000.00**.
 
 **Why:** `10000 × (100 / 100) = 10000 PV`.
@@ -240,11 +251,13 @@ SELECT value FROM settings WHERE key_name = 'pv_per_peso_rate';
 **Purpose:** Confirm pairing % converts to the expected peso amount in the form.
 
 **Steps:**
+
 1. With entry fee `10000.00` and package PV rate `100.00`, set **Pairing Bonus (% of paired PV)** to `20.00`.
 2. Set `pv_per_peso_rate` to `1.0000` first for easy checking.
 3. Observe the preview.
 
 **Expected Result:**
+
 - Preview shows **≈ ₱2,000.00/PV**.
 
 **Why:** `10000 package PV × 20% × 1.0 = ₱2000` per package-PV paired.
@@ -254,10 +267,12 @@ SELECT value FROM settings WHERE key_name = 'pv_per_peso_rate';
 #### Test 2.3: Direct Referral Preview
 
 **Steps:**
+
 1. Set **Direct Referral (% of Package PV)** to `5.00`.
 2. Observe the preview.
 
 **Expected Result:**
+
 - Preview shows **≈ ₱500.00 per direct recruit**.
 
 **Why:** `10000 × 5% × 1.0 = ₱500`.
@@ -267,16 +282,19 @@ SELECT value FROM settings WHERE key_name = 'pv_per_peso_rate';
 #### Test 2.4: DFI PV Mode Preview
 
 **Steps:**
+
 1. Set **DFI (% of Package PV)** to `5.00`.
 2. Leave fixed daily income at `0`.
 3. Set **Max DFI Days** to `90`.
 4. Save the package.
 
 **Expected Result:**
+
 - Package table shows the computed DFI amount (e.g., ₱500/day if PV rate = 1.0).
 - The label says something like “5% of PV · 90 days”.
 
 **Verify:**
+
 ```sql
 SELECT name, dfi_pv_pct, daily_fixed_income, daily_fixed_income_days
 FROM packages
@@ -293,6 +311,7 @@ LIMIT 1;
 **Purpose:** Confirm joining a member adds package PV (not just a count) to ancestor legs.
 
 **Setup:**
+
 ```sql
 -- Pick an active member who will be the binary parent
 SELECT id, username, left_pv, right_pv
@@ -302,15 +321,18 @@ LIMIT 1;
 ```
 
 **Steps:**
+
 1. Note the binary parent's `id` and current `left_pv` / `right_pv`.
 2. Register a new member under that parent in the **left** leg.
 3. Use the default active package.
 
 **Expected Result:**
+
 - The parent's `left_pv` increases by the new member's **package PV** (not by 1).
 - The parent's `left_count` also increases by 1 (legacy counter, kept for reference).
 
 **Verify:**
+
 ```sql
 -- Replace [parent_id] with the actual parent ID
 SELECT left_pv, right_pv, left_count, right_count
@@ -327,19 +349,23 @@ WHERE id = [parent_id];
 **Purpose:** Confirm a pair forms when left and right PV match, and the bonus is peso-derived.
 
 **Setup:**
+
 1. Find or create a member with one member in the left leg and one in the right leg.
 2. Both new members should have the same package PV.
 
 **Steps:**
+
 1. Note the sponsor/binary parent member's `id`.
 2. Register the second leg member if needed.
 
 **Expected Result:**
+
 - The ancestor's `paired_pv` increases by the matched PV amount.
 - The ancestor's e-wallet receives a pairing bonus in pesos.
 - `pairs_paid` legacy counter also increases (kept for reference).
 
 **Verify:**
+
 ```sql
 -- Replace [ancestor_id]
 SELECT left_pv, right_pv, paired_pv, pairs_paid, lifetime_earned
@@ -354,7 +380,7 @@ ORDER BY created_at DESC
 LIMIT 1;
 ```
 
-**Expected math:** If both legs received `10000` PV and `pairing_pv_pct = 20%` and `pv_per_peso_rate = 1.0`, the bonus is `10000 × 20% × 1.0 = ₱2000.00`.
+**Expected math:** If both legs received `10000` PV and `pv_per_peso_rate = 1.0`, the bonus is `10000 × 1.0 = ₱10000.00`.
 
 ---
 
@@ -363,6 +389,7 @@ LIMIT 1;
 **Purpose:** Confirm the daily cap is enforced in PV terms, not count terms.
 
 **Setup:**
+
 1. Find an ancestor member.
 2. Check the active package's `daily_pair_pv_cap`.
 
@@ -374,15 +401,18 @@ WHERE u.id = [ancestor_id];
 ```
 
 **Steps:**
+
 1. Register enough downline members to exceed the daily pair PV cap.
    - For example, if cap is `30000` PV and each package is `10000` PV, register enough pairs to exceed `30000` paired PV in one day.
 2. Watch the member's earnings.
 
 **Expected Result:**
+
 - Pairing bonuses are paid until `paired_pv_today` reaches `daily_pair_pv_cap`.
 - Additional paired PV beyond the cap is recorded as **flushed PV** and earns nothing today.
 
 **Verify:**
+
 ```sql
 SELECT paired_pv_today, flushed_pv
 FROM users
@@ -403,19 +433,23 @@ LIMIT 5;
 **Purpose:** Confirm stronger-leg PV carries over to the next day.
 
 **Setup:**
+
 1. Create a strong left leg and a weak right leg.
 2. Wait for or manually trigger the midnight cron (see Test 9.1).
 
 **Steps:**
+
 1. Note `left_pv`, `right_pv`, and `paired_pv` before cron.
 2. Run the cron.
 
 **Expected Result:**
+
 - `paired_pv_today` resets to `0`.
 - `left_pv` and `right_pv` remain unchanged.
 - Tomorrow, new PV can pair against the carried-over balance.
 
 **Verify:**
+
 ```sql
 SELECT left_pv, right_pv, paired_pv, paired_pv_today
 FROM users
@@ -431,6 +465,7 @@ WHERE id = [ancestor_id];
 **Purpose:** Confirm direct referral bonus is computed from package PV.
 
 **Setup:**
+
 1. Find an active sponsor member.
 2. Note the package's `direct_ref_pv_pct`.
 
@@ -442,12 +477,15 @@ WHERE u.id = [sponsor_id];
 ```
 
 **Steps:**
+
 1. Register a new member using this sponsor's referral code.
 
 **Expected Result:**
+
 - Sponsor receives `package_pv × (direct_ref_pv_pct / 100) × pv_per_peso_rate`.
 
 **Verify:**
+
 ```sql
 SELECT amount, type, cap_deduction, status
 FROM commissions
@@ -463,6 +501,7 @@ LIMIT 1;
 **Purpose:** Confirm unilevel bonuses are percentages of package PV.
 
 **Setup:**
+
 1. Build a sponsor chain at least 3 levels deep.
 2. Check the package's indirect levels:
 
@@ -474,13 +513,16 @@ ORDER BY level;
 ```
 
 **Steps:**
+
 1. Register a new member at the bottom of the chain.
 
 **Expected Result:**
+
 - Each qualifying upline receives `package_pv × (pv_pct / 100) × pv_per_peso_rate`.
 - Level 1 gets the highest configured percentage (if configured that way).
 
 **Verify:**
+
 ```sql
 -- Replace [new_member_id]
 SELECT c.user_id, u.username, c.level, c.amount, c.type
@@ -497,6 +539,7 @@ ORDER BY c.level;
 **Purpose:** Confirm a capped upline stops receiving indirect bonuses.
 
 **Setup:**
+
 1. Cap a middle member in the sponsor chain:
 
 ```sql
@@ -509,13 +552,16 @@ WHERE u.id = [middle_member_id];
 ```
 
 **Steps:**
+
 1. Register a new member below the capped member.
 
 **Expected Result:**
+
 - The capped member receives no indirect bonus.
 - Uplines **above** the capped member still receive their indirect bonuses normally.
 
 **Verify:**
+
 ```sql
 SELECT c.user_id, u.username, c.level, c.amount, c.status
 FROM commissions c
@@ -533,6 +579,7 @@ ORDER BY c.level;
 **Purpose:** Confirm the cap engine applies to PV-derived peso amounts.
 
 **Setup:**
+
 1. Find an active member near their lifetime cap.
 
 ```sql
@@ -547,15 +594,18 @@ LIMIT 1;
 ```
 
 **Steps:**
+
 1. Trigger a pairing bonus under this member (register a downline member or approve a repeat purchase that causes a pair).
 
 **Expected Result:**
+
 - The member receives only the remaining amount.
 - The rest is blocked (`cap_deduction`).
 - `lifetime_earned` reaches exactly the cap.
 - `cap_status` becomes `capped`.
 
 **Verify:**
+
 ```sql
 SELECT lifetime_earned, cap_status, capped_at
 FROM users
@@ -575,17 +625,21 @@ LIMIT 1;
 **Purpose:** Confirm a capped member receives zero on all commission types.
 
 **Setup:**
+
 1. Use the member capped in Test 5.1, or cap one manually.
 
 **Steps:**
+
 1. Register a new member under the capped sponsor.
 2. If possible, trigger a pairing bonus for the capped member.
 
 **Expected Result:**
+
 - Direct referral commission shows `amount = 0.00`, `cap_deduction = full_bonus`, `status = 'flushed'`.
 - Pairing commission does not credit the capped member.
 
 **Verify:**
+
 ```sql
 SELECT amount, cap_deduction, status, type
 FROM commissions
@@ -603,6 +657,7 @@ LIMIT 5;
 **Purpose:** Confirm fixed DFI still works when `dfi_pv_pct = 0`.
 
 **Setup:**
+
 1. In **Admin → Packages**, edit the active package.
 2. Set **DFI (% of Package PV)** to `0.00`.
 3. Set **Fixed Daily Income** to `100.00`.
@@ -610,14 +665,17 @@ LIMIT 5;
 5. Save.
 
 **Steps:**
+
 1. Find an active member on this package with `dfi_active = 1` and `dfi_days_used < 90`.
 2. Run the midnight cron or call `DailyFixedIncome::processDailyPayout()` from a test script.
 
 **Expected Result:**
+
 - Member receives exactly `₱100.00`.
 - `dfi_days_used` increases by 1.
 
 **Verify:**
+
 ```sql
 SELECT dfi_days_used, lifetime_earned
 FROM users
@@ -637,6 +695,7 @@ LIMIT 1;
 **Purpose:** Confirm DFI is computed from package PV when `dfi_pv_pct > 0`.
 
 **Setup:**
+
 1. Edit the active package.
 2. Set **DFI (% of Package PV)** to `5.00`.
 3. Set **Fixed Daily Income** to `0`.
@@ -644,14 +703,17 @@ LIMIT 1;
 5. Save.
 
 **Steps:**
+
 1. Find an active member on this package.
 2. Run the DFI payout.
 
 **Expected Result:**
+
 - Member receives `package_pv × 5% × pv_per_peso_rate`.
   - For entry fee ₱10,000 and package PV rate 100%, this is `10000 × 5% × 1.0 = ₱500.00`.
 
 **Verify:**
+
 ```sql
 SELECT amount, day_number
 FROM daily_fixed_income_log
@@ -667,6 +729,7 @@ LIMIT 1;
 **Purpose:** Confirm DFI stops after `daily_fixed_income_days`.
 
 **Setup:**
+
 ```sql
 -- Set a member's days used to one less than max
 UPDATE users
@@ -675,13 +738,16 @@ WHERE id = [member_id];
 ```
 
 **Steps:**
+
 1. Run the DFI payout twice.
 
 **Expected Result:**
+
 - First run: DFI paid, `dfi_days_used` reaches max.
 - Second run: No DFI paid.
 
 **Verify:**
+
 ```sql
 SELECT dfi_days_used
 FROM users
@@ -697,6 +763,7 @@ WHERE id = [member_id];
 **Purpose:** Confirm admin can add products with PV.
 
 **Steps:**
+
 1. Log in as admin.
 2. Go to **Admin → Products**.
 3. Click **New Product**.
@@ -704,10 +771,12 @@ WHERE id = [member_id];
 5. Save.
 
 **Expected Result:**
+
 - Product appears in the list.
 - `pv_value` is saved correctly.
 
 **Verify:**
+
 ```sql
 SELECT name, price, pv_value, status
 FROM products
@@ -722,16 +791,19 @@ LIMIT 1;
 **Purpose:** Confirm a member can request a repeat purchase.
 
 **Steps:**
+
 1. Log in as a member.
 2. Go to **Repeat Purchases** or **Shop**.
 3. Select a product and quantity.
 4. Submit.
 
 **Expected Result:**
+
 - A pending repeat purchase record is created.
 - No PV is distributed yet.
 
 **Verify:**
+
 ```sql
 SELECT id, member_id, product_id, quantity, total_pv, total_price, status
 FROM repeat_purchases
@@ -746,21 +818,25 @@ LIMIT 1;
 **Purpose:** Confirm approving a repeat purchase triggers PV flow.
 
 **Setup:**
+
 1. Have a pending repeat purchase.
 2. Note the buyer's `id`, the product's `pv_value`, and the quantity.
 
 **Steps:**
+
 1. Log in as admin.
 2. Go to **Admin → Repeat Purchases**.
 3. Click **Approve** on the pending purchase.
 
 **Expected Result:**
+
 - Buyer's `personal_pv` increases by `total_pv`.
 - Sponsor chain receives `group_pv` (if they qualify; see Test 8).
 - Binary tree receives `left_pv` or `right_pv` (if ancestors qualify).
 - `pv_transactions` records are created.
 
 **Verify:**
+
 ```sql
 -- Buyer personal PV
 SELECT personal_pv
@@ -786,17 +862,21 @@ ORDER BY id;
 **Purpose:** Confirm product PV can cause a binary pair and pairing bonus.
 
 **Setup:**
+
 1. Find an ancestor member whose left and right legs are close to matching.
 2. Submit and approve a repeat purchase in the weaker leg.
 
 **Steps:**
+
 1. Approve the repeat purchase.
 
 **Expected Result:**
+
 - Ancestor's `paired_pv` increases.
 - Pairing bonus commission is created.
 
 **Verify:**
+
 ```sql
 SELECT left_pv, right_pv, paired_pv, paired_pv_today
 FROM users
@@ -818,6 +898,7 @@ LIMIT 1;
 **Purpose:** Confirm the personal PV requirement filters repeat-purchase commissions.
 
 **Setup:**
+
 1. Go to **Admin → Settings**.
 2. Set **Personal PV Requirement** to `1000.00`.
 3. Ensure a sponsor in the chain has `personal_pv < 1000`.
@@ -831,15 +912,18 @@ LIMIT 1;
 ```
 
 **Steps:**
+
 1. Submit and approve a repeat purchase by a member whose sponsor is the low-PV member.
 
 **Expected Result:**
+
 - The low-PV sponsor does **not** receive group_pv from this purchase.
 - The low-PV ancestor does **not** receive binary PV from this purchase.
 - The buyer still receives personal_pv.
 - Uplines above the low-PV member who meet the gate still receive PV normally.
 
 **Verify:**
+
 ```sql
 SELECT personal_pv, group_pv
 FROM users
@@ -859,6 +943,7 @@ WHERE user_id = [low_pv_sponsor_id]
 **Purpose:** Confirm the gate opens when personal PV is high enough.
 
 **Setup:**
+
 1. Set the same sponsor's `personal_pv` above the gate:
 
 ```sql
@@ -866,12 +951,15 @@ UPDATE users SET personal_pv = 1500 WHERE id = [low_pv_sponsor_id];
 ```
 
 **Steps:**
+
 1. Submit and approve another repeat purchase from the same buyer.
 
 **Expected Result:**
+
 - Sponsor's `group_pv` increases by the product PV.
 
 **Verify:**
+
 ```sql
 SELECT group_pv
 FROM users
@@ -897,6 +985,7 @@ LIMIT 1;
 **Purpose:** Confirm the midnight cron runs without errors.
 
 **Steps:**
+
 1. SSH to the server.
 2. Run:
 
@@ -905,10 +994,12 @@ php /path/to/site/cron/midnight_reset.php
 ```
 
 **Expected Result:**
+
 - Script completes without fatal errors.
 - Log file is created/updated in `cron/logs/`.
 
 **Verify:**
+
 ```bash
 tail -n 20 /path/to/site/cron/logs/reset_$(date +%Y-%m).log
 ```
@@ -918,18 +1009,22 @@ tail -n 20 /path/to/site/cron/logs/reset_$(date +%Y-%m).log
 #### Test 9.2: Daily Pair PV Counter Resets
 
 **Setup:**
+
 ```sql
 -- Give a member some paired_pv_today
 UPDATE users SET paired_pv_today = 9999 WHERE id = [member_id];
 ```
 
 **Steps:**
+
 1. Run the midnight cron.
 
 **Expected Result:**
+
 - `paired_pv_today` becomes `0.00`.
 
 **Verify:**
+
 ```sql
 SELECT paired_pv_today
 FROM users
@@ -943,18 +1038,22 @@ WHERE id = [member_id];
 **Purpose:** Confirm personal_pv resets on the first day of the month.
 
 **Setup:**
+
 ```sql
 -- Temporarily set a member's personal_pv
 UPDATE users SET personal_pv = 5000 WHERE id = [member_id];
 ```
 
 **Steps:**
+
 1. Run the cron on the first day of the month, or temporarily edit `cron/monthly_pv_reset.php` to test in isolation.
 
 **Expected Result:**
+
 - `personal_pv` becomes `0.00` for all members.
 
 **Verify:**
+
 ```sql
 SELECT personal_pv
 FROM users
@@ -968,18 +1067,22 @@ WHERE id = [member_id];
 **Purpose:** Confirm the cron triggers DFI payouts.
 
 **Setup:**
+
 1. Ensure DFI is enabled globally (`dfi_enabled` setting = `1`).
 2. Ensure an active member has `dfi_active = 1` and `dfi_days_used < max days`.
 
 **Steps:**
+
 1. Run the midnight cron.
 
 **Expected Result:**
+
 - The member receives DFI.
 - A record appears in `daily_fixed_income_log`.
 - `dfi_days_used` increases by 1.
 
 **Verify:**
+
 ```sql
 SELECT dfi_days_used
 FROM users
@@ -1001,10 +1104,12 @@ LIMIT 1;
 **Purpose:** Confirm the public site no longer shows legacy fixed-peso text.
 
 **Steps:**
+
 1. Open the site homepage while logged out.
 2. Scroll through Hero, Compensation Plan, Packages, Why AltasFarm, and Terms sections.
 
 **Expected Result:**
+
 - Pairing bonus is shown in pesos derived from PV.
 - Cap is described as “PV per day,” not “pairs per day.”
 - Unilevel shows percentages with peso equivalents.
@@ -1012,6 +1117,7 @@ LIMIT 1;
 - No references to legacy columns like `pairing_bonus` fixed ₱2000 unless they match the computed value.
 
 **Verify:**
+
 - Right-click → **View Page Source** and search for `pairing_bonus`, `daily_pair_cap`, `direct_ref_bonus`.
 - Expected: no matches.
 
@@ -1022,14 +1128,17 @@ LIMIT 1;
 **Purpose:** Confirm members see PV stats.
 
 **Steps:**
+
 1. Log in as a member.
 2. View the dashboard.
 
 **Expected Result:**
+
 - Cards show Personal PV, Group PV, Left PV, Right PV, Paired PV, Flushed PV, or similar.
 - DFI card shows the daily rate and PV equivalent.
 
 **Verify:**
+
 - No PHP notices or warnings.
 - Values match database:
 
@@ -1046,13 +1155,16 @@ WHERE id = [member_id];
 **Purpose:** Confirm every PV movement is auditable.
 
 **Steps:**
+
 1. Register a member and approve a repeat purchase.
 2. Query the `pv_transactions` table.
 
 **Expected Result:**
+
 - Rows exist for `binary_left`, `binary_right`, `binary_paired`, `binary_flushed`, `product_personal`, `product_group`, etc.
 
 **Verify:**
+
 ```sql
 SELECT type, amount, source_user_id, source_type, created_at
 FROM pv_transactions
@@ -1069,6 +1181,7 @@ LIMIT 20;
 **Purpose:** Confirm active code no longer depends on `pairing_bonus`, `daily_pair_cap`, or `direct_ref_bonus`.
 
 **Steps:**
+
 1. In your code editor, search the active directories:
 
 ```bash
@@ -1082,6 +1195,7 @@ grep -R "pairing_bonus\|daily_pair_cap\|direct_ref_bonus" \
 ```
 
 **Expected Result:**
+
 - No matches in active code (legacy columns may still exist in the database and in `temp/` backups, which is fine).
 
 ---
@@ -1091,11 +1205,13 @@ grep -R "pairing_bonus\|daily_pair_cap\|direct_ref_bonus" \
 **Purpose:** Confirm the whole registration flow is unbroken.
 
 **Steps:**
+
 1. Generate a registration code as admin.
 2. Register a new member using the code.
 3. Log in as the new member.
 
 **Expected Result:**
+
 - Registration succeeds.
 - Sponsor receives direct referral bonus.
 - Binary parent receives package PV in the correct leg.
@@ -1108,11 +1224,13 @@ grep -R "pairing_bonus\|daily_pair_cap\|direct_ref_bonus" \
 **Purpose:** Confirm withdrawals are unaffected by PV changes.
 
 **Steps:**
+
 1. Log in as a member with e-wallet balance.
 2. Submit a payout request.
 3. As admin, approve and complete the payout.
 
 **Expected Result:**
+
 - Payout is recorded.
 - Member balance decreases correctly.
 
@@ -1122,7 +1240,7 @@ grep -R "pairing_bonus\|daily_pair_cap\|direct_ref_bonus" \
 
 When you find an issue, use this format:
 
-```markdown
+````markdown
 ### Bug Report — PV-Centered System
 
 **Tester:** [Your Name]
@@ -1131,6 +1249,7 @@ When you find an issue, use this format:
 **Severity:** [Critical / High / Medium / Low]
 
 **Steps to Reproduce:**
+
 1. [Step 1]
 2. [Step 2]
 3. [Step 3]
@@ -1142,16 +1261,20 @@ When you find an issue, use this format:
 [What actually happened]
 
 **Database State (Before):**
+
 ```sql
 [Paste relevant query results]
 ```
+````
 
 **Database State (After):**
+
 ```sql
 [Paste relevant query results]
 ```
 
 **PHP Error Log:**
+
 ```
 [Paste any errors from /var/log/apache2/error.log or similar]
 ```
@@ -1160,10 +1283,12 @@ When you find an issue, use this format:
 [Attach if applicable]
 
 **Environment:**
+
 - Browser: [Chrome/Firefox/Safari] v[X.X]
 - OS: [Windows/Mac/Linux]
 - Server: PHP [version], MySQL [version]
-```
+
+````
 
 ---
 
@@ -1226,10 +1351,12 @@ When you find an issue, use this format:
 **A:**
 ```sql
 UPDATE users SET personal_pv = 1500 WHERE id = [member_id];
-```
+````
 
 ### Q: How do I find a member's sponsor chain?
+
 **A:**
+
 ```sql
 WITH RECURSIVE chain AS (
     SELECT id, username, sponsor_id, 0 AS depth FROM users WHERE id = [member_id]
@@ -1243,7 +1370,9 @@ SELECT * FROM chain ORDER BY depth;
 ```
 
 ### Q: How do I find a member's binary ancestors?
+
 **A:**
+
 ```sql
 WITH RECURSIVE ancestors AS (
     SELECT id, username, binary_parent_id, binary_position, 0 AS depth
@@ -1258,22 +1387,29 @@ SELECT * FROM ancestors ORDER BY depth;
 ```
 
 ### Q: How do I run only the DFI payout without the full cron?
+
 **A:**
+
 ```bash
 php -r "require 'config/db.php'; require 'core/DailyFixedIncome.php'; var_dump(DailyFixedIncome::processDailyPayout());"
 ```
 
 ### Q: How do I reset personal_pv for everyone without waiting for the monthly cron?
+
 **A:**
+
 ```bash
 php /path/to/site/cron/monthly_pv_reset.php
 ```
 
 ### Q: Can I test the monthly reset without changing the server date?
+
 **A:** Yes — run the `monthly_pv_reset.php` script directly. It resets all members' `personal_pv` to `0`.
 
 ### Q: Where can I see all PV movements for one member?
+
 **A:**
+
 ```sql
 SELECT type, amount, source_user_id, source_type, created_at
 FROM pv_transactions
@@ -1282,44 +1418,49 @@ ORDER BY created_at DESC;
 ```
 
 ### Q: The pairing bonus amount looks wrong. What should I check?
+
 **A:**
+
 1. Verify `package_pv_rate` and `entry_fee`.
-2. Verify `pairing_pv_pct`.
-3. Verify `pv_per_peso_rate`.
+2. Verify `pv_per_peso_rate` (global setting).
+3. Verify the package's `binary_pv_pct` (binary PV basis).
 4. Check how much PV was actually paired (`paired_pv_today`, `flushed_pv`).
 
 ### Q: A member didn't get indirect bonus. Why?
+
 **A:**
+
 1. Check `indirect_referral_enabled` setting is `1`.
 2. Check `package_indirect_levels` has percentages for that package.
 3. Verify the member is in the sponsor chain (not just binary tree).
 4. Check if the member is capped or permanently inactive.
 
 ### Q: What does `cap_deduction` mean in the commissions table?
+
 **A:** It is the amount blocked by the lifetime cap. If `amount + cap_deduction = total_bonus`, the cap reduced or eliminated the payout.
 
 ---
 
 ## 9. Quick Reference Card
 
-| Test | What to Do | What to Check |
-|------|-----------|---------------|
-| PV rate | Change `pv_per_peso_rate` in settings | Database value updates |
-| Package PV | Set entry fee + PV rate | Preview shows correct package PV |
-| Pairing % | Set `pairing_pv_pct` | Preview matches formula |
-| Direct % | Set `direct_ref_pv_pct` | Preview matches formula |
-| DFI PV mode | Set `dfi_pv_pct > 0` | DFI amount computed from package PV |
-| Binary PV | Register a member | Ancestor leg PV increases by package PV |
-| Pair fires | Add members to both legs | `paired_pv` and wallet update |
-| PV cap | Exceed daily pair PV cap | `flushed_pv` records appear |
-| Direct ref | Register under sponsor | Sponsor gets `% of package PV` |
-| Indirect | Register deep in chain | Uplines get level percentages |
-| Cap | Set member near cap, trigger bonus | Partial/zeroed payout, status change |
-| Repeat purchase | Member buys product + admin approves | PV flows, transactions logged |
-| PV gate | Set gate above sponsor's personal PV | Sponsor gets no repeat-purchase PV |
-| Cron | Run `midnight_reset.php` | No errors, counters reset, DFI paid |
-| Frontend | View public pages | No legacy fixed-peso copy |
-| Legacy cleanup | Grep active code | No references to old bonus columns |
+| Test            | What to Do                            | What to Check                           |
+| --------------- | ------------------------------------- | --------------------------------------- |
+| PV rate         | Change `pv_per_peso_rate` in settings | Database value updates                  |
+| Package PV      | Set entry fee + PV rate               | Preview shows correct package PV        |
+| Pairing payout  | Set global `pv_per_peso_rate`         | Preview matches formula                 |
+| Direct %        | Set `direct_ref_pv_pct`               | Preview matches formula                 |
+| DFI PV mode     | Set `dfi_pv_pct > 0`                  | DFI amount computed from package PV     |
+| Binary PV       | Register a member                     | Ancestor leg PV increases by package PV |
+| Pair fires      | Add members to both legs              | `paired_pv` and wallet update           |
+| PV cap          | Exceed daily pair PV cap              | `flushed_pv` records appear             |
+| Direct ref      | Register under sponsor                | Sponsor gets `% of package PV`          |
+| Indirect        | Register deep in chain                | Uplines get level percentages           |
+| Cap             | Set member near cap, trigger bonus    | Partial/zeroed payout, status change    |
+| Repeat purchase | Member buys product + admin approves  | PV flows, transactions logged           |
+| PV gate         | Set gate above sponsor's personal PV  | Sponsor gets no repeat-purchase PV      |
+| Cron            | Run `midnight_reset.php`              | No errors, counters reset, DFI paid     |
+| Frontend        | View public pages                     | No legacy fixed-peso copy               |
+| Legacy cleanup  | Grep active code                      | No references to old bonus columns      |
 
 ---
 

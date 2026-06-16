@@ -11,7 +11,8 @@ CREATE TABLE packages (
   id                        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name                      VARCHAR(80)      NOT NULL,
   entry_fee                 DECIMAL(12,2)    NOT NULL,
-  package_pv_rate           DECIMAL(5,2)     NOT NULL DEFAULT 100.00 COMMENT 'Percentage of entry fee that becomes package PV for binary/direct/indirect basis',
+  package_pv_rate           DECIMAL(5,2)     NOT NULL DEFAULT 100.00 COMMENT 'Percentage of entry fee that becomes package PV for direct/indirect/DFI basis',
+  binary_pv_pct             DECIMAL(5,2)     NOT NULL DEFAULT 20.00 COMMENT 'Percentage of entry fee that becomes binary PV',
   -- Legacy count-based fields (kept for reference)
   pairing_bonus             DECIMAL(12,2)    NOT NULL DEFAULT 0.00,
   daily_pair_cap            TINYINT UNSIGNED NOT NULL DEFAULT 3,
@@ -48,13 +49,16 @@ CREATE TABLE package_indirect_levels (
 
 -- ─── PRODUCTS (Phase 5) ───────────────────────────────────────
 CREATE TABLE products (
-  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name        VARCHAR(120)     NOT NULL,
-  price       DECIMAL(12,2)    NOT NULL,
-  pv_value    DECIMAL(14,2)    NOT NULL,
-  status      ENUM('active','inactive') NOT NULL DEFAULT 'active',
-  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name             VARCHAR(120)     NOT NULL,
+  price            DECIMAL(12,2)    NOT NULL,
+  pv_value         DECIMAL(14,2)    NOT NULL,
+  image_url        VARCHAR(255)     NULL DEFAULT NULL COMMENT 'Product image path relative to uploads/',
+  short_description VARCHAR(255)    NULL DEFAULT NULL COMMENT 'Short description shown on product cards',
+  description      TEXT             NULL DEFAULT NULL COMMENT 'Full description shown in product detail modal',
+  status           ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- ─── REPEAT PURCHASES (Phase 5) ───────────────────────────────
@@ -376,12 +380,12 @@ VALUES (
 
 -- Default starter package (v2 defaults)
 INSERT INTO packages (
-  name, entry_fee, package_pv_rate, pairing_pv_pct, daily_pair_pv_cap,
+  name, entry_fee, package_pv_rate, binary_pv_pct, pairing_pv_pct, daily_pair_pv_cap,
   direct_ref_pv_pct,
   lifetime_cap_multiplier, reactivation_fee, reactivation_window_days,
   daily_fixed_income, daily_fixed_income_days, dfi_pv_pct, status
 ) VALUES (
-  'Starter', 10000.00, 100.00, 20.00, 30000.00,
+  'Starter', 10000.00, 100.00, 20.00, 20.00, 30000.00,
   5.00,
   3.00, 10000.00, 15,
   100.00, 90, 0.00, 'active'

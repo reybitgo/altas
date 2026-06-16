@@ -11,6 +11,7 @@ class RepeatPurchase
         $st = db()->prepare('
             SELECT rp.*,
                    p.name AS product_name,
+                   p.image_url AS product_image,
                    m.username AS member_username
             FROM   repeat_purchases rp
             JOIN   products p ON p.id = rp.product_id
@@ -24,7 +25,7 @@ class RepeatPurchase
     public static function forMember(int $memberId, int $page = 1, int $perPage = 20): array
     {
         return paginate(
-            "SELECT rp.*, p.name AS product_name
+            "SELECT rp.*, p.name AS product_name, p.image_url AS product_image
              FROM   repeat_purchases rp
              JOIN   products p ON p.id = rp.product_id
              WHERE  rp.member_id = ?
@@ -40,6 +41,7 @@ class RepeatPurchase
         return paginate(
             "SELECT rp.*,
                     p.name AS product_name,
+                    p.image_url AS product_image,
                     m.username AS member_username,
                     m.full_name AS member_full_name
              FROM   repeat_purchases rp
@@ -58,6 +60,7 @@ class RepeatPurchase
         return paginate(
             "SELECT rp.*,
                     p.name AS product_name,
+                    p.image_url AS product_image,
                     m.username AS member_username,
                     m.full_name AS member_full_name
              FROM   repeat_purchases rp

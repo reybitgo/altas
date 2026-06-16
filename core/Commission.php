@@ -36,21 +36,21 @@ class Commission
         $newUser = $newUserRow->fetch();
         if (!$newUser) return;
         $newUserIsActive = ($newUser['status'] ?? '') === 'active';
-        $packagePv       = Package::packagePv((int)($newUser['package_id'] ?? 0));
+        $binaryPackagePv = Package::binaryPackagePv((int)($newUser['package_id'] ?? 0));
 
         while ($cur !== null) {
             if (isset($visited[$cur])) break;
             $visited[$cur] = true;
 
-            // 1. Add package PV to the correct ancestor leg.
+            // 1. Add binary package PV to the correct ancestor leg.
             //    Legacy left_count/right_count are kept in sync for reporting only.
             if ($incrementCounts) {
                 $countCol = ($side === 'left') ? 'left_count' : 'right_count';
                 $pdo->prepare("UPDATE users SET {$countCol} = {$countCol} + 1 WHERE id = ?")
                     ->execute([$cur]);
 
-                if ($packagePv > 0) {
-                    self::applyBinaryPv($cur, $side, $packagePv, $newUserId, 'registration');
+                if ($binaryPackagePv > 0) {
+                    self::applyBinaryPv($cur, $side, $binaryPackagePv, $newUserId, 'registration');
                 }
             }
 
@@ -143,11 +143,10 @@ class Commission
             SELECT u.id, u.package_id, u.left_pv, u.right_pv,
                    u.paired_pv, u.paired_pv_today,
                    u.daily_cap_bypass,
-                   p.pairing_pv_pct, p.daily_pair_pv_cap
+                   p.daily_pair_pv_cap
             FROM   users u
             LEFT JOIN packages p ON p.id = u.package_id
             WHERE  u.id = ? AND u.status = 'active'
-              AND  p.pairing_pv_pct > 0
         ");
         $st->execute([$ancestorId]);
         $ancestor = $st->fetch();

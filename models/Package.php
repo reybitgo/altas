@@ -51,7 +51,7 @@ class Package
      * Save or update a package with all v2 fields.
      *
      * @param array $data Package data including v2/v3 fields:
-     *   - name, entry_fee, package_pv_rate, pairing_pv_pct, daily_pair_pv_cap,
+     *   - name, entry_fee, package_pv_rate, binary_pv_pct, daily_pair_pv_cap,
      *     direct_ref_pv_pct, status
      *   - lifetime_cap_multiplier, reactivation_fee, reactivation_window_days
      *   - daily_fixed_income, daily_fixed_income_days, dfi_pv_pct
@@ -66,7 +66,7 @@ class Package
             'name'                     => $data['name'],
             'entry_fee'                => (float)($data['entry_fee'] ?? 0),
             'package_pv_rate'          => (float)($data['package_pv_rate'] ?? 100.00),
-            'pairing_pv_pct'           => (float)($data['pairing_pv_pct'] ?? 0),
+            'binary_pv_pct'            => (float)($data['binary_pv_pct'] ?? 20.00),
             'daily_pair_pv_cap'        => (float)($data['daily_pair_pv_cap'] ?? 0),
             'direct_ref_pv_pct'        => (float)($data['direct_ref_pv_pct'] ?? 0),
             // v2 fields
@@ -125,7 +125,7 @@ class Package
     /**
      * Calculate the Package PV for a given package.
      * Package PV = entry_fee × (package_pv_rate / 100)
-     * Used as the basis for binary/direct/indirect PV calculations.
+     * Used as the basis for direct/indirect/DFI PV calculations.
      * It does NOT flow into Personal PV or Group PV.
      */
     public static function packagePv(int $packageId): float
@@ -136,15 +136,27 @@ class Package
     }
 
     /**
+     * Calculate the Binary PV allocated for a given package.
+     * Binary PV = entry_fee × (binary_pv_pct / 100)
+     * This is the amount that flows into the binary tree on registration.
+     */
+    public static function binaryPackagePv(int $packageId): float
+    {
+        $pkg = self::find($packageId);
+        if (!$pkg) return 0.00;
+        return (float)$pkg['entry_fee'] * ((float)$pkg['binary_pv_pct'] / 100);
+    }
+
+    /**
      * Calculate the peso pairing bonus for a given paired PV amount.
-     * Bonus = paired_pv × (pairing_pv_pct / 100) × pv_per_peso_rate
+     * Pairing now uses the global PV-per-peso conversion rate only.
+     * Bonus = paired_pv × pv_per_peso_rate
      */
     public static function pairingBonus(float $pairedPv, int $packageId): float
     {
-        $pkg = self::find($packageId);
-        if (!$pkg || (float)$pkg['pairing_pv_pct'] <= 0) return 0.00;
+        if ($pairedPv <= 0.00) return 0.00;
         $rate = (float)setting('pv_per_peso_rate', '1.0000');
-        return $pairedPv * ((float)$pkg['pairing_pv_pct'] / 100) * $rate;
+        return $pairedPv * $rate;
     }
 
     /**

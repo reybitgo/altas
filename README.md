@@ -71,7 +71,7 @@ URL: `http://yourdomain.com/mlm/`
 |-------|-----------|------|
 | New member registers | Direct referral → sponsor (% of package PV) | Instant |
 | New member registers | Indirect referral → 10 upline sponsors (% of package PV) | Instant |
-| New member forms a pair | Pairing bonus → each qualifying ancestor (% of paired PV) | Instant |
+| New member forms a pair | Pairing bonus → each qualifying ancestor (paired PV × global PV conversion rate) | Instant |
 | Repeat purchase approved | Product PV → buyer personal PV, group PV up sponsor chain, binary PV up placement tree | Instant |
 | Daily cap exceeded | Excess paired PV flushed (lost forever) | Instant |
 | **Midnight cron** | Reset daily pair counters, flush PV logs, reset personal PV monthly | Daily |

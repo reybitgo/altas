@@ -152,12 +152,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
 
       // Re-seed default Starter package (PV-based defaults)
       $pdo->exec("INSERT INTO packages (
-                id, name, entry_fee, package_pv_rate, pairing_pv_pct, daily_pair_pv_cap,
+                id, name, entry_fee, package_pv_rate, binary_pv_pct, pairing_pv_pct, daily_pair_pv_cap,
                 direct_ref_pv_pct,
                 lifetime_cap_multiplier, reactivation_fee, reactivation_window_days,
                 daily_fixed_income, daily_fixed_income_days, dfi_pv_pct, status
             ) VALUES (
-                1, 'Starter', 10000.00, 100.00, 20.00, 30000.00,
+                1, 'Starter', 10000.00, 100.00, 20.00, 20.00, 30000.00,
                 5.00,
                 3.00, 10000.00, 15,
                 100.00, 90, 0.00, 'active'
