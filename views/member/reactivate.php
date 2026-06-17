@@ -9,9 +9,8 @@ $pageTitle = 'Reactivate Account';
 
 // Build method config for JS
 $methods = [];
-if ($request['can_use_ewallet']) {
-  $methods[] = ['ewallet', 'E-Wallet', '#2d6a35', '💳', 'Deduct from your balance'];
-}
+// E-Wallet is always shown (like register), but disabled when balance is insufficient
+$methods[] = ['ewallet', 'E-Wallet', '#2d6a35', '💳', ''];
 $methods[] = ['gcash', 'GCash', '#0070d8', '', 'Send via GCash'];
 $methods[] = ['maya', 'Maya', '#48b0db', '', 'Send via Maya'];
 $methods[] = ['usdt_trc20', 'USDT TRC20', '#26a17b', '', 'Send via USDT'];
@@ -75,12 +74,9 @@ $jsAdmin = [
                 <div class="d-flex gap-2 flex-wrap" id="methodBtns">
                   <?php foreach ($methods as $idx => [$val, $label, $color, $icon, $hint]): ?>
                     <?php
-                      $isDisabled = false;
-                      $title = '';
-                      if ($val === 'ewallet' && !$request['can_use_ewallet']) {
-                        $isDisabled = true;
-                        $title = 'Insufficient balance';
-                      }
+                      $isEwallet = $val === 'ewallet';
+                      $isDisabled = $isEwallet && !$request['can_use_ewallet'];
+                      $title = $isDisabled ? 'Insufficient e-wallet balance' : '';
                     ?>
                     <label class="method-option <?= $isDisabled ? 'method-disabled' : '' ?>"
                       style="--mc:<?= $color ?>;"
@@ -88,12 +84,13 @@ $jsAdmin = [
                       <input type="radio" name="payment_method" value="<?= $val ?>"
                         <?= $val === $defaultMethod ? 'checked' : '' ?>
                         <?= $isDisabled ? 'disabled' : '' ?>
+                        data-sufficient="<?= $isEwallet && $request['can_use_ewallet'] ? '1' : '0' ?>"
                         onchange="switchMethod('<?= $val ?>')">
                       <?php if ($icon): ?><span style="font-size:1.1rem;"><?= $icon ?></span><?php endif; ?>
                       <span><?= $label ?></span>
-                      <?php if ($val === 'ewallet' && $request['can_use_ewallet']): ?>
+                      <?php if ($isEwallet && $request['can_use_ewallet']): ?>
                         <small>Bal: <?= fmt_money($request['ewallet_balance']) ?></small>
-                      <?php elseif ($val === 'ewallet'): ?>
+                      <?php elseif ($isEwallet): ?>
                         <small class="text-danger">Low balance</small>
                       <?php else: ?>
                         <small><?= $hint ?></small>
@@ -153,8 +150,8 @@ $jsAdmin = [
                 </div>
               </div>
 
-              <!-- E-Wallet Preview (shown for ewallet method) -->
-              <div id="ewalletPreview" class="rounded p-3 mb-3" style="background:#f0fdf4;border:1px solid #bbf7d0;font-size:.85rem;">
+              <!-- E-Wallet Preview (shown for ewallet method with sufficient balance) -->
+              <div id="ewalletPreview" class="rounded p-3 mb-3 d-none" style="background:#f0fdf4;border:1px solid #bbf7d0;font-size:.85rem;">
                 <div class="d-flex justify-content-between mb-1">
                   <span style="color:#166534;">Current Balance</span>
                   <span class="font-mono fw-bold" style="color:#166534;"><?= fmt_money($request['ewallet_balance']) ?></span>
@@ -167,6 +164,21 @@ $jsAdmin = [
                 <div class="d-flex justify-content-between fw-bold">
                   <span style="color:#14532d;">Remaining After</span>
                   <span class="font-mono" style="color:#14532d;"><?= fmt_money($request['ewallet_balance'] - $request['fee']) ?></span>
+                </div>
+              </div>
+
+              <!-- E-Wallet Insufficient Balance Warning -->
+              <div id="ewalletInsufficient" class="alert alert-warning py-3 mb-3 d-none">
+                <div class="d-flex align-items-center gap-2">
+                  <span style="font-size:1.25rem;">⚠️</span>
+                  <div>
+                    <strong>Insufficient E-Wallet Balance</strong>
+                    <div style="font-size:.8rem;opacity:.9;">
+                      Your current balance is <?= fmt_money($request['ewallet_balance']) ?>.
+                      The reactivation fee is <?= fmt_money($request['fee']) ?>.
+                      Please top up or choose an external payment method.
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -291,15 +303,27 @@ $jsAdmin = [
       btn.disabled = !this.checked;
     });
 
+    const insufficientBox = document.getElementById('ewalletInsufficient');
+
     function switchMethod(method) {
+      const checked = document.querySelector('input[name="payment_method"][value="' + method + '"]');
+      const ewalletSufficient = checked && checked.dataset.sufficient === '1';
+
       // Show/hide admin details box
       if (method === 'ewallet') {
         detailsBox.classList.add('d-none');
-        ewalletBox.classList.remove('d-none');
         if (proofInput) proofInput.removeAttribute('required');
+        if (ewalletSufficient) {
+          ewalletBox.classList.remove('d-none');
+          if (insufficientBox) insufficientBox.classList.add('d-none');
+        } else {
+          ewalletBox.classList.add('d-none');
+          if (insufficientBox) insufficientBox.classList.remove('d-none');
+        }
       } else {
         detailsBox.classList.remove('d-none');
         ewalletBox.classList.add('d-none');
+        if (insufficientBox) insufficientBox.classList.add('d-none');
         if (proofInput) proofInput.setAttribute('required', 'required');
       }
 
