@@ -14,7 +14,6 @@ $dfiEnabled      = setting('dfi_enabled', '1') === '1';
 $gcashEnabled    = setting('gcash_enabled', '1') === '1';
 $mayaEnabled     = setting('maya_enabled', '1') === '1';
 $minPayout       = (float) setting('min_payout', '500');
-$usdtFee         = (float) setting('service_fee_usdt_trc20', '5');
 $gcashFee        = (float) setting('service_fee_gcash', '0');
 $mayaFee         = (float) setting('service_fee_maya', '0');
 
@@ -62,7 +61,7 @@ $binaryEnabled = setting('binary_enabled', '1') === '1';
 $streamCount = ($binaryEnabled ? 1 : 0) + 1 + ($indirectEnabled ? 1 : 0) + ($dfiEnabled ? 1 : 0);
 
 // Build payout methods list
-$payoutMethods = ['USDT TRC20'];
+$payoutMethods = ['USDT TRC20', 'USDT BEP20'];
 if ($gcashEnabled) $payoutMethods[] = 'GCash';
 if ($mayaEnabled)  $payoutMethods[] = 'Maya';
 $payoutMethodsText = implode(', ', $payoutMethods);
@@ -91,7 +90,7 @@ $streamOxford = count($streamWords) > 2
   <!-- ── Primary SEO ── -->
   <title><?= e($siteName) ?> — Closed <?= number_format($seatLimit) ?>-Member Philippine Poultry Network</title>
   <meta name="description" content="<?= e($siteName) ?> is a closed <?= number_format($seatLimit) ?>-member Philippine poultry binary network. <?= $streamCount ?> income streams (<?= $streamText ?>). <?= $payoutMethodsText ?> payouts. Seats are finite — join before the network is full.">
-  <meta name="keywords" content="<?= e($siteName) ?>, Philippine poultry network, binary MLM Philippines, USDT payout, farm investment Philippines, poultry farming community, bayanihan network<?= $indirectEnabled ? ', unilevel' : '' ?>">
+  <meta name="keywords" content="<?= e($siteName) ?>, Philippine poultry network, binary MLM Philippines, USDT TRC20 payout, USDT BEP20 payout, farm investment Philippines, poultry farming community, bayanihan network<?= $indirectEnabled ? ', unilevel' : '' ?>">
   <meta name="robots" content="index, follow">
   <meta name="author" content="<?= e($siteName) ?>">
   <link rel="canonical" href="<?= $base ?>/">
@@ -324,7 +323,7 @@ $streamOxford = count($streamWords) > 2
         <p>These Terms of Service ("Terms") govern the relationship between <?= e($siteName) ?> ("the Platform," "we," "us") and any individual who registers as a member ("Member," "you"). <?= e($siteName) ?> is operated by its founding administrators, based in Santiago, Isabela, Philippines.</p>
 
         <h3>2. Eligibility</h3>
-        <p>To register, you must: (a) be at least 18 years of age; (b) be a resident of the Philippines or a Filipino national abroad; (c) possess a valid USDT TRC20 wallet address for receiving payouts; (d) have a valid registration code issued by an existing member or the admin team; and (e) agree to these Terms in full.</p>
+        <p>To register, you must: (a) be at least 18 years of age; (b) be a resident of the Philippines or a Filipino national abroad; (c) possess a valid USDT TRC20 or USDT BEP20 wallet address for receiving payouts; (d) have a valid registration code issued by an existing member or the admin team; and (e) agree to these Terms in full.</p>
 
         <h3>3. Membership Limit</h3>
         <p><?= e($siteName) ?> operates a hard membership cap of exactly <?= number_format($seatLimit) ?> (<?= e((new NumberFormatter('en', NumberFormatter::SPELLOUT))->format($seatLimit)) ?>) seats. When the <?= number_format($seatLimit) ?>th registration is confirmed, the platform will permanently close registration. No exceptions, waitlists, or re-openings will be considered. Each member is limited to one (1) account. Registering multiple accounts constitutes fraud and will result in immediate suspension and forfeiture of balances.</p>
@@ -396,7 +395,7 @@ $streamOxford = count($streamWords) > 2
         <h3>2. What We Collect</h3>
         <ul>
           <li><strong>Registration data:</strong> Full name, email address, mobile number, province/region, and the referral code used to register.</li>
-          <li><strong>Financial data:</strong> Your USDT TRC20 wallet address, withdrawal requests, and commission history. We do not collect bank account numbers, credit card numbers, or GCash/Maya account details.</li>
+          <li><strong>Financial data:</strong> Your USDT TRC20 or USDT BEP20 wallet address, withdrawal requests, and commission history. We do not collect bank account numbers, credit card numbers, or GCash/Maya account details.</li>
           <li><strong>Technical data:</strong> IP address (for security and fraud detection), browser type, device type, and session tokens. These are discarded after 30 days.</li>
           <li><strong>Communications:</strong> Support messages and emails you send to us.</li>
         </ul>
@@ -414,7 +413,7 @@ $streamOxford = count($streamWords) > 2
         <p>We process your data on the basis of: (a) contractual necessity — to perform our obligations under the Terms of Service; and (b) legitimate interest — to maintain the integrity and security of the network.</p>
 
         <h3>5. Data Sharing</h3>
-        <p>We do not sell, rent, or trade your personal data to any third party. Limited data may be shared with: (a) blockchain networks for USDT transaction processing (your wallet address only, which is inherently public on the TRON network); (b) service providers who assist with platform security and hosting, under strict confidentiality agreements; and (c) law enforcement or regulators, if required by Philippine law.</p>
+        <p>We do not sell, rent, or trade your personal data to any third party. Limited data may be shared with: (a) blockchain networks for USDT transaction processing (your wallet address only, which is inherently public on the TRON or BNB Chain network); (b) service providers who assist with platform security and hosting, under strict confidentiality agreements; and (c) law enforcement or regulators, if required by Philippine law.</p>
 
         <h3>6. Data Retention</h3>
         <p>Account data is retained for the lifetime of the network and for a minimum of five (5) years after network closure, to comply with financial record-keeping obligations. You may request deletion of non-transactional data (e.g., support messages) at any time.</p>
@@ -477,7 +476,7 @@ $streamOxford = count($streamWords) > 2
         <p><?= e($siteName) ?> operates in accordance with the Philippine Consumer Act (Republic Act 7394). Members have the right to honest and accurate information about the platform, its earning structure, and its limitations. Any member who believes they have been misled by a sponsor's claims may report the matter to <a href="mailto:support@altasfarm.com" style="color:var(--green-mid);">support@altasfarm.com</a>. We take misrepresentation by sponsors seriously and will investigate reported cases.</p>
 
         <h3>6. USDT / Cryptocurrency Disclosure</h3>
-        <p>All payouts on <?= e($siteName) ?> are made in USDT (Tether) on the TRON network (TRC20). USDT is a stablecoin pegged to the US Dollar. While USDT is designed to maintain a 1:1 peg, cryptocurrency carries inherent risks including de-pegging events, blockchain network congestion, and wallet loss. <?= e($siteName) ?> is not liable for losses arising from cryptocurrency market conditions. Members are responsible for the security of their own USDT wallets.</p>
+        <p>All payouts on <?= e($siteName) ?> are made in USDT (Tether) on the TRON network (TRC20) or BNB Chain (BEP20). USDT is a stablecoin pegged to the US Dollar. While USDT is designed to maintain a 1:1 peg, cryptocurrency carries inherent risks including de-pegging events, blockchain network congestion, and wallet loss. <?= e($siteName) ?> is not liable for losses arising from cryptocurrency market conditions. Members are responsible for the security of their own USDT wallets.</p>
 
         <h3>7. Income Disclaimer</h3>
         <p>Earnings from <?= e($siteName) ?> are not guaranteed. The amount a member earns depends on their own referral activity, the activity of their network, and the pace of overall registrations within the <?= number_format($seatLimit) ?>-seat limit. <?= e($siteName) ?> does not represent, warrant, or imply that any specific income level is achievable. Do not invest funds you cannot afford to lose.</p>
@@ -685,7 +684,6 @@ $streamOxford = count($streamWords) > 2
       <div class="trust-item"><span class="trust-icon">✉</span> <strong>support@altasfarm.com</strong></div>
       <div class="trust-item"><span class="trust-icon">🛡</span> RA 10173 <strong>Data Privacy</strong></div>
       <div class="trust-item"><span class="trust-icon">📅</span> Est. <strong>2024</strong></div>
-      <div class="trust-item"><span class="trust-icon">₮</span> USDT <strong>TRC20</strong> Payouts</div>
     </div>
   </div>
 
@@ -697,11 +695,10 @@ $streamOxford = count($streamWords) > 2
     number_format($seatLimit) . ' Members Only',
     'Real Poultry Products',
     'Instant Commissions',
-    'USDT TRC20 Payouts',
+    'USDT TRC20/BEP20 Payouts',
     'Philippine Farms',
     'Daily Pair Bonuses',
     'Bayanihan Network',
-    'Closed Community',
     'Binary Structure',
   ];
   if ($indirectEnabled) {
@@ -745,7 +742,7 @@ $streamOxford = count($streamWords) > 2
             <li>Backed by real, operating Philippine poultry farms in Isabela</li>
             <li>Commissions fire the instant a new member registers</li>
             <li>One package tier — every member enters as an equal</li>
-            <li>Payouts in Gcash, Maya, or USDT TRC20 — borderless, no bank required</li>
+            <li>Payouts in GCash, Maya, USDT TRC20, or USDT BEP20 — borderless, no bank required</li>
             <li>Full audit trail: every commission logged and traceable</li>
           </ul>
           <div style="margin-top:2rem;">
@@ -931,6 +928,7 @@ $streamOxford = count($streamWords) > 2
                 <?php if ($gcashEnabled): ?><span class="badge-payout" style="background:#0070d820;color:#0070d8;">GCash</span><?php endif; ?>
                 <?php if ($mayaEnabled): ?><span class="badge-payout" style="background:#48b0db20;color:#48b0db;">Maya</span><?php endif; ?>
                 <span class="badge-payout" style="background:#26a17b20;color:#26a17b;">₮ USDT TRC20</span>
+                <span class="badge-payout" style="background:#f0b90b20;color:#f0b90b;">₮ USDT BEP20</span>
               </div>
               <div class="pkg-price"><?= fmt_money($pkg['entry_fee']) ?> <small>one-time entry fee</small></div>
               <?php if (!$isFull): ?>
@@ -967,7 +965,8 @@ $streamOxford = count($streamWords) > 2
                 <div class="payout-methods" style="margin-bottom:1rem;">
                   <?php if ($gcashEnabled): ?><span class="badge-payout" style="background:#0070d820;color:#0070d8;font-size:.7rem;padding:.2rem .5rem;border-radius:4px;">GCash</span><?php endif; ?>
                   <?php if ($mayaEnabled): ?><span class="badge-payout" style="background:#48b0db20;color:#48b0db;font-size:.7rem;padding:.2rem .5rem;border-radius:4px;">Maya</span><?php endif; ?>
-                  <span class="badge-payout" style="background:#26a17b20;color:#26a17b;font-size:.7rem;padding:.2rem .5rem;border-radius:4px;">USDT</span>
+                  <span class="badge-payout" style="background:#26a17b20;color:#26a17b;font-size:.7rem;padding:.2rem .5rem;border-radius:4px;">USDT TRC20</span>
+                  <span class="badge-payout" style="background:#f0b90b20;color:#f0b90b;font-size:.7rem;padding:.2rem .5rem;border-radius:4px;">USDT BEP20</span>
                 </div>
                 <?php if (!$isFull): ?>
                   <a href="<?= $base ?>/?page=register" class="btn-primary" style="width:100%;font-size:.9rem;">Claim Your Seat →</a>
@@ -1015,7 +1014,7 @@ $streamOxford = count($streamWords) > 2
               <div class="why-icon">₮</div>
               <div>
                 <div class="why-item-title">USDT — No Geography, No Bank</div>
-                <div class="why-item-desc">Payouts settle via <?= $payoutMethodsText ?>. Whether you are in the Philippines or working abroad, your wallet receives the same way — no remittance cut, no delay.</div>
+                <div class="why-item-desc">Payouts settle via <?= $payoutMethodsText ?> networks. Whether you are in the Philippines or working abroad, your wallet receives the same way — no remittance cut, no delay.</div>
               </div>
             </div>
             <div class="why-item">
