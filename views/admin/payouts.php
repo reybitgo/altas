@@ -73,23 +73,28 @@
                 $method  = $pr['payout_method']  ?: 'gcash';
                 $account = $pr['payout_account'];
                 $methodLabel = match ($method) {
-                  'maya' => 'Maya',
-                  'usdt' => 'USDT TRC20',
-                  default => 'GCash'
+                  'maya'        => 'Maya',
+                  'usdt_trc20'  => 'USDT TRC20',
+                  'usdt_bep20'  => 'USDT BEP20',
+                  default       => 'GCash'
                 };
                 $methodColor = match ($method) {
-                  'maya' => '#48b0db',
-                  'usdt' => '#26a17b',
-                  default => '#0070d8'
+                  'maya'        => '#48b0db',
+                  'usdt_trc20'  => '#26a17b',
+                  'usdt_bep20'  => '#f0b90b',
+                  default       => '#0070d8'
                 };
                 $sendVerb    = match ($method) {
-                  'usdt' => 'Transfer USDT to',
+                  'usdt_trc20', 'usdt_bep20' => 'Transfer USDT to',
                   default => 'Send via ' . $methodLabel . ' to'
                 };
                 $netPhp      = $pr['amount'] - ($pr['service_fee_amount'] ?? 0);
-                $hasUsdt     = $method === 'usdt' && ($pr['usdt_amount'] ?? 0) > 0;
+                $rateCol     = $method === 'usdt_bep20' ? 'usdt_bep20_rate'   : 'usdt_trc20_rate';
+                $amtCol      = $method === 'usdt_bep20' ? 'usdt_bep20_amount' : 'usdt_trc20_amount';
+                $gasCol      = $method === 'usdt_bep20' ? 'usdt_bep20_gas_fee': 'usdt_trc20_gas_fee';
+                $hasUsdt     = in_array($method, ['usdt_trc20', 'usdt_bep20'], true) && ($pr[$amtCol] ?? 0) > 0;
                 $sendAmount  = $hasUsdt
-                  ? number_format($pr['usdt_amount'], 4) . ' USDT'
+                  ? number_format($pr[$amtCol], 4) . ' USDT'
                   : fmt_money($netPhp);
               ?>
                 <tr>
@@ -104,10 +109,10 @@
                   </td>
                   <td>
                     <?php if ($hasUsdt): ?>
-                      <div class="fw-bold font-mono text-success"><?= number_format($pr['usdt_amount'], 4) ?> USDT</div>
-                      <div class="text-muted" style="font-size:.68rem;">@ ₱<?= number_format($pr['usdt_rate'], 2) ?></div>
+                      <div class="fw-bold font-mono text-success"><?= number_format($pr[$amtCol], 4) ?> USDT</div>
+                      <div class="text-muted" style="font-size:.68rem;">@ ₱<?= number_format($pr[$rateCol], 2) ?></div>
                       <?php if (($pr['service_fee_amount'] ?? 0) > 0): ?>
-                        <div class="text-muted" style="font-size:.65rem;">Fee: <?= fmt_money($pr['service_fee_amount']) ?> + <?= number_format($pr['usdt_gas_fee'], 2) ?> USDT gas</div>
+                        <div class="text-muted" style="font-size:.65rem;">Fee: <?= fmt_money($pr['service_fee_amount']) ?> + <?= number_format($pr[$gasCol], $method === 'usdt_bep20' ? 6 : 2) ?> USDT gas</div>
                       <?php endif; ?>
                     <?php elseif (($pr['service_fee_amount'] ?? 0) > 0): ?>
                       <div class="fw-bold font-mono"><?= fmt_money($netPhp) ?></div>
@@ -148,9 +153,9 @@
                   </td>
                   <td>
                     <?php
-                    $hasUsdt    = $method === 'usdt' && ($pr['usdt_amount'] ?? 0) > 0;
+                    $hasUsdt    = in_array($method, ['usdt_trc20', 'usdt_bep20'], true) && ($pr[$amtCol] ?? 0) > 0;
                     $netPhp     = $pr['amount'] - ($pr['service_fee_amount'] ?? 0);
-                    $sendAmount = $hasUsdt ? number_format($pr['usdt_amount'], 4) . ' USDT' : fmt_money($netPhp);
+                    $sendAmount = $hasUsdt ? number_format($pr[$amtCol], 4) . ' USDT' : fmt_money($netPhp);
                     ?>
                     <?php if ($pr['status'] === 'pending'): ?>
                       <div class="d-flex gap-1 flex-wrap">
@@ -169,10 +174,10 @@
                         <div class="font-mono mb-1" style="color:#374151;word-break:break-all;font-size:.8rem;"><?= e($account) ?></div>
                         <?php if ($hasUsdt): ?>
                           <div class="fw-bold font-mono" style="color:<?= $methodColor ?>;font-size:1rem;">
-                            <?= number_format($pr['usdt_amount'], 4) ?> USDT
+                            <?= number_format($pr[$amtCol], 4) ?> USDT
                           </div>
                           <div style="color:#6b7a99;font-size:.65rem;">
-                            From <?= fmt_money($pr['amount']) ?> &middot; Fee <?= fmt_money($pr['service_fee_amount'] ?? 0) ?> &middot; Gas <?= number_format($pr['usdt_gas_fee'] ?? 0, 2) ?> USDT
+                            From <?= fmt_money($pr['amount']) ?> &middot; Fee <?= fmt_money($pr['service_fee_amount'] ?? 0) ?> &middot; Gas <?= number_format($pr[$gasCol] ?? 0, $method === 'usdt_bep20' ? 6 : 2) ?> USDT
                           </div>
                         <?php else: ?>
                           <div class="fw-bold" style="color:<?= $methodColor ?>;"><?= fmt_money($netPhp) ?></div>

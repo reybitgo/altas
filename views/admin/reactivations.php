@@ -79,18 +79,20 @@
               </tr>
             <?php else: foreach ($result['data'] as $row):
                 $methodLabel = match ($row['payment_method']) {
-                    'ewallet' => 'E-Wallet',
-                    'maya'    => 'Maya',
-                    'usdt'    => 'USDT',
-                    'admin'   => 'Admin',
-                    default   => 'GCash'
+                    'ewallet'     => 'E-Wallet',
+                    'maya'        => 'Maya',
+                    'usdt_trc20'  => 'USDT TRC20',
+                    'usdt_bep20'  => 'USDT BEP20',
+                    'admin'       => 'Admin',
+                    default       => 'GCash'
                 };
                 $methodColor = match ($row['payment_method']) {
-                    'ewallet' => '#3b6ff0',
-                    'maya'    => '#48b0db',
-                    'usdt'    => '#26a17b',
-                    'admin'   => '#6b7280',
-                    default   => '#0070d8'
+                    'ewallet'     => '#3b6ff0',
+                    'maya'        => '#48b0db',
+                    'usdt_trc20'  => '#26a17b',
+                    'usdt_bep20'  => '#f0b90b',
+                    'admin'       => '#6b7280',
+                    default       => '#0070d8'
                 };
             ?>
               <tr>
@@ -107,10 +109,11 @@
                   </span>
                   <?php
                   $adminAccount = match ($row['payment_method']) {
-                      'gcash' => $adminPayment['gcash_number'] ?? '',
-                      'maya'  => $adminPayment['maya_number'] ?? '',
-                      'usdt'  => $adminPayment['usdt_address'] ?? '',
-                      default => ''
+                      'gcash'      => $adminPayment['gcash_number'] ?? '',
+                      'maya'       => $adminPayment['maya_number'] ?? '',
+                      'usdt_trc20' => $adminPayment['usdt_trc20_address'] ?? '',
+                      'usdt_bep20' => $adminPayment['usdt_bep20_address'] ?? '',
+                      default      => ''
                   };
                   ?>
                   <?php if ($adminAccount): ?>
@@ -150,10 +153,11 @@
                     <div class="d-flex gap-1 flex-wrap">
                       <?php
                       $acct = match ($row['payment_method']) {
-                          'gcash' => e($adminPayment['gcash_number'] ?? ''),
-                          'maya'  => e($adminPayment['maya_number'] ?? ''),
-                          'usdt'  => e($adminPayment['usdt_address'] ?? ''),
-                          default => ''
+                          'gcash'      => e($adminPayment['gcash_number'] ?? ''),
+                          'maya'       => e($adminPayment['maya_number'] ?? ''),
+                          'usdt_trc20' => e($adminPayment['usdt_trc20_address'] ?? ''),
+                          'usdt_bep20' => e($adminPayment['usdt_bep20_address'] ?? ''),
+                          default      => ''
                       };
                       ?>
                       <button class="btn btn-sm btn-success"

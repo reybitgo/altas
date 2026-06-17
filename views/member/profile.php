@@ -103,20 +103,29 @@
                 </div>
               <?php endif; ?>
 
-              <div class="mb-0">
+              <div class="mb-3">
                 <label class="form-label">
                   <span style="color:#26a17b;font-weight:700;margin-right:.35rem;">₮</span>USDT TRC20 Address
                 </label>
-                <input type="text" name="usdt_address" class="form-control font-mono"
-                  value="<?= e($user['usdt_address'] ?? '') ?>" placeholder="T..." maxlength="42" spellcheck="false">
+                <input type="text" name="usdt_trc20_address" class="form-control font-mono"
+                  value="<?= e($user['usdt_trc20_address'] ?? '') ?>" placeholder="T..." maxlength="42" spellcheck="false">
                 <div class="form-text">TRC20 addresses start with <strong>T</strong> and are 34 characters.</div>
+              </div>
+
+              <div class="mb-0">
+                <label class="form-label">
+                  <span style="color:#f0b90b;font-weight:700;margin-right:.35rem;">₮</span>USDT BEP20 Address
+                </label>
+                <input type="text" name="usdt_bep20_address" class="form-control font-mono"
+                  value="<?= e($user['usdt_bep20_address'] ?? '') ?>" placeholder="0x..." maxlength="42" spellcheck="false">
+                <div class="form-text">BEP20 addresses start with <strong>0x</strong> and are 42 characters.</div>
               </div>
 
               <?php if (!$gcashEnabled || !$mayaEnabled): ?>
                 <div class="alert alert-info mt-3 mb-0 py-2" style="font-size:.75rem;">
                   <strong>ℹ Note:</strong>
                   <?php if (!$gcashEnabled && !$mayaEnabled): ?>
-                    GCash and Maya payouts are currently disabled by the administrator. Only USDT TRC20 is available.
+                    GCash and Maya payouts are currently disabled by the administrator. Only USDT TRC20/BEP20 are available.
                   <?php elseif (!$gcashEnabled): ?>
                     GCash payouts are currently disabled by the administrator.
                   <?php else: ?>

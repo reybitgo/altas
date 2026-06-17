@@ -221,7 +221,7 @@ class User
 
     public static function updateProfile(int $id, array $data): bool
     {
-        $allowed = ['full_name', 'email', 'mobile', 'gcash_number', 'maya_number', 'usdt_address', 'address', 'photo'];
+        $allowed = ['full_name', 'email', 'mobile', 'gcash_number', 'maya_number', 'usdt_trc20_address', 'usdt_bep20_address', 'address', 'photo'];
         $fields  = [];
         $values  = [];
 

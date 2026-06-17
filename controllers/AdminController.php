@@ -148,14 +148,40 @@ class AdminController
             json_response(['ok' => false, 'error' => 'Invalid fee value.'], 400);
         }
 
-        $current = round((float)setting('usdt_gas_fee', '2.50'), 4);
+        $current = round((float)setting('usdt_trc20_gas_fee', '2.50'), 4);
 
         // Only write if value actually changed (avoid unnecessary DB writes)
         if (abs($fee - $current) < 0.0001) {
             json_response(['ok' => true, 'updated' => false, 'fee' => $fee]);
         }
 
-        db()->prepare("UPDATE settings SET value = ? WHERE key_name = 'usdt_gas_fee'")
+        db()->prepare("UPDATE settings SET value = ? WHERE key_name = 'usdt_trc20_gas_fee'")
+            ->execute([(string)$fee]);
+
+        json_response(['ok' => true, 'updated' => true, 'fee' => $fee, 'previous' => $current]);
+    }
+
+    /**
+     * Called from payout.php JS when live BEP20 gas fee differs from DB value.
+     * Accessible to logged-in members so the payout page can call it without admin session.
+     */
+    public function updateUsdtBep20Gas(): void
+    {
+        $raw  = file_get_contents('php://input');
+        $body = json_decode($raw, true);
+        $fee  = isset($body['fee']) ? round((float)$body['fee'], 4) : null;
+
+        if ($fee === null || $fee <= 0 || $fee > 50) {
+            json_response(['ok' => false, 'error' => 'Invalid fee value.'], 400);
+        }
+
+        $current = round((float)setting('usdt_bep20_gas_fee', '0.05'), 4);
+
+        if (abs($fee - $current) < 0.0001) {
+            json_response(['ok' => true, 'updated' => false, 'fee' => $fee]);
+        }
+
+        db()->prepare("UPDATE settings SET value = ? WHERE key_name = 'usdt_bep20_gas_fee'")
             ->execute([(string)$fee]);
 
         json_response(['ok' => true, 'updated' => true, 'fee' => $fee, 'previous' => $current]);
@@ -518,14 +544,17 @@ class AdminController
             'maintenance_bypass_token',
             'service_fee_gcash',
             'service_fee_maya',
-            'service_fee_usdt',
-            'usdt_gas_fee',
+            'service_fee_usdt_trc20',
+            'service_fee_usdt_bep20',
+            'usdt_trc20_gas_fee',
+            'usdt_bep20_gas_fee',
             'gcash_enabled',
             'maya_enabled',
             'dfi_enabled',
             'gcash_number',
             'maya_number',
-            'usdt_address',
+            'usdt_trc20_address',
+            'usdt_bep20_address',
             'default_cap_multiplier',
             'reactivation_ewallet_enabled',
             'reactivation_external_enabled',
@@ -739,7 +768,7 @@ class AdminController
         // Fetch admin payment details for reactivation display
         $pdo = db();
         $adminPayment = [];
-        foreach (['gcash_number','maya_number','usdt_address'] as $k) {
+        foreach (['gcash_number','maya_number','usdt_trc20_address','usdt_bep20_address'] as $k) {
             $adminPayment[$k] = $pdo->query("SELECT value FROM settings WHERE key_name='{$k}'")->fetchColumn() ?: '';
         }
 

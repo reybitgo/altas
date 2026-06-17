@@ -242,6 +242,18 @@
                 <td><strong><?= e($user['gcash_number'] ?? '—') ?></strong></td>
               </tr>
               <tr>
+                <td>Maya</td>
+                <td><strong><?= e($user['maya_number'] ?? '—') ?></strong></td>
+              </tr>
+              <tr>
+                <td>USDT TRC20</td>
+                <td><strong><?= e($user['usdt_trc20_address'] ?? '—') ?></strong></td>
+              </tr>
+              <tr>
+                <td>USDT BEP20</td>
+                <td><strong><?= e($user['usdt_bep20_address'] ?? '—') ?></strong></td>
+              </tr>
+              <tr>
                 <td>Address</td>
                 <td><?= e($user['address'] ?? '—') ?></td>
               </tr>

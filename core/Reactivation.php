@@ -74,7 +74,8 @@ class Reactivation
                 $canUseEwallet ? 'ewallet' : null,
                 'gcash',
                 'maya',
-                'usdt',
+                'usdt_trc20',
+                'usdt_bep20',
             ])),
         ];
     }
@@ -86,7 +87,7 @@ class Reactivation
      * External (GCash/Maya/USDT): creates pending record, admin confirms later.
      *
      * @param int    $userId        User ID
-     * @param string $paymentMethod 'ewallet' | 'gcash' | 'maya' | 'usdt' | 'admin'
+     * @param string $paymentMethod 'ewallet' | 'gcash' | 'maya' | 'usdt_trc20' | 'usdt_bep20' | 'admin'
      * @param string $proofImage    Optional file path for proof image (external payments)
      * @return array ['ok' => bool, 'message' => string, 'pending' => bool, ...]
      */
@@ -112,7 +113,7 @@ class Reactivation
         }
 
         // 3. Validate payment method
-        $allowed = ['ewallet', 'gcash', 'maya', 'usdt', 'admin'];
+        $allowed = ['ewallet', 'gcash', 'maya', 'usdt_trc20', 'usdt_bep20', 'admin'];
         if (!in_array($paymentMethod, $allowed, true)) {
             return ['ok' => false, 'error' => 'Invalid payment method.'];
         }

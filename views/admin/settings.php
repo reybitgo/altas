@@ -215,10 +215,15 @@
                 </label>
                 <input type="tel" name="maya_number" class="form-control font-mono" placeholder="09XXXXXXXXX" value="<?= e(setting('maya_number', '')) ?>">
               </div>
-              <div class="mb-0">
+              <div class="mb-3">
                 <label class="form-label" style="color:#26a17b;font-weight:700;font-size:.75rem;">₮ USDT TRC20 Address</label>
-                <input type="text" name="usdt_address" class="form-control font-mono" placeholder="T..." value="<?= e(setting('usdt_address', '')) ?>">
+                <input type="text" name="usdt_trc20_address" class="form-control font-mono" placeholder="T..." value="<?= e(setting('usdt_trc20_address', '')) ?>">
                 <div class="form-text">TRC20 addresses start with T and are 34 characters</div>
+              </div>
+              <div class="mb-0">
+                <label class="form-label" style="color:#f0b90b;font-weight:700;font-size:.75rem;">₮ USDT BEP20 Address</label>
+                <input type="text" name="usdt_bep20_address" class="form-control font-mono" placeholder="0x..." value="<?= e(setting('usdt_bep20_address', '')) ?>">
+                <div class="form-text">BEP20 addresses start with 0x and are 42 characters</div>
               </div>
             </div>
           </div>
@@ -311,36 +316,53 @@
               </div>
 
               <div class="row g-2 mb-3">
-                <div class="col-4">
+                <div class="col-3">
                   <label class="form-label" style="color:#0070d8;font-weight:700;font-size:.75rem;">GCash %</label>
                   <div class="input-group input-group-sm">
                     <input type="number" name="service_fee_gcash" class="form-control" min="0" max="100" step="0.01" value="<?= e(setting('service_fee_gcash', '0')) ?>">
                     <span class="input-group-text">%</span>
                   </div>
                 </div>
-                <div class="col-4">
+                <div class="col-3">
                   <label class="form-label" style="color:#48b0db;font-weight:700;font-size:.75rem;">Maya %</label>
                   <div class="input-group input-group-sm">
                     <input type="number" name="service_fee_maya" class="form-control" min="0" max="100" step="0.01" value="<?= e(setting('service_fee_maya', '0')) ?>">
                     <span class="input-group-text">%</span>
                   </div>
                 </div>
-                <div class="col-4">
-                  <label class="form-label" style="color:#26a17b;font-weight:700;font-size:.75rem;">USDT %</label>
+                <div class="col-3">
+                  <label class="form-label" style="color:#26a17b;font-weight:700;font-size:.75rem;">TRC20 %</label>
                   <div class="input-group input-group-sm">
-                    <input type="number" name="service_fee_usdt" class="form-control" min="0" max="100" step="0.01" value="<?= e(setting('service_fee_usdt', '5')) ?>">
+                    <input type="number" name="service_fee_usdt_trc20" class="form-control" min="0" max="100" step="0.01" value="<?= e(setting('service_fee_usdt_trc20', '5')) ?>">
+                    <span class="input-group-text">%</span>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <label class="form-label" style="color:#f0b90b;font-weight:700;font-size:.75rem;">BEP20 %</label>
+                  <div class="input-group input-group-sm">
+                    <input type="number" name="service_fee_usdt_bep20" class="form-control" min="0" max="100" step="0.01" value="<?= e(setting('service_fee_usdt_bep20', '5')) ?>">
                     <span class="input-group-text">%</span>
                   </div>
                 </div>
               </div>
 
-              <div class="mb-0">
-                <label class="form-label" style="color:#26a17b;font-weight:700;font-size:.75rem;">₮ USDT TRC20 Network Gas Fee</label>
-                <div class="input-group input-group-sm">
-                  <span class="input-group-text">USDT</span>
-                  <input type="number" name="usdt_gas_fee" class="form-control font-mono" min="0" step="0.0001" value="<?= e(setting('usdt_gas_fee', '2.50')) ?>">
+              <div class="row g-2 mb-0">
+                <div class="col-6">
+                  <label class="form-label" style="color:#26a17b;font-weight:700;font-size:.75rem;">₮ TRC20 Gas Fee</label>
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text">USDT</span>
+                    <input type="number" name="usdt_trc20_gas_fee" class="form-control font-mono" min="0" step="0.0001" value="<?= e(setting('usdt_trc20_gas_fee', '2.50')) ?>">
+                  </div>
+                  <div class="form-text" style="font-size:.7rem;">Fixed TRC20 network fee (typically 1–3 USDT)</div>
                 </div>
-                <div class="form-text">Fixed TRC20 network fee (typically 1–3 USDT)</div>
+                <div class="col-6">
+                  <label class="form-label" style="color:#f0b90b;font-weight:700;font-size:.75rem;">₮ BEP20 Gas Fee</label>
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text">USDT</span>
+                    <input type="number" name="usdt_bep20_gas_fee" class="form-control font-mono" min="0" step="0.000001" value="<?= e(setting('usdt_bep20_gas_fee', '0.05')) ?>">
+                  </div>
+                  <div class="form-text" style="font-size:.7rem;">Fixed BEP20 network fee (typically 0.01–0.10 USDT)</div>
+                </div>
               </div>
             </div>
           </div>

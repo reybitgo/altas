@@ -31,13 +31,14 @@ class MemberController
         $user = Auth::user();
 
         $data = [
-            'full_name'    => trim($_POST['full_name']    ?? ''),
-            'email'        => trim($_POST['email']        ?? ''),
-            'mobile'       => trim($_POST['mobile']       ?? ''),
-            'gcash_number' => trim($_POST['gcash_number'] ?? ''),
-            'maya_number'  => trim($_POST['maya_number']  ?? ''),
-            'usdt_address' => trim($_POST['usdt_address'] ?? ''),
-            'address'      => trim($_POST['address']      ?? ''),
+            'full_name'          => trim($_POST['full_name']          ?? ''),
+            'email'              => trim($_POST['email']              ?? ''),
+            'mobile'             => trim($_POST['mobile']             ?? ''),
+            'gcash_number'       => trim($_POST['gcash_number']       ?? ''),
+            'maya_number'        => trim($_POST['maya_number']        ?? ''),
+            'usdt_trc20_address' => trim($_POST['usdt_trc20_address'] ?? ''),
+            'usdt_bep20_address' => trim($_POST['usdt_bep20_address'] ?? ''),
+            'address'            => trim($_POST['address']            ?? ''),
         ];
 
         // Handle photo upload
@@ -256,12 +257,12 @@ class MemberController
         Auth::guard('member');
         csrf_verify();
 
-        $amount   = (float)($_POST['amount']         ?? 0);
-        $method   = trim($_POST['payout_method']     ?? 'gcash');
-        $account  = trim($_POST['payout_account']    ?? '');
-        $usdtRate = (float)($_POST['usdt_rate']      ?? 0);
+        $amount   = (float)($_POST['amount']             ?? 0);
+        $method   = trim($_POST['payout_method']         ?? 'gcash');
+        $account  = trim($_POST['payout_account']        ?? '');
+        $usdtRate = (float)($_POST['usdt_trc20_rate']    ?? $_POST['usdt_bep20_rate'] ?? 0);
 
-        $allowed = ['gcash', 'maya', 'usdt'];
+        $allowed = ['gcash', 'maya', 'usdt_trc20', 'usdt_bep20'];
         if (!in_array($method, $allowed)) {
             flash('error', 'Invalid payout method.');
             redirect('/?page=payout');
@@ -388,7 +389,7 @@ class MemberController
 
         // Fetch admin payment details for external payment display (from settings)
         $admin = [];
-        foreach (['gcash_number','maya_number','usdt_address'] as $k) {
+        foreach (['gcash_number','maya_number','usdt_trc20_address','usdt_bep20_address'] as $k) {
             $admin[$k] = db()->query("SELECT value FROM settings WHERE key_name='{$k}'")->fetchColumn() ?: '';
         }
 
