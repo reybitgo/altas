@@ -110,9 +110,12 @@
 
     <!-- Recent Transfers -->
     <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span class="card-title">📋 Recent Transfers</span>
-        <a href="<?= APP_URL ?>/?page=earnings" class="btn btn-outline-primary btn-sm" style="font-size:.72rem;">View Ledger →</a>
+        <div class="d-flex align-items-center gap-2">
+          <a href="<?= APP_URL ?>/?page=earnings" class="btn btn-outline-primary btn-sm" style="font-size:.72rem;">View Ledger →</a>
+          <?php require 'views/partials/rows_per_page.php'; ?>
+        </div>
       </div>
       <div class="table-responsive">
         <table class="table table-hover mb-0" style="font-size:.85rem;">
@@ -127,11 +130,9 @@
             </tr>
           </thead>
           <tbody>
-            <?php
-            $rows = $recent->fetchAll();
-            if (empty($rows)): ?>
+            <?php if (empty($recent['data'])): ?>
               <tr><td colspan="6" class="text-center py-4 text-muted">No transfers yet.</td></tr>
-            <?php else: foreach ($rows as $t): ?>
+            <?php else: foreach ($recent['data'] as $t): ?>
               <tr>
                 <td style="font-size:.75rem;"><?= fmt_datetime($t['created_at']) ?></td>
                 <td>
@@ -156,6 +157,11 @@
           </tbody>
         </table>
       </div>
+      <?php if (!empty($recent['total_pages']) && $recent['total_pages'] > 1): ?>
+        <div class="card-footer">
+          <?= pagination_links($recent, APP_URL . '/?page=ewallet_transfer&per_page=' . per_page()) ?>
+        </div>
+      <?php endif; ?>
     </div>
   </div>
 </div>

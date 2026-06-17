@@ -126,10 +126,7 @@
           <?php endif; ?>
 
           <!-- Reactivation events -->
-          <?php
-          $reactivationHistory = Reactivation::getReactivationHistory($userId);
-          foreach ($reactivationHistory as $r):
-          ?>
+          <?php foreach ($reactivationHistory['data'] ?? [] as $r): ?>
           <div class="timeline-item">
             <div class="timeline-dot" style="background:#3b6ff0;"></div>
             <div class="timeline-content">
@@ -184,12 +181,12 @@
     <?php endif; ?>
 
     <!-- Reactivation History -->
-    <?php
-    $reactivationHistory = Reactivation::getReactivationHistory($userId);
-    if (!empty($reactivationHistory)):
-    ?>
+    <?php if (!empty($reactivationHistory['data'])): ?>
       <div class="card mb-4">
-        <div class="card-header"><span class="card-title">🔄 Reactivation History</span></div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="card-title">🔄 Reactivation History</span>
+          <?php require 'views/partials/rows_per_page.php'; ?>
+        </div>
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-hover mb-0" style="font-size:.85rem;">
@@ -202,7 +199,7 @@
                 </tr>
               </thead>
               <tbody>
-                <?php foreach ($reactivationHistory as $r): ?>
+                <?php foreach ($reactivationHistory['data'] as $r): ?>
                   <tr>
                     <td><?= fmt_datetime($r['created_at']) ?></td>
                     <td><?= fmt_money((float)$r['previous_earned']) ?></td>
@@ -214,6 +211,11 @@
             </table>
           </div>
         </div>
+        <?php if (!empty($reactivationHistory['total_pages']) && $reactivationHistory['total_pages'] > 1): ?>
+          <div class="card-footer">
+            <?= pagination_links($reactivationHistory, APP_URL . '/?page=cap_status&per_page=' . per_page()) ?>
+          </div>
+        <?php endif; ?>
       </div>
     <?php endif; ?>
 

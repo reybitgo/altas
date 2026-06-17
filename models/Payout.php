@@ -149,17 +149,17 @@ class Payout
         return $st->fetch() ?: null;
     }
 
-    public static function forUser(int $userId, int $page = 1): array
+    public static function forUser(int $userId, int $page = 1, int $perPage = 10): array
     {
         return paginate(
             "SELECT * FROM payout_requests WHERE user_id = ? ORDER BY requested_at DESC",
             [$userId],
             $page,
-            20
+            $perPage
         );
     }
 
-    public static function all(int $page = 1, string $status = ''): array
+    public static function all(int $page = 1, string $status = '', int $perPage = 10): array
     {
         $where  = '1=1';
         $params = [];
@@ -177,7 +177,7 @@ class Payout
              ORDER BY pr.requested_at DESC",
             $params,
             $page,
-            25
+            $perPage
         );
     }
 

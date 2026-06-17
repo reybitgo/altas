@@ -90,7 +90,7 @@ class Code
     /**
      * Paginated list for admin.
      */
-    public static function all(int $page = 1, string $status = '', int $pkgId = 0): array
+    public static function all(int $page = 1, string $status = '', int $pkgId = 0, int $perPage = 10): array
     {
         $where  = '1=1';
         $params = [];
@@ -113,7 +113,7 @@ class Code
              ORDER BY r.created_at DESC",
             $params,
             $page,
-            25
+            $perPage
         );
     }
 

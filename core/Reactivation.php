@@ -328,22 +328,25 @@ class Reactivation
     }
 
     /**
-     * Get reactivation history for a member.
+     * Get paginated reactivation history for a member.
      *
      * @param int $userId User ID
-     * @return array List of reactivation records
+     * @param int $page Page number
+     * @param int $perPage Items per page
+     * @return array Paginated reactivation records
      */
-    public static function getReactivationHistory(int $userId): array
+    public static function getReactivationHistory(int $userId, int $page = 1, int $perPage = 20): array
     {
-        $st = db()->prepare("
-            SELECT r.*, p.name AS package_name
-            FROM reactivations r
-            JOIN packages p ON p.id = r.package_id
-            WHERE r.user_id = ?
-            ORDER BY r.created_at DESC
-        ");
-        $st->execute([$userId]);
-        return $st->fetchAll();
+        return paginate(
+            "SELECT r.*, p.name AS package_name
+             FROM reactivations r
+             JOIN packages p ON p.id = r.package_id
+             WHERE r.user_id = ?
+             ORDER BY r.created_at DESC",
+            [$userId],
+            $page,
+            $perPage
+        );
     }
 
     // ── Admin Query Helpers (patterned after Payout.php) ────────────────────
@@ -368,7 +371,7 @@ class Reactivation
     /**
      * Get paginated reactivation records for admin.
      */
-    public static function all(int $page = 1, string $status = ''): array
+    public static function all(int $page = 1, string $status = '', int $perPage = 10): array
     {
         $where  = '1=1';
         $params = [];
@@ -386,7 +389,7 @@ class Reactivation
              ORDER BY r.created_at DESC",
             $params,
             $page,
-            25
+            $perPage
         );
     }
 

@@ -90,7 +90,7 @@
     <?php endif; ?>
 
     <div class="card">
-      <div class="card-header">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <ul class="nav nav-pills card-header-pills gap-1">
           <?php
           $filterTabs = ['' => 'All', ...($binaryEnabled ? ['pairing' => '🤝 Pairing'] : []), 'direct_referral' => '👥 Direct', ...(setting('indirect_referral_enabled', '1') === '1' ? ['indirect_referral' => '🔗 Indirect'] : []), 'daily_fixed_income' => '📅 DFI'];
@@ -101,6 +101,7 @@
             </li>
           <?php endforeach; ?>
         </ul>
+        <?php require 'views/partials/rows_per_page.php'; ?>
       </div>
       <div class="table-responsive">
         <table class="table table-hover mb-0">
@@ -150,7 +151,7 @@
         </table>
       </div>
       <?php if ($history['total_pages'] > 1): ?>
-        <div class="card-footer"><?= pagination_links($history, APP_URL . '/?page=earnings&type=' . urlencode($type)) ?></div>
+        <div class="card-footer"><?= pagination_links($history, APP_URL . '/?page=earnings&type=' . urlencode($type) . '&per_page=' . per_page()) ?></div>
       <?php endif; ?>
     </div>
   </div>

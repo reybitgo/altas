@@ -124,7 +124,7 @@
 
     <?php if ($tab === 'transfers'): ?>
     <div class="card">
-      <div class="card-header"><span class="card-title">💱 All Transfers</span></div>
+      <div class="card-header d-flex justify-content-between align-items-center"><span class="card-title">💱 All Transfers</span><?php require 'views/partials/rows_per_page.php'; ?></div>
       <div class="table-responsive">
         <table class="table table-hover mb-0" style="font-size:.85rem;">
           <thead>
@@ -138,9 +138,9 @@
             </tr>
           </thead>
           <tbody>
-            <?php if (empty($transfers)): ?>
+            <?php if (empty($transfers['data'])): ?>
               <tr><td colspan="6" class="text-center py-4 text-muted">No transfers yet.</td></tr>
-            <?php else: foreach ($transfers as $t): ?>
+            <?php else: foreach ($transfers['data'] as $t): ?>
               <tr>
                 <td style="font-size:.75rem;"><?= fmt_datetime($t['created_at']) ?></td>
                 <td><a href="<?= APP_URL ?>/?page=admin_user_view&id=<?= $t['sender_id'] ?>" class="text-decoration-none fw-semibold">@<?= e($t['sender_username']) ?></a></td>
@@ -153,11 +153,14 @@
           </tbody>
         </table>
       </div>
+      <?php if (!empty($transfers['total_pages']) && $transfers['total_pages'] > 1): ?>
+        <div class="card-footer"><?= pagination_links($transfers, APP_URL . '/?page=admin_ewallet_monitor&tab=transfers&per_page=' . per_page()) ?></div>
+      <?php endif; ?>
     </div>
 
     <?php elseif ($tab === 'topups'): ?>
     <div class="card">
-      <div class="card-header"><span class="card-title">💰 Admin Top-Ups</span></div>
+      <div class="card-header d-flex justify-content-between align-items-center"><span class="card-title">💰 Admin Top-Ups</span><?php require 'views/partials/rows_per_page.php'; ?></div>
       <div class="table-responsive">
         <table class="table table-hover mb-0" style="font-size:.85rem;">
           <thead>
@@ -170,9 +173,9 @@
             </tr>
           </thead>
           <tbody>
-            <?php if (empty($topups)): ?>
+            <?php if (empty($topups['data'])): ?>
               <tr><td colspan="5" class="text-center py-4 text-muted">No top-ups yet.</td></tr>
-            <?php else: foreach ($topups as $t): ?>
+            <?php else: foreach ($topups['data'] as $t): ?>
               <tr>
                 <td style="font-size:.75rem;"><?= fmt_datetime($t['created_at']) ?></td>
                 <td><a href="<?= APP_URL ?>/?page=admin_user_view&id=<?= $t['admin_id'] ?>" class="text-decoration-none fw-semibold">@<?= e($t['admin_username']) ?></a></td>
@@ -184,11 +187,14 @@
           </tbody>
         </table>
       </div>
+      <?php if (!empty($topups['total_pages']) && $topups['total_pages'] > 1): ?>
+        <div class="card-footer"><?= pagination_links($topups, APP_URL . '/?page=admin_ewallet_monitor&tab=topups&per_page=' . per_page()) ?></div>
+      <?php endif; ?>
     </div>
 
     <?php else: ?>
     <div class="card">
-      <div class="card-header"><span class="card-title">💸 Fee Credits to Admin</span></div>
+      <div class="card-header d-flex justify-content-between align-items-center"><span class="card-title">💸 Fee Credits to Admin</span><?php require 'views/partials/rows_per_page.php'; ?></div>
       <div class="table-responsive">
         <table class="table table-hover mb-0" style="font-size:.85rem;">
           <thead>
@@ -201,9 +207,9 @@
             </tr>
           </thead>
           <tbody>
-            <?php if (empty($fees)): ?>
+            <?php if (empty($fees['data'])): ?>
               <tr><td colspan="5" class="text-center py-4 text-muted">No fees collected yet.</td></tr>
-            <?php else: foreach ($fees as $f): ?>
+            <?php else: foreach ($fees['data'] as $f): ?>
               <tr>
                 <td style="font-size:.75rem;"><?= fmt_datetime($f['created_at']) ?></td>
                 <td><a href="<?= APP_URL ?>/?page=admin_user_view&id=<?= $f['sender_id'] ?>" class="text-decoration-none fw-semibold">@<?= e($f['sender_username']) ?></a></td>
@@ -215,6 +221,9 @@
           </tbody>
         </table>
       </div>
+      <?php if (!empty($fees['total_pages']) && $fees['total_pages'] > 1): ?>
+        <div class="card-footer"><?= pagination_links($fees, APP_URL . '/?page=admin_ewallet_monitor&tab=fees&per_page=' . per_page()) ?></div>
+      <?php endif; ?>
     </div>
     <?php endif; ?>
   </div>

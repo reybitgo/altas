@@ -123,6 +123,10 @@
 
     <h5 class="mb-3">Purchase History</h5>
     <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="card-title">🛒 Purchase History</span>
+        <?php require 'views/partials/rows_per_page.php'; ?>
+      </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
           <thead style="background:#f8fafc;">
@@ -176,16 +180,10 @@
       </div>
     </div>
 
-    <?php if (!empty($history['pages']) && $history['pages'] > 1): ?>
-      <nav class="mt-3">
-        <ul class="pagination justify-content-center">
-          <?php for ($i = 1; $i <= $history['pages']; $i++): ?>
-            <li class="page-item <?= $i === $history['page'] ? 'active' : '' ?>">
-              <a class="page-link" href="<?= APP_URL ?>/?page=repeat_purchases&pg=<?= $i ?>"><?= $i ?></a>
-            </li>
-          <?php endfor; ?>
-        </ul>
-      </nav>
+    <?php if (!empty($history['total_pages']) && $history['total_pages'] > 1): ?>
+      <div class="mt-3">
+        <?= pagination_links($history, APP_URL . '/?page=repeat_purchases&per_page=' . per_page()) ?>
+      </div>
     <?php endif; ?>
   </div>
 </div>

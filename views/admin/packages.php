@@ -26,8 +26,8 @@
 
     <!-- Stats Row -->
     <?php
-    $totalPkg = count($packages);
-    $activePkg = count(array_filter($packages, fn($p) => $p['status'] === 'active'));
+    $totalPkg  = $packages['total'] ?? 0;
+    $activePkg = count(array_filter(Package::all() ?: [], fn($p) => $p['status'] === 'active'));
     $binaryEnabled = setting('binary_enabled', '1') === '1';
     ?>
     <div class="row g-2 mb-3">
@@ -59,6 +59,10 @@
 
     <!-- Full-width Packages Table -->
     <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="card-title">📦 Packages</span>
+        <?php require 'views/partials/rows_per_page.php'; ?>
+      </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0" id="pkgTable">
           <thead style="background:#f8fafc;">
@@ -74,7 +78,7 @@
             </tr>
           </thead>
           <tbody>
-            <?php if (empty($packages)): ?>
+            <?php if (empty($packages['data'])): ?>
               <tr>
                 <td colspan="<?= $binaryEnabled ? '8' : '7' ?>" class="text-center py-5 text-muted">
                   <div style="font-size:2rem;opacity:.3;margin-bottom:.5rem;">📦</div>
@@ -83,7 +87,7 @@
                 </td>
               </tr>
             <?php else: ?>
-              <?php foreach ($packages as $pkg):
+              <?php foreach ($packages['data'] as $pkg):
                 $lifetimeCap = (float)$pkg['entry_fee'] * (float)$pkg['lifetime_cap_multiplier'];
                 $hasDfi      = Package::hasDfi((int)$pkg['id']);
                 $dfiAmount   = Package::dailyFixedIncome((int)$pkg['id']);
@@ -140,6 +144,9 @@
           </tbody>
         </table>
       </div>
+      <?php if (!empty($packages['total_pages']) && $packages['total_pages'] > 1): ?>
+        <div class="card-footer"><?= pagination_links($packages, APP_URL . '/?page=admin_packages&per_page=' . per_page()) ?></div>
+      <?php endif; ?>
     </div>
   </div>
 </div>

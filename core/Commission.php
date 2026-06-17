@@ -682,4 +682,21 @@ class Commission
             $perPage
         );
     }
+
+    /**
+     * Get paginated cap-blocked commission records for a user.
+     */
+    public static function capBlockedHistory(int $userId, int $page = 1, int $perPage = 20): array
+    {
+        return paginate(
+            "SELECT c.*, u.username AS source_username
+             FROM commissions c
+             LEFT JOIN users u ON u.id = c.source_user_id
+             WHERE c.user_id = ? AND c.cap_deduction > 0
+             ORDER BY c.created_at DESC",
+            [$userId],
+            $page,
+            $perPage
+        );
+    }
 }

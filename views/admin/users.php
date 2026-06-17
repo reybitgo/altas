@@ -28,8 +28,8 @@
     </div>
 
     <div class="card">
-      <div class="card-header">
-        <form method="GET" action="<?= APP_URL ?>/" class="row g-2 align-items-end mb-0">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <form method="GET" action="<?= APP_URL ?>/" class="row g-2 align-items-end mb-0 flex-grow-1">
           <input type="hidden" name="page" value="admin_users">
           <div class="col-12 col-md-5"><input type="text" name="q" value="<?= e($search) ?>" class="form-control form-control-sm" placeholder="🔍 Search username, name, email…"></div>
           <div class="col-6 col-md-2">
@@ -49,6 +49,7 @@
             <?php if ($search || $status || $pkgId): ?><a href="<?= APP_URL ?>/?page=admin_users" class="btn btn-outline-secondary btn-sm">✕ Clear</a><?php endif; ?>
           </div>
         </form>
+        <?php require 'views/partials/rows_per_page.php'; ?>
       </div>
       <div class="table-responsive">
         <table class="table table-hover mb-0">
@@ -109,12 +110,14 @@
                     </div>
                   </td>
                 </tr>
-                <?php if ($result['total_pages'] > 1): ?><div class="card-footer"><?= pagination_links($result, APP_URL . '/?page=admin_users&q=' . urlencode($search) . '&status=' . $status . '&pkg=' . $pkgId) ?></div><?php endif; ?>
             <?php endforeach;
             endif; ?>
           </tbody>
         </table>
       </div>
+      <?php if ($result['total_pages'] > 1): ?>
+        <div class="card-footer"><?= pagination_links($result, APP_URL . '/?page=admin_users&q=' . urlencode($search) . '&status=' . $status . '&pkg=' . $pkgId . '&per_page=' . per_page()) ?></div>
+      <?php endif; ?>
     </div>
   </div>
 </div>

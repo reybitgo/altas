@@ -187,7 +187,10 @@ $jsHints['usdt_bep20'] = 'USDT will be sent to this BEP20 wallet address (Binanc
     </div>
 
     <div class="card">
-      <div class="card-header"><span class="card-title">📋 Payout History</span></div>
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="card-title">📋 Payout History</span>
+        <?php require 'views/partials/rows_per_page.php'; ?>
+      </div>
       <div class="table-responsive">
         <table class="table table-hover mb-0">
           <thead>
@@ -271,7 +274,7 @@ $jsHints['usdt_bep20'] = 'USDT will be sent to this BEP20 wallet address (Binanc
         </table>
       </div>
       <?php if ($history['total_pages'] > 1): ?>
-        <div class="card-footer"><?= pagination_links($history, APP_URL . '/?page=payout') ?></div>
+        <div class="card-footer"><?= pagination_links($history, APP_URL . '/?page=payout&per_page=' . per_page()) ?></div>
       <?php endif; ?>
     </div>
   </div>

@@ -23,6 +23,11 @@ class Product
         return db()->query($sql)->fetchAll();
     }
 
+    public static function allPaginated(int $page = 1, int $perPage = 25): array
+    {
+        return paginate('SELECT * FROM products ORDER BY name ASC', [], $page, $perPage);
+    }
+
     public static function active(): array
     {
         return self::all(true);

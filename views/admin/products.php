@@ -47,6 +47,10 @@
     </div>
 
     <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="card-title">🛍️ Products</span>
+        <?php require 'views/partials/rows_per_page.php'; ?>
+      </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
           <thead style="background:#f8fafc;">
@@ -60,7 +64,7 @@
             </tr>
           </thead>
           <tbody>
-            <?php if (empty($products)): ?>
+            <?php if (empty($products['data'])): ?>
               <tr>
                 <td colspan="6" class="text-center py-5 text-muted">
                   <div style="font-size:2rem;opacity:.3;margin-bottom:.5rem;">🛍️</div>
@@ -68,7 +72,7 @@
                 </td>
               </tr>
             <?php else: ?>
-              <?php foreach ($products as $p): ?>
+              <?php foreach ($products['data'] as $p): ?>
                 <tr>
                   <td style="padding-left:1.25rem;">
                     <?php if (!empty($p['image_url'])): ?>
@@ -106,6 +110,9 @@
           </tbody>
         </table>
       </div>
+      <?php if (!empty($products['total_pages']) && $products['total_pages'] > 1): ?>
+        <div class="card-footer"><?= pagination_links($products, APP_URL . '/?page=admin_products&per_page=' . per_page()) ?></div>
+      <?php endif; ?>
     </div>
   </div>
 </div>

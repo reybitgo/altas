@@ -292,7 +292,17 @@ function setting(string $key, string $default = ''): string
 
 // ── Pagination ────────────────────────────────────────────────────────────────
 
-function paginate(string $query, array $params, int $page, int $perPage = 20): array
+/**
+ * Current rows-per-page value from the query string.
+ * Defaults to 10 and is never lower than 5.
+ */
+function per_page(int $default = 10, int $min = 5): int
+{
+    $val = (int)($_GET['per_page'] ?? $default);
+    return max($min, $val);
+}
+
+function paginate(string $query, array $params, int $page, int $perPage = 10): array
 {
     $pdo = db();
 
@@ -398,19 +408,113 @@ function delete_uploaded_file(?string $relativePath): void
 }
 
 /**
- * Render pagination links as HTML.
+ * Render Bootstrap 5 pagination links.
+ * Includes First/Prev, numbered pages with ellipsis, and Next/Last controls.
  */
 function pagination_links(array $p, string $baseUrl): string
 {
-    if ($p['total_pages'] <= 1) return '';
-    $html = '<div class="pagination">';
-    if ($p['has_prev']) {
-        $html .= '<a href="' . $baseUrl . '&pg=' . ($p['page'] - 1) . '" class="page-btn">‹ Prev</a>';
+    $totalPages = (int) ($p['total_pages'] ?? 1);
+    $page       = (int) ($p['page'] ?? 1);
+    if ($totalPages <= 1) {
+        return '';
     }
-    $html .= '<span class="page-info">Page ' . $p['page'] . ' of ' . $p['total_pages'] . '</span>';
-    if ($p['has_next']) {
-        $html .= '<a href="' . $baseUrl . '&pg=' . ($p['page'] + 1) . '" class="page-btn">Next ›</a>';
+
+    $pages = _pagination_page_range($page, $totalPages);
+
+    $html  = '<nav aria-label="Page navigation">';
+    $html .= '<ul class="pagination pagination-sm justify-content-center mb-0 flex-wrap">';
+
+    // First
+    $firstDisabled = $page <= 1 ? ' disabled' : '';
+    $firstHref     = $page <= 1 ? '' : ' href="' . $baseUrl . '&pg=1"';
+    $html .= '<li class="page-item' . $firstDisabled . '">';
+    if ($page <= 1) {
+        $html .= '<span class="page-link" aria-label="First" aria-disabled="true"><span aria-hidden="true">&laquo;</span></span>';
+    } else {
+        $html .= '<a class="page-link"' . $firstHref . ' aria-label="First"><span aria-hidden="true">&laquo;</span></a>';
     }
-    $html .= '</div>';
+    $html .= '</li>';
+
+    // Previous
+    $prevDisabled = $page <= 1 ? ' disabled' : '';
+    $prevHref     = $page <= 1 ? '' : ' href="' . $baseUrl . '&pg=' . ($page - 1) . '"';
+    $html .= '<li class="page-item' . $prevDisabled . '">';
+    if ($page <= 1) {
+        $html .= '<span class="page-link" aria-label="Previous" aria-disabled="true"><span aria-hidden="true">&lsaquo;</span></span>';
+    } else {
+        $html .= '<a class="page-link"' . $prevHref . ' aria-label="Previous"><span aria-hidden="true">&lsaquo;</span></a>';
+    }
+    $html .= '</li>';
+
+    // Page numbers + ellipsis
+    $lastShown = 0;
+    foreach ($pages as $i) {
+        if ($i - $lastShown > 1) {
+            $html .= '<li class="page-item disabled"><span class="page-link" aria-disabled="true">&hellip;</span></li>';
+        }
+        if ($i === $page) {
+            $html .= '<li class="page-item active" aria-current="page"><span class="page-link">' . $i . '</span></li>';
+        } else {
+            $html .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '&pg=' . $i . '">' . $i . '</a></li>';
+        }
+        $lastShown = $i;
+    }
+
+    // Next
+    $nextDisabled = $page >= $totalPages ? ' disabled' : '';
+    $nextHref     = $page >= $totalPages ? '' : ' href="' . $baseUrl . '&pg=' . ($page + 1) . '"';
+    $html .= '<li class="page-item' . $nextDisabled . '">';
+    if ($page >= $totalPages) {
+        $html .= '<span class="page-link" aria-label="Next" aria-disabled="true"><span aria-hidden="true">&rsaquo;</span></span>';
+    } else {
+        $html .= '<a class="page-link"' . $nextHref . ' aria-label="Next"><span aria-hidden="true">&rsaquo;</span></a>';
+    }
+    $html .= '</li>';
+
+    // Last
+    $lastDisabled = $page >= $totalPages ? ' disabled' : '';
+    $lastHref     = $page >= $totalPages ? '' : ' href="' . $baseUrl . '&pg=' . $totalPages . '"';
+    $html .= '<li class="page-item' . $lastDisabled . '">';
+    if ($page >= $totalPages) {
+        $html .= '<span class="page-link" aria-label="Last" aria-disabled="true"><span aria-hidden="true">&raquo;</span></span>';
+    } else {
+        $html .= '<a class="page-link"' . $lastHref . ' aria-label="Last"><span aria-hidden="true">&raquo;</span></a>';
+    }
+    $html .= '</li>';
+
+    $html .= '</ul></nav>';
     return $html;
+}
+
+/**
+ * Build a compact page-number range for pagination_links().
+ */
+function _pagination_page_range(int $current, int $total): array
+{
+    if ($total <= 7) {
+        return range(1, $total);
+    }
+
+    $pages = [1, 2];
+
+    $start = max(3, $current - 1);
+    $end   = min($total - 2, $current + 1);
+
+    for ($i = $start; $i <= $end; $i++) {
+        $pages[] = $i;
+    }
+
+    $pages[] = $total - 1;
+    $pages[] = $total;
+
+    // Remove duplicates while preserving order
+    $seen = [];
+    $out  = [];
+    foreach ($pages as $i) {
+        if (!isset($seen[$i])) {
+            $out[] = $i;
+            $seen[$i] = true;
+        }
+    }
+    return $out;
 }

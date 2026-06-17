@@ -123,11 +123,14 @@
 
     <!-- Codes table -->
     <div class="card no-print">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span class="card-title">🎟️ Code List</span>
-        <?php if ($status || $pkgId): ?>
-          <a href="<?= APP_URL ?>/?page=admin_codes" class="btn btn-sm btn-outline-secondary">✕ Clear filter</a>
-        <?php endif; ?>
+        <div class="d-flex align-items-center gap-2">
+          <?php if ($status || $pkgId): ?>
+            <a href="<?= APP_URL ?>/?page=admin_codes" class="btn btn-sm btn-outline-secondary">✕ Clear filter</a>
+          <?php endif; ?>
+          <?php require 'views/partials/rows_per_page.php'; ?>
+        </div>
       </div>
       <div class="table-responsive">
         <table class="table table-hover mb-0">
@@ -191,7 +194,7 @@
         </table>
       </div>
       <?php if ($codes['total_pages'] > 1): ?>
-        <div class="card-footer"><?= pagination_links($codes, APP_URL . '/?page=admin_codes&status=' . urlencode($status ?? '') . '&pkg=' . ($pkgId ?? 0)) ?></div>
+        <div class="card-footer"><?= pagination_links($codes, APP_URL . '/?page=admin_codes&status=' . urlencode($status ?? '') . '&pkg=' . ($pkgId ?? 0) . '&per_page=' . per_page()) ?></div>
       <?php endif; ?>
     </div>
 

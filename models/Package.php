@@ -21,6 +21,11 @@ class Package
         return db()->query($sql)->fetchAll();
     }
 
+    public static function allPaginated(int $page = 1, int $perPage = 25): array
+    {
+        return paginate('SELECT * FROM packages ORDER BY entry_fee ASC', [], $page, $perPage);
+    }
+
     /**
      * Return the Phase-4 indirect-referral percentages (pv_pct) per level.
      * Legacy fixed-peso `bonus` column is no longer used by the engine.

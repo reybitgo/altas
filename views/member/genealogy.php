@@ -365,9 +365,12 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
     <?php else: ?>
       <!-- Indirect disabled — show direct referrals table instead -->
       <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
           <span class="card-title">👥 Direct Referrals</span>
-          <span class="badge bg-secondary-subtle text-secondary"><?= $direct['total'] ?? 0 ?> members</span>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-secondary-subtle text-secondary"><?= $direct['total'] ?? 0 ?> members</span>
+            <?php require 'views/partials/rows_per_page.php'; ?>
+          </div>
         </div>
         <div class="table-responsive">
           <table class="table table-hover mb-0">
@@ -405,7 +408,7 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
           </table>
         </div>
         <?php if (($direct['total_pages'] ?? 1) > 1): ?>
-          <div class="card-footer"><?= pagination_links($direct, APP_URL . '/?page=genealogy&view=referral') ?></div>
+          <div class="card-footer"><?= pagination_links($direct, APP_URL . '/?page=genealogy&view=referral&per_page=' . per_page()) ?></div>
         <?php endif; ?>
       </div>
     <?php endif; ?>

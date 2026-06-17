@@ -32,11 +32,12 @@ class AdminController
     {
         Auth::guard('admin');
         $page     = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage  = per_page();
         $search   = trim($_GET['q']      ?? '');
         $status   = $_GET['status']      ?? '';
         $pkgId    = (int)($_GET['pkg']   ?? 0);
         $packages = Package::all();
-        $result   = User::allMembers($page, $search, $status, $pkgId);
+        $result   = User::allMembers($page, $search, $status, $pkgId, $perPage);
         require 'views/admin/users.php';
     }
 
@@ -51,9 +52,10 @@ class AdminController
         }
 
         $summary  = Commission::summary($id);
-        $payouts  = Payout::forUser($id);
-        $commHist = Commission::history($id, 1, 20);
-        $ledger   = Ewallet::ledger($id, 1);
+        $perPage  = per_page();
+        $payouts  = Payout::forUser($id, max(1, (int)($_GET['pg_payout'] ?? 1)), $perPage);
+        $commHist = Commission::history($id, max(1, (int)($_GET['pg_comm'] ?? 1)), $perPage);
+        $ledger   = Ewallet::ledger($id, max(1, (int)($_GET['pg_ledger'] ?? 1)), $perPage);
         $pairingStatus = User::todayPairingStatus($id);
         $cdStatus = CdStatus::getActive($id);
         $cdHistory = CdStatus::history($id);
@@ -61,21 +63,11 @@ class AdminController
         // v2: Cap & DFI data for admin user view tab
         $capStatus = User::getCapStatus($id);
         $dfiStatus = DailyFixedIncome::getMemberDFIStatus($id);
-        $reactivationHistory = Reactivation::getReactivationHistory($id);
-        $capBlocked = db()->prepare("SELECT c.*, u.username AS source_username FROM commissions c LEFT JOIN users u ON u.id = c.source_user_id WHERE c.user_id = ? AND c.cap_deduction > 0 ORDER BY c.created_at DESC LIMIT 20");
-        $capBlocked->execute([$id]);
+        $reactivationHistory = Reactivation::getReactivationHistory($id, max(1, (int)($_GET['pg_react'] ?? 1)), $perPage);
+        $capBlocked = Commission::capBlockedHistory($id, max(1, (int)($_GET['pg_cap'] ?? 1)), $perPage);
 
         // Transfer history for e-wallet tab
-        $transferHistory = db()->prepare("
-            SELECT t.*, su.username AS sender_username, ru.username AS recipient_username
-            FROM ewallet_transfers t
-            JOIN users su ON su.id = t.sender_id
-            JOIN users ru ON ru.id = t.recipient_id
-            WHERE t.sender_id = ? OR t.recipient_id = ?
-            ORDER BY t.created_at DESC
-            LIMIT 50
-        ");
-        $transferHistory->execute([$id, $id]);
+        $transferHistory = Ewallet::userTransferHistory($id, max(1, (int)($_GET['pg_transfer'] ?? 1)), $perPage);
 
         require 'views/admin/user_view.php';
     }
@@ -190,7 +182,9 @@ class AdminController
     public function packages(): void
     {
         Auth::guard('admin');
-        $packages = Package::all();
+        $page     = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage  = per_page();
+        $packages = Package::allPaginated($page, $perPage);
         $editPkg  = null;
         if (isset($_GET['edit'])) {
             $editPkg = Package::withLevels((int)$_GET['edit']);
@@ -310,7 +304,9 @@ class AdminController
     public function products(): void
     {
         Auth::guard('admin');
-        $products = Product::all();
+        $page        = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage     = per_page();
+        $products    = Product::allPaginated($page, $perPage);
         $editProduct = null;
         if (isset($_GET['edit'])) {
             $editProduct = Product::find((int)$_GET['edit']);
@@ -400,11 +396,12 @@ class AdminController
     public function repeatPurchases(): void
     {
         Auth::guard('admin');
-        $status = $_GET['status'] ?? 'pending';
-        $page   = max(1, (int)($_GET['pg'] ?? 1));
-        $result = $status === 'pending'
-            ? RepeatPurchase::pending($page, 25)
-            : RepeatPurchase::all($page, 25);
+        $status  = $_GET['status'] ?? 'pending';
+        $page    = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage = per_page();
+        $result  = $status === 'pending'
+            ? RepeatPurchase::pending($page, $perPage)
+            : RepeatPurchase::all($page, $perPage);
         require 'views/admin/repeat_purchases.php';
     }
 
@@ -442,10 +439,11 @@ class AdminController
     {
         Auth::guard('admin');
         $page     = max(1, (int)($_GET['pg']  ?? 1));
+        $perPage  = per_page();
         $status   = $_GET['status']            ?? '';
         $pkgId    = (int)($_GET['pkg']         ?? 0);
         $packages = Package::all(true);
-        $codes    = Code::all($page, $status, $pkgId);
+        $codes    = Code::all($page, $status, $pkgId, $perPage);
         $stats    = Code::stats();
         require 'views/admin/codes.php';
     }
@@ -484,9 +482,10 @@ class AdminController
     public function payouts(): void
     {
         Auth::guard('admin');
-        $page   = max(1, (int)($_GET['pg']     ?? 1));
-        $status = $_GET['status']               ?? 'pending';
-        $result = Payout::all($page, $status);
+        $page    = max(1, (int)($_GET['pg']     ?? 1));
+        $perPage = per_page();
+        $status  = $_GET['status']               ?? 'pending';
+        $result  = Payout::all($page, $status, $perPage);
         require 'views/admin/payouts.php';
     }
 
@@ -650,8 +649,9 @@ class AdminController
             'perminact' => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role='member' AND cap_status='perminact'")->fetchColumn(),
         ];
 
-        $page   = max(1, (int)($_GET['pg'] ?? 1));
-        $status = $_GET['status'] ?? '';
+        $page    = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage = per_page();
+        $status  = $_GET['status'] ?? '';
 
         $where = "u.role='member'";
         $params = [];
@@ -669,7 +669,7 @@ class AdminController
              ORDER BY u.cap_status DESC, u.lifetime_earned DESC",
             $params,
             $page,
-            25
+            $perPage
         );
 
         require 'views/admin/cap_monitor.php';
@@ -758,9 +758,10 @@ class AdminController
     public function reactivations(): void
     {
         Auth::guard('admin');
-        $page   = max(1, (int)($_GET['pg'] ?? 1));
-        $status = $_GET['status'] ?? '';
-        $result = Reactivation::all($page, $status);
+        $page    = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage = per_page();
+        $status  = $_GET['status'] ?? '';
+        $result  = Reactivation::all($page, $status, $perPage);
 
         $totalRevenue = Reactivation::completedTotal();
         $pendingTotal = Reactivation::pendingTotal();
@@ -839,37 +840,13 @@ class AdminController
         Auth::guard('admin');
         $pdo = db();
 
-        $transfers = $pdo->query("
-            SELECT t.*, su.username AS sender_username, ru.username AS recipient_username
-            FROM ewallet_transfers t
-            JOIN users su ON su.id = t.sender_id
-            JOIN users ru ON ru.id = t.recipient_id
-            ORDER BY t.created_at DESC
-            LIMIT 200
-        ")->fetchAll();
+        $tab     = $_GET['tab'] ?? 'transfers';
+        $page    = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage = per_page();
 
-        $topups = $pdo->query("
-            SELECT tu.*, au.username AS admin_username, ru.username AS recipient_username
-            FROM ewallet_admin_topups tu
-            JOIN users au ON au.id = tu.admin_id
-            JOIN users ru ON ru.id = tu.recipient_id
-            ORDER BY tu.created_at DESC
-            LIMIT 200
-        ")->fetchAll();
-
-        // Fee credits to admin from ewallet_ledger
-        $fees = $pdo->query("
-            SELECT l.*, t.sender_id, t.recipient_id,
-                   su.username AS sender_username, ru.username AS recipient_username
-            FROM ewallet_ledger l
-            JOIN ewallet_transfers t ON t.id = l.reference_id
-            JOIN users su ON su.id = t.sender_id
-            JOIN users ru ON ru.id = t.recipient_id
-            WHERE l.ref_type = 'transfer' AND l.type = 'credit'
-              AND l.note LIKE '%fee%'
-            ORDER BY l.created_at DESC
-            LIMIT 200
-        ")->fetchAll();
+        $transfers = Ewallet::transferHistory($tab === 'transfers' ? $page : 1, $perPage);
+        $topups    = Ewallet::topUpHistory($tab === 'topups' ? $page : 1, $perPage);
+        $fees      = Ewallet::feeLedger($tab === 'fees' ? $page : 1, $perPage);
 
         $stats = [
             'total_transfers' => (float) $pdo->query("SELECT COALESCE(SUM(amount),0) FROM ewallet_transfers WHERE status='completed'")->fetchColumn(),

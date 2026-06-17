@@ -354,4 +354,77 @@ class Ewallet
             return ['ok' => false, 'error' => 'Top-up failed.', 'topup_id' => null];
         }
     }
+
+    /**
+     * Get paginated global transfer history (admin monitor).
+     */
+    public static function transferHistory(int $page = 1, int $perPage = 25): array
+    {
+        return paginate(
+            "SELECT t.*, su.username AS sender_username, ru.username AS recipient_username
+             FROM ewallet_transfers t
+             JOIN users su ON su.id = t.sender_id
+             JOIN users ru ON ru.id = t.recipient_id
+             ORDER BY t.created_at DESC",
+            [],
+            $page,
+            $perPage
+        );
+    }
+
+    /**
+     * Get paginated global admin top-up history (admin monitor).
+     */
+    public static function topUpHistory(int $page = 1, int $perPage = 25): array
+    {
+        return paginate(
+            "SELECT tu.*, au.username AS admin_username, ru.username AS recipient_username
+             FROM ewallet_admin_topups tu
+             JOIN users au ON au.id = tu.admin_id
+             JOIN users ru ON ru.id = tu.recipient_id
+             ORDER BY tu.created_at DESC",
+            [],
+            $page,
+            $perPage
+        );
+    }
+
+    /**
+     * Get paginated global fee-credit ledger entries (admin monitor).
+     */
+    public static function feeLedger(int $page = 1, int $perPage = 25): array
+    {
+        return paginate(
+            "SELECT l.*, u.username, t.sender_id, t.recipient_id,
+                    su.username AS sender_username, ru.username AS recipient_username
+             FROM ewallet_ledger l
+             JOIN users u ON u.id = l.user_id
+             JOIN ewallet_transfers t ON t.id = l.reference_id
+             JOIN users su ON su.id = t.sender_id
+             JOIN users ru ON ru.id = t.recipient_id
+             WHERE l.ref_type = 'transfer' AND l.type = 'credit' AND l.note LIKE '%Transfer fee%'
+             ORDER BY l.created_at DESC",
+            [],
+            $page,
+            $perPage
+        );
+    }
+
+    /**
+     * Get paginated transfer history for a specific user (member/admin user view).
+     */
+    public static function userTransferHistory(int $userId, int $page = 1, int $perPage = 20): array
+    {
+        return paginate(
+            "SELECT t.*, su.username AS sender_username, ru.username AS recipient_username
+             FROM ewallet_transfers t
+             JOIN users su ON su.id = t.sender_id
+             JOIN users ru ON ru.id = t.recipient_id
+             WHERE t.sender_id = ? OR t.recipient_id = ?
+             ORDER BY t.created_at DESC",
+            [$userId, $userId],
+            $page,
+            $perPage
+        );
+    }
 }

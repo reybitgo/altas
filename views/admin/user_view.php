@@ -315,13 +315,15 @@
 
     <!-- Tabs -->
     <?php $tab = $_GET['tab'] ?? 'commissions'; ?>
+    <?php $baseUserUrl = APP_URL . '/?page=admin_user_view&id=' . (int)$user['id']; ?>
     <div class="card">
-      <div class="card-header">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <ul class="nav nav-pills card-header-pills gap-1">
           <?php foreach (['commissions' => '💰 Commissions', 'ledger' => '📒 E-Wallet Ledger', 'payouts' => '💳 Payouts', 'cap_dfi' => '🛡️ Cap & DFI', 'ewallet' => '💱 Transfers'] as $t => $label): ?>
             <li class="nav-item"><a class="nav-link <?= $tab === $t ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=admin_user_view&id=<?= $user['id'] ?>&tab=<?= $t ?>"><?= $label ?></a></li>
           <?php endforeach; ?>
         </ul>
+        <?php require 'views/partials/rows_per_page.php'; ?>
       </div>
 
       <?php if ($tab === 'commissions'): ?>
@@ -362,6 +364,11 @@
             </tbody>
           </table>
         </div>
+        <?php if (($commHist['total_pages'] ?? 1) > 1): ?>
+          <div class="card-footer bg-transparent border-top-0">
+            <?= pagination_links($commHist, $baseUserUrl . '&tab=commissions&per_page=' . per_page()) ?>
+          </div>
+        <?php endif; ?>
 
       <?php elseif ($tab === 'ledger'): ?>
         <div class="table-responsive">
@@ -392,6 +399,11 @@
             </tbody>
           </table>
         </div>
+        <?php if (($ledger['total_pages'] ?? 1) > 1): ?>
+          <div class="card-footer bg-transparent border-top-0">
+            <?= pagination_links($ledger, $baseUserUrl . '&tab=ledger&per_page=' . per_page()) ?>
+          </div>
+        <?php endif; ?>
 
       <?php elseif ($tab === 'cap_dfi'): ?>
         <div class="card-body">
@@ -457,7 +469,7 @@
           </div>
 
           <!-- Reactivation History -->
-          <?php if (!empty($reactivationHistory)): ?>
+          <?php if (!empty($reactivationHistory['data'])): ?>
             <div class="card mb-4">
               <div class="card-header"><span class="card-title">🔄 Reactivation History</span></div>
               <div class="table-responsive">
@@ -466,7 +478,7 @@
                     <tr><th>Date</th><th>Previous Earned</th><th>Fee Paid</th><th>Method</th><th>Status</th></tr>
                   </thead>
                   <tbody>
-                    <?php foreach ($reactivationHistory as $r): ?>
+                    <?php foreach ($reactivationHistory['data'] as $r): ?>
                       <tr>
                         <td><?= fmt_datetime($r['created_at']) ?></td>
                         <td><?= fmt_money((float)$r['previous_earned']) ?></td>
@@ -478,6 +490,11 @@
                   </tbody>
                 </table>
               </div>
+              <?php if (($reactivationHistory['total_pages'] ?? 1) > 1): ?>
+                <div class="card-footer bg-transparent border-top-0">
+                  <?= pagination_links($reactivationHistory, $baseUserUrl . '&tab=cap_dfi&per_page=' . per_page()) ?>
+                </div>
+              <?php endif; ?>
             </div>
           <?php endif; ?>
 
@@ -490,9 +507,9 @@
                   <tr><th>Date</th><th>Type</th><th>Description</th><th>Credited</th><th>Blocked</th></tr>
                 </thead>
                 <tbody>
-                  <?php $blockedRows = $capBlocked->fetchAll(); if (empty($blockedRows)): ?>
+                  <?php if (empty($capBlocked['data'])): ?>
                     <tr><td colspan="5" class="text-center py-4 text-muted">No cap-blocked commissions.</td></tr>
-                  <?php else: foreach ($blockedRows as $c):
+                  <?php else: foreach ($capBlocked['data'] as $c):
                     $tn = match ($c['type']) {
                       'pairing' => '🤝 Pairing',
                       'direct_referral' => '👥 Direct',
@@ -512,6 +529,11 @@
                 </tbody>
               </table>
             </div>
+            <?php if (($capBlocked['total_pages'] ?? 1) > 1): ?>
+              <div class="card-footer bg-transparent border-top-0">
+                <?= pagination_links($capBlocked, $baseUserUrl . '&tab=cap_dfi&per_page=' . per_page()) ?>
+              </div>
+            <?php endif; ?>
           </div>
         </div>
 
@@ -526,14 +548,9 @@
                   <tr><th>Date</th><th>Direction</th><th>Counterparty</th><th>Amount</th><th>Fee</th><th>Note</th></tr>
                 </thead>
                 <tbody>
-                  <?php
-                  $transferRows = [];
-                  if (!empty($transferHistory)) {
-                      $transferRows = $transferHistory;
-                  }
-                  if (empty($transferRows)): ?>
+                  <?php if (empty($transferHistory['data'])): ?>
                     <tr><td colspan="6" class="text-center py-4 text-muted">No transfer history.</td></tr>
-                  <?php else: foreach ($transferRows as $t): ?>
+                  <?php else: foreach ($transferHistory['data'] as $t): ?>
                     <tr>
                       <td style="font-size:.75rem;"><?= fmt_datetime($t['created_at']) ?></td>
                       <td>
@@ -558,6 +575,11 @@
                 </tbody>
               </table>
             </div>
+            <?php if (($transferHistory['total_pages'] ?? 1) > 1): ?>
+              <div class="card-footer bg-transparent border-top-0">
+                <?= pagination_links($transferHistory, $baseUserUrl . '&tab=ewallet&per_page=' . per_page()) ?>
+              </div>
+            <?php endif; ?>
           </div>
         </div>
 
@@ -598,6 +620,11 @@
             </tbody>
           </table>
         </div>
+        <?php if (($payouts['total_pages'] ?? 1) > 1): ?>
+          <div class="card-footer bg-transparent border-top-0">
+            <?= pagination_links($payouts, $baseUserUrl . '&tab=payouts&per_page=' . per_page()) ?>
+          </div>
+        <?php endif; ?>
       <?php endif; ?>
     </div>
   </div>

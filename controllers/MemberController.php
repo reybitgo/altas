@@ -113,8 +113,9 @@ class MemberController
         $userId  = Auth::id();
         $type    = $_GET['type'] ?? '';
         $page    = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage = per_page();
         $summary = Commission::summary($userId);
-        $history = Commission::history($userId, $page, 20, $type);
+        $history = Commission::history($userId, $page, $perPage, $type);
         $cdStatus = CdStatus::getActive($userId);
         $cdHistory = CdStatus::history($userId);
         $cdLedger = [];
@@ -136,10 +137,11 @@ class MemberController
     public function repeatPurchases(): void
     {
         Auth::guard('member');
-        $user   = Auth::user();
-        $page   = max(1, (int)($_GET['pg'] ?? 1));
+        $user    = Auth::user();
+        $page    = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage = per_page();
         $products = Product::active();
-        $history  = RepeatPurchase::forMember($user['id'], $page, 20);
+        $history  = RepeatPurchase::forMember($user['id'], $page, $perPage);
         require 'views/member/repeat_purchases.php';
     }
 
@@ -178,8 +180,9 @@ class MemberController
             if (setting('indirect_referral_enabled', '1') === '1') {
                 $indirect = User::indirectReferralTree($user['id']);
             } else {
-                $page   = max(1, (int)($_GET['pg'] ?? 1));
-                $direct = User::directReferrals($user['id'], $page);
+                $page    = max(1, (int)($_GET['pg'] ?? 1));
+                $perPage = per_page();
+                $direct  = User::directReferrals($user['id'], $page, $perPage);
             }
         }
         require 'views/member/genealogy.php';
@@ -248,7 +251,9 @@ class MemberController
         Auth::guard('member');
         $userId  = Auth::id();
         $user    = Auth::user();
-        $history = Payout::forUser($userId);
+        $page    = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage = per_page();
+        $history = Payout::forUser($userId, $page, $perPage);
         require 'views/member/payout.php';
     }
 
@@ -303,7 +308,8 @@ class MemberController
         Auth::guard('member');
         $userId  = Auth::id();
         $page    = max(1, (int)($_GET['pg'] ?? 1));
-        $history = DailyFixedIncome::getDFIHistory($userId, $page);
+        $perPage = per_page();
+        $history = DailyFixedIncome::getDFIHistory($userId, $page, $perPage);
         $status  = DailyFixedIncome::getMemberDFIStatus($userId);
 
         // Fetch all DFI records for calendar view (grouped by date)
@@ -341,6 +347,9 @@ class MemberController
         $capStatus = User::getCapStatus($userId);
         $summary   = Commission::summary($userId);
         $user      = User::find($userId);
+        $page      = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage   = per_page();
+        $reactivationHistory = Reactivation::getReactivationHistory($userId, $page, $perPage);
         require 'views/member/cap_status.php';
     }
 
@@ -589,17 +598,9 @@ class MemberController
         $dailyLimit  = (float) setting('ewallet_transfer_daily_limit', '5000.00');
         $weeklyLimit = (float) setting('ewallet_transfer_weekly_limit', '20000.00');
 
-        $pdo = db();
-        $recent = $pdo->prepare("
-            SELECT t.*, su.username AS sender_username, ru.username AS recipient_username
-            FROM ewallet_transfers t
-            JOIN users su ON su.id = t.sender_id
-            JOIN users ru ON ru.id = t.recipient_id
-            WHERE t.sender_id = ? OR t.recipient_id = ?
-            ORDER BY t.created_at DESC
-            LIMIT 20
-        ");
-        $recent->execute([$user['id'], $user['id']]);
+        $page    = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage = per_page();
+        $recent  = Ewallet::userTransferHistory($user['id'], $page, $perPage);
 
         require 'views/member/ewallet_transfer.php';
     }

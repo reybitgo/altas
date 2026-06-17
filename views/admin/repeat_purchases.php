@@ -41,6 +41,10 @@
     </div>
 
     <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="card-title">🛒 Repeat Purchases</span>
+        <?php require 'views/partials/rows_per_page.php'; ?>
+      </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
           <thead style="background:#f8fafc;">
@@ -119,16 +123,10 @@
       </div>
     </div>
 
-    <?php if (!empty($result['pages']) && $result['pages'] > 1): ?>
-      <nav class="mt-3">
-        <ul class="pagination justify-content-center">
-          <?php for ($i = 1; $i <= $result['pages']; $i++): ?>
-            <li class="page-item <?= $i === $result['page'] ? 'active' : '' ?>">
-              <a class="page-link" href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=<?= e($status) ?>&pg=<?= $i ?>"><?= $i ?></a>
-            </li>
-          <?php endfor; ?>
-        </ul>
-      </nav>
+    <?php if (!empty($result['total_pages']) && $result['total_pages'] > 1): ?>
+      <div class="mt-3">
+        <?= pagination_links($result, APP_URL . '/?page=admin_repeat_purchases&status=' . e($status) . '&per_page=' . per_page()) ?>
+      </div>
     <?php endif; ?>
   </div>
 </div>

@@ -66,9 +66,12 @@
 
     <!-- Members table -->
     <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span class="card-title">Members</span>
-        <span class="badge bg-secondary-subtle text-secondary"><?= $result['total'] ?> records</span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-secondary-subtle text-secondary"><?= $result['total'] ?> records</span>
+          <?php require 'views/partials/rows_per_page.php'; ?>
+        </div>
       </div>
       <div class="table-responsive">
         <table class="table table-hover mb-0" style="font-size:.85rem;">
@@ -90,7 +93,7 @@
                 <td colspan="8" class="text-center py-5 text-muted">No members found.</td>
               </tr>
             <?php else: foreach ($result['data'] as $row):
-                $pct = $row['lifetime_cap'] > 0 ? min(100, (($row['lifetime_earned'] ?? 0) / $row['lifetime_cap']) * 100) : 0;
+                $pct = ((float)($row['lifetime_cap'] ?? 0)) > 0 ? min(100, ((float)($row['lifetime_earned'] ?? 0)) / (float)($row['lifetime_cap']) * 100) : 0;
                 $statusBadge = match ($row['cap_status']) {
                     'active'    => '<span class="badge bg-success-subtle text-success">✅ Active</span>',
                     'capped'    => '<span class="badge bg-warning-subtle text-warning">⚠️ Capped</span>',
@@ -111,8 +114,8 @@
                 </td>
                 <td><?= e($row['package_name'] ?? '—') ?></td>
                 <td><?= $statusBadge ?></td>
-                <td class="font-mono fw-semibold"><?= fmt_money($row['lifetime_earned']) ?></td>
-                <td class="font-mono text-muted"><?= fmt_money($row['lifetime_cap']) ?></td>
+                <td class="font-mono fw-semibold"><?= fmt_money((float)($row['lifetime_earned'] ?? 0)) ?></td>
+                <td class="font-mono text-muted"><?= fmt_money((float)($row['lifetime_cap'] ?? 0)) ?></td>
                 <td style="min-width:140px;">
                   <div class="d-flex align-items-center gap-2">
                     <div class="cap-bar-track" style="flex:1;height:6px;">
@@ -132,7 +135,7 @@
       </div>
       <?php if ($result['total_pages'] > 1): ?>
         <div class="card-footer">
-          <?= pagination_links($result, APP_URL . '/?page=admin_cap_monitor&status=' . urlencode($status)) ?>
+          <?= pagination_links($result, APP_URL . '/?page=admin_cap_monitor&status=' . urlencode($status) . '&per_page=' . per_page()) ?>
         </div>
       <?php endif; ?>
     </div>

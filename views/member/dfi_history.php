@@ -223,9 +223,12 @@ if (!isset($history) || !is_array($history)) {
 
     <!-- History Table -->
     <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span class="card-title">Payout Log</span>
-        <span class="text-muted" style="font-size:.75rem;"><?= $history['total'] ?> record(s)</span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted" style="font-size:.75rem;"><?= $history['total'] ?> record(s)</span>
+          <?php require 'views/partials/rows_per_page.php'; ?>
+        </div>
       </div>
       <div class="card-body p-0">
         <?php if (empty($history['data'])): ?>
@@ -262,7 +265,7 @@ if (!isset($history) || !is_array($history)) {
               </tbody>
             </table>
           </div>
-          <?= pagination_links($history, APP_URL . '/?page=dfi_history') ?>
+          <?= pagination_links($history, APP_URL . '/?page=dfi_history&per_page=' . per_page()) ?>
         <?php endif; ?>
       </div>
     </div>
