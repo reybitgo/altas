@@ -139,7 +139,9 @@ Apply the migration. Create `uploads/repeat_purchase_proofs/` directory (chmod 7
 
 Replace the old `repeat_purchases` table definition with the four new tables (same DDL as above). Add `stock` column to `products`. Add `personal_pv_requirement` column to `packages`. Remove the `personal_pv_requirement` row from settings seed data.
 
-### 1.3 — `models/Product.php`: add stock helper
+### 1.3 — `models/Product.php`: add stock helper + update existing methods
+
+#### Add `availableStock()` method
 
 Add one public static method:
 
@@ -167,6 +169,30 @@ public static function availableStock(int $productId): int
 ```
 
 No `decrementStock()` or `incrementStock()` — the reservation model does not mutate `products.stock`.
+
+#### Update `Product::save()` to handle stock
+
+In the existing `save()` method, add `stock` to the `$fields` array:
+
+```php
+$fields = [
+    'name'             => trim($data['name'] ?? ''),
+    'price'            => (float)($data['price'] ?? 0),
+    'pv_value'         => (float)($data['pv_value'] ?? 0),
+    'stock'            => max(0, (int)($data['stock'] ?? 0)),  // ← add this line
+    'image_url'        => $data['image_url'] ?? null,
+    'short_description'=> trim($data['short_description'] ?? ''),
+    'description'      => trim($data['description'] ?? ''),
+    'status'           => $data['status'] ?? 'active',
+];
+```
+
+#### Update `Product::delete()` for new table name
+
+The old `delete()` method checks `repeat_purchases` — that table will be dropped in the migration. Change the check to `repeat_purchase_order_items`:
+
+```php
+$inUse = (int)db()->query("SELECT COUNT(*) FROM repeat_purchase_order_items WHERE product_id = {$id}")->fetchColumn();
 
 ### 1.4 — `models/Cart.php`: new model
 
@@ -1982,6 +2008,110 @@ In `views/admin/settings.php`, delete the entire "Personal PV Gate" section (aro
 
 In `views/admin/packages.php`, add an input field for `personal_pv_requirement` in the package form, and update `AdminController::savePackage()` to read and save it.
 
+### 5.4 — Add stock management to admin products page
+
+Since `products.stock` is absolute inventory that is **never** mutated by orders, the only way to set or adjust it is through the admin product form.
+
+#### Update `AdminController::saveProduct()` to read stock
+
+In `controllers/AdminController.php`, inside `saveProduct()`, add `stock` to the `$data` array (alongside `price`, `pv_value`, etc.):
+
+```php
+$data = [
+    'name'             => trim($_POST['name'] ?? ''),
+    'price'            => (float)($_POST['price'] ?? 0),
+    'pv_value'         => (float)($_POST['pv_value'] ?? 0),
+    'stock'            => max(0, (int)($_POST['stock'] ?? 0)),   // ← add this
+    // ... rest unchanged
+];
+```
+
+#### Add stock column to products table and modal input
+
+In `views/admin/products.php`:
+
+**a)** Add a "Stock" column to the table header and data cells:
+
+Table header (after PV Value column):
+```php
+<th class="text-end">PV Value</th>
+<th class="text-center">Stock</th>            <!-- ← add -->
+<th class="text-center">Status</th>
+```
+
+Table data cell (after PV Value column):
+```php
+<td class="text-end font-mono"><?= number_format((float)$p['pv_value'], 2) ?></td>
+<td class="text-center font-mono">
+  <?php $avail = Product::availableStock((int)$p['id']); ?>
+  <span class="badge bg-<?= $avail > 0 ? 'success' : ($avail === 0 && (int)$p['stock'] > 0 ? 'warning' : 'secondary') ?>-subtle text-<?= $avail > 0 ? 'success' : ($avail === 0 && (int)$p['stock'] > 0 ? 'warning' : 'secondary') ?>" style="font-size:.72rem;">
+    <?= $avail ?> / <?= (int)$p['stock'] ?>
+  </span>
+  <div class="small text-muted" style="font-size:.65rem;">available / total</div>
+</td>
+<td class="text-center">
+```
+
+**b)** Add a stock input with increment/decrement to the product modal form, after the Price / PV row:
+
+```php
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <label class="form-label">Price (₱) <span class="text-danger">*</span></label>
+    <input type="number" name="price" id="prodPrice" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editProduct['price'] ?? '') ?>" required>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">PV Value <span class="text-danger">*</span></label>
+    <input type="number" name="pv_value" id="prodPv" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editProduct['pv_value'] ?? '') ?>" required>
+  </div>
+</div>
+
+<!-- Stock row (full width with stepper) -->
+<div class="mb-3">
+  <label class="form-label">Stock <span class="text-danger">*</span></label>
+  <div class="input-group" style="max-width:200px;">
+    <button type="button" class="btn btn-outline-secondary" onclick="adjustStock(-1)">−</button>
+    <input type="number" name="stock" id="prodStock" class="form-control text-center" inputmode="numeric" min="0" step="1" value="<?= (int)($editProduct['stock'] ?? 0) ?>" required>
+    <button type="button" class="btn btn-outline-secondary" onclick="adjustStock(1)">+</button>
+  </div>
+  <div class="form-text">
+    Total physical inventory. Orders reserve from this count but never modify it.
+    Set to 0 to disallow purchases until restocked.
+  </div>
+</div>
+```
+
+**c)** Add the stock-adjust JS function and reset logic:
+
+In the `<script>` block at the bottom of the page, add:
+```js
+function adjustStock(delta) {
+    const input = document.getElementById('prodStock');
+    let val = parseInt(input.value || '0', 10);
+    val = Math.max(0, val + delta);
+    input.value = val;
+}
+
+// In resetProductForm(), add:
+document.getElementById('prodStock').value = '0';
+```
+
+Also update `resetProductForm()` to include the stock input reset:
+
+```js
+function resetProductForm() {
+    // ... existing resets ...
+    document.getElementById('prodStock').value = '0';  // ← add
+    // ...
+}
+```
+
+**d)** When editing, pre-populate the stock field from the existing product data (already handled by the `value` attribute with `$editProduct['stock'] ?? 0`).
+
+> **Note for Phase 1-4 testing:** Before Phase 5 is deployed, admins can set stock directly via SQL:
+> `UPDATE products SET stock = 100 WHERE id = 1;`
+> This is needed because the Phase 3 QA test requires `stock > 0` on products.
+
 ### Phase 5 QA Test
 
 ```
@@ -2057,19 +2187,45 @@ TC-512 — Pagination works (if many orders)
   → Click page 2 — loads next page.
   → [PASS] if pagination works.
 
+TC-513 — Products table shows stock column
+  → Navigate to ?page=admin_products.
+  → Table has a "Stock" column showing "available / total" for each product.
+  → Badge color reflects availability (green if available > 0, amber if stock > 0 but reserved == stock, grey if stock == 0).
+  → [PASS] if stock column renders correct data.
+
+TC-514 — Stock input with stepper in product form
+  → Click "+ New Product" or "Edit" on a product.
+  → Modal shows a Stock input with − and + buttons.
+  → Click "+" — value increments by 1.
+  → Click "−" — value decrements by 1, never below 0.
+  → [PASS] if stepper works correctly.
+
+TC-515 — Stock value saves and persists
+  → Edit a product, set stock to 50, save.
+  → Re-open the edit modal — stock field shows 50.
+  → Products table stock column shows "0 / 50" (if no orders reserve it).
+  → [PASS] if stock saves and displays.
+
+TC-516 — Stock 0 prevents checkout (regression)
+  → Set a product's stock to 0.
+  → As member, add that product to cart.
+  → Go to checkout — stock error is displayed.
+  → Place Order is blocked.
+  → [PASS] if blocked.
+
 ── FULL END-TO-END SMOKE TEST ────────────────────────────────
 
-TC-513 — Complete member flow
+TC-517 — Complete member flow
   → As member: add products to cart → checkout → e-wallet
     → order approved → PV distributed → cart cleared.
   → [PASS] if flow completes without errors.
 
-TC-514 — Complete admin flow
+TC-518 — Complete admin flow
   → As member: place external payment order.
   → As admin: view pending → mark paid → approve → PV distributed.
   → [PASS] if two-step approval completes.
 
-Pass criteria: All 14 test cases pass.
+Pass criteria: All 18 test cases pass.
 ```
 
 ---
