@@ -9,6 +9,54 @@ class RepeatPurchaseOrder
         return $st->fetch() ?: null;
     }
 
+    public static function findWithItems(int $id): ?array
+    {
+        $order = self::find($id);
+        if (!$order) return null;
+
+        $st = db()->prepare("
+            SELECT oi.*, p.name, p.image_url
+            FROM   repeat_purchase_order_items oi
+            JOIN   products p ON p.id = oi.product_id
+            WHERE  oi.order_id = ?
+        ");
+        $st->execute([$id]);
+        $order['items'] = $st->fetchAll();
+        return $order;
+    }
+
+    public static function forMember(int $memberId, int $page = 1, int $perPage = 20): array
+    {
+        $pdo = db();
+        $countSt = $pdo->prepare("SELECT COUNT(*) FROM repeat_purchase_orders WHERE member_id = ?");
+        $countSt->execute([$memberId]);
+        $total = (int)$countSt->fetchColumn();
+
+        $totalPages = max(1, (int)ceil($total / $perPage));
+        $page       = max(1, min($page, $totalPages));
+        $offset     = ($page - 1) * $perPage;
+
+        $st = $pdo->prepare("
+            SELECT o.*,
+                   (SELECT COUNT(*) FROM repeat_purchase_order_items oi WHERE oi.order_id = o.id) AS item_count
+            FROM   repeat_purchase_orders o
+            WHERE  o.member_id = ?
+            ORDER BY o.created_at DESC
+            LIMIT ? OFFSET ?
+        ");
+        $st->execute([$memberId, $perPage, $offset]);
+
+        return [
+            'data'        => $st->fetchAll(),
+            'total'       => $total,
+            'page'        => $page,
+            'per_page'    => $perPage,
+            'total_pages' => $totalPages,
+            'has_prev'    => $page > 1,
+            'has_next'    => $page < $totalPages,
+        ];
+    }
+
     public static function pending(int $page = 1, int $perPage = 25): array
     {
         return self->_paginate("status = 'pending'", $page, $perPage);

@@ -137,12 +137,19 @@ class MemberController
     public function repeatPurchases(): void
     {
         Auth::guard('member');
-        $user    = Auth::user();
-        $page    = max(1, (int)($_GET['pg'] ?? 1));
-        $perPage = per_page();
-        $products = Product::active();
-        $history  = RepeatPurchase::forMember($user['id'], $page, $perPage);
-        require 'views/member/repeat_purchases.php';
+
+        $memberId   = Auth::id();
+        $products   = Product::active();
+        $cart       = Cart::getOrCreate($memberId);
+        $cartItems  = Cart::getItems((int)$cart['id']);
+        $cartTotals = Cart::getTotals((int)$cart['id']);
+        $page       = max(1, (int)($_GET['pg'] ?? 1));
+        $history    = RepeatPurchaseOrder::forMember($memberId, $page);
+
+        $pageTitle = 'Repeat Purchases';
+        include 'views/partials/head.php';
+        include 'views/member/repeat_purchases.php';
+        include 'views/partials/footer.php';
     }
 
     public function doRepeatPurchase(): void
@@ -180,7 +187,7 @@ class MemberController
             flash('error', $e->getMessage());
         }
 
-        redirect('/?page=repeat_purchases');
+        redirect('/?page=repeat_purchases&cart=1');
     }
 
     public function updateCartItem(): void
@@ -190,11 +197,29 @@ class MemberController
 
         $itemId   = (int)($_POST['item_id'] ?? 0);
         $quantity = max(1, (int)($_POST['quantity'] ?? 1));
+        $isAjax   = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest';
 
         try {
             Cart::updateItemQuantity($itemId, $quantity);
-            flash('success', 'Cart updated.');
+            if ($isAjax) {
+                $memberId = Auth::id();
+                $cart = Cart::getOrCreate($memberId);
+                $totals = Cart::getTotals((int)$cart['id']);
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'item_id' => $itemId,
+                    'quantity' => $quantity,
+                    'totals' => $totals,
+                ]);
+                exit;
+            }
         } catch (Throwable $e) {
+            if ($isAjax) {
+                header('Content-Type: application/json', true, 400);
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
             flash('error', $e->getMessage());
         }
 
@@ -207,9 +232,22 @@ class MemberController
         csrf_verify();
 
         $itemId = (int)($_POST['item_id'] ?? 0);
+        $isAjax = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest';
 
         Cart::removeItemById($itemId);
-        flash('success', 'Item removed from cart.');
+
+        if ($isAjax) {
+            $memberId = Auth::id();
+            $cart = Cart::getOrCreate($memberId);
+            $totals = Cart::getTotals((int)$cart['id']);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'item_id' => $itemId,
+                'totals' => $totals,
+            ]);
+            exit;
+        }
 
         redirect('/?page=repeat_purchases');
     }

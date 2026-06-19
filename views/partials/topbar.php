@@ -48,22 +48,6 @@ $isMember      = ($user['role'] ?? '') === 'member';
         </div>
       <?php endif; ?>
 
-      <?php
-        $cartCount = 0;
-        $activeCart = Cart::getActive((int)Auth::id());
-        if ($activeCart) {
-            $totals = Cart::getTotals((int)$activeCart['id']);
-            $cartCount = (int)$totals['total_items'];
-        }
-      ?>
-      <a href="?page=repeat_purchases" class="btn btn-sm btn-outline-light position-relative me-2">
-        🛒
-        <?php if ($cartCount > 0): ?>
-        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.65rem;">
-          <?= $cartCount ?>
-        </span>
-        <?php endif; ?>
-      </a>
     <?php endif; ?>
 
     <a href="<?= APP_URL ?>/?page=<?= Auth::isAdmin() ? 'admin' : 'profile' ?>"
@@ -71,5 +55,23 @@ $isMember      = ($user['role'] ?? '') === 'member';
       <span class="bal-label"><?= Auth::isAdmin() ? 'Admin' : 'User' ?></span>
       <span class="bal-amount">@<?= e($user['username'] ?? '') ?></span>
     </a>
+
+    <?php if ($isMember):
+      $cartCount = 0;
+      $activeCart = Cart::getActive((int)Auth::id());
+      if ($activeCart) {
+          $totals = Cart::getTotals((int)$activeCart['id']);
+          $cartCount = (int)$totals['total_items'];
+      }
+    ?>
+      <button class="btn btn-sm btn-outline-light position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+        🛒
+        <?php if ($cartCount > 0): ?>
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.65rem;">
+          <?= $cartCount ?>
+        </span>
+        <?php endif; ?>
+      </button>
+    <?php endif; ?>
   </div>
 </div>
