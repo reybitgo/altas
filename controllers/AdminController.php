@@ -433,6 +433,76 @@ class AdminController
         redirect('/?page=admin_repeat_purchases');
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    //  REPEAT PURCHASE ORDERS (Phase 7)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    public function repeatPurchaseOrders(): void
+    {
+        Auth::guard('admin');
+
+        $page   = max(1, (int)($_GET['pg'] ?? 1));
+        $status = $_GET['status'] ?? 'pending';
+
+        $result = match ($status) {
+            'paid'    => RepeatPurchaseOrder::paid($page),
+            'all'     => RepeatPurchaseOrder::all($page),
+            default   => RepeatPurchaseOrder::pending($page),
+        };
+
+        $pageTitle = 'Repeat Purchase Orders';
+        include 'views/partials/head.php';
+        include 'views/partials/topbar.php';
+        include 'views/partials/sidebar_admin.php';
+        include 'views/admin/repeat_purchases.php';
+        include 'views/partials/footer.php';
+    }
+
+    public function markRepeatOrderPaid(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $orderId = (int)($_POST['id'] ?? 0);
+        try {
+            RepeatPurchaseOrder::markPaid($orderId, Auth::id());
+            flash('success', 'Order marked as paid.');
+        } catch (RuntimeException $e) {
+            flash('error', $e->getMessage());
+        }
+        redirect('/?page=admin_repeat_purchase_orders');
+    }
+
+    public function approveRepeatOrder(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $orderId = (int)($_POST['id'] ?? 0);
+        try {
+            RepeatPurchaseOrder::approve($orderId, Auth::id());
+            flash('success', 'Order approved and PV distributed.');
+        } catch (RuntimeException $e) {
+            flash('error', $e->getMessage());
+        }
+        redirect('/?page=admin_repeat_purchase_orders');
+    }
+
+    public function rejectRepeatOrder(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $orderId = (int)($_POST['id'] ?? 0);
+        try {
+            RepeatPurchaseOrder::reject($orderId, Auth::id());
+            flash('success', 'Order rejected.');
+        } catch (RuntimeException $e) {
+            flash('error', $e->getMessage());
+        }
+        redirect('/?page=admin_repeat_purchase_orders');
+    }
+
     // ── Registration Codes ────────────────────────────────────────────────────
 
     public function codes(): void

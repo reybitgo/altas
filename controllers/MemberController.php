@@ -214,6 +214,152 @@ class MemberController
         redirect('/?page=repeat_purchases');
     }
 
+    public function checkout(): void
+    {
+        Auth::guard('member');
+
+        $cart = Cart::getOrCreate(Auth::id());
+        $items = Cart::getItems((int)$cart['id']);
+
+        if (empty($items)) {
+            flash('warning', 'Your cart is empty.');
+            redirect('/?page=repeat_purchases');
+        }
+
+        $totals = Cart::getTotals((int)$cart['id']);
+        $ewalletBalance = Ewallet::balance(Auth::id());
+        $canUseEwallet = $ewalletBalance >= (float)$totals['total_price'];
+
+        $methods = [];
+        if (setting('gcash_enabled', '1') === '1') $methods['gcash'] = 'GCash';
+        if (setting('maya_enabled', '1') === '1')  $methods['maya']  = 'Maya';
+        if (trim(setting('usdt_trc20_address', ''))) $methods['usdt_trc20'] = 'USDT TRC20';
+        if (trim(setting('usdt_bep20_address', ''))) $methods['usdt_bep20'] = 'USDT BEP20';
+
+        $stockErrors = Cart::validateStock((int)$cart['id']);
+
+        $pageTitle = 'Checkout';
+        include 'views/partials/head.php';
+        include 'views/partials/topbar.php';
+        include 'views/partials/sidebar_member.php';
+        include 'views/member/checkout.php';
+        include 'views/partials/footer.php';
+    }
+
+    public function placeOrder(): void
+    {
+        Auth::guard('member');
+        csrf_verify();
+
+        $memberId = Auth::id();
+        $cart = Cart::getOrCreate($memberId);
+        $cartId = (int)$cart['id'];
+
+        $items = Cart::getItems($cartId);
+        if (empty($items)) {
+            flash('warning', 'Your cart is empty.');
+            redirect('/?page=repeat_purchases');
+        }
+
+        $stockErrors = Cart::validateStock($cartId);
+        if (!empty($stockErrors)) {
+            flash('error', 'Some items are out of stock: ' . implode(' | ', $stockErrors));
+            redirect('/?page=checkout');
+        }
+
+        $binaryPosition = ($_POST['binary_position'] ?? 'left') === 'right' ? 'right' : 'left';
+        $paymentMethod = $_POST['payment_method'] ?? '';
+        $validMethods = ['ewallet', 'gcash', 'maya', 'usdt_trc20', 'usdt_bep20'];
+        if (!in_array($paymentMethod, $validMethods, true)) {
+            flash('error', 'Invalid payment method.');
+            redirect('/?page=checkout');
+        }
+
+        $totals = Cart::getTotals($cartId);
+        $totalPrice = (float)$totals['total_price'];
+
+        $pdo = db();
+        $pdo->beginTransaction();
+
+        try {
+            $proofImage = null;
+            if ($paymentMethod !== 'ewallet') {
+                if (!isset($_FILES['proof_image']) || $_FILES['proof_image']['error'] !== UPLOAD_ERR_OK) {
+                    throw new RuntimeException('Please upload a proof of payment.');
+                }
+                $file = $_FILES['proof_image'];
+                $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime = finfo_file($finfo, $file['tmp_name']);
+                finfo_close($finfo);
+                if (!in_array($mime, $allowedMimes, true)) {
+                    throw new RuntimeException('Proof must be an image (JPEG, PNG, GIF, WebP).');
+                }
+                if ($file['size'] > 5 * 1024 * 1024) {
+                    throw new RuntimeException('Proof image must be 5 MB or smaller.');
+                }
+                $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+                $filename = 'proof_' . $memberId . '_' . time() . '.' . $ext;
+                $destDir = __DIR__ . '/../uploads/repeat_purchase_proofs/';
+                if (!is_dir($destDir)) {
+                    mkdir($destDir, 0755, true);
+                }
+                if (!move_uploaded_file($file['tmp_name'], $destDir . $filename)) {
+                    throw new RuntimeException('Failed to save proof image.');
+                }
+                $proofImage = 'repeat_purchase_proofs/' . $filename;
+            }
+
+            $orderId = RepeatPurchaseOrder::createFromCart(
+                $memberId,
+                $cartId,
+                $binaryPosition,
+                $paymentMethod,
+                $proofImage
+            );
+
+            if ($paymentMethod === 'ewallet') {
+                $ewalletBalance = Ewallet::balance($memberId);
+                if ($ewalletBalance < $totalPrice) {
+                    throw new RuntimeException('Insufficient e-wallet balance.');
+                }
+
+                $pdo->prepare("UPDATE users SET ewallet_balance = ewallet_balance - ? WHERE id = ?")
+                    ->execute([$totalPrice, $memberId]);
+
+                $newBal = Ewallet::balance($memberId);
+                $pdo->prepare("
+                    INSERT INTO ewallet_ledger
+                      (user_id, type, amount, reference_id, ref_type, balance_after, note)
+                    VALUES (?, 'debit', ?, ?, 'registration', ?, ?)
+                ")->execute([$memberId, $totalPrice, $orderId, $newBal, "Payment for repeat purchase order #{$orderId}"]);
+
+                $pdo->prepare("
+                    UPDATE repeat_purchase_orders
+                    SET status = 'approved', paid_at = NOW(), approved_by = ?, approved_at = NOW()
+                    WHERE id = ?
+                ")->execute([$memberId, $orderId]);
+
+                Commission::processProductPV($orderId);
+            }
+
+            Cart::clear($cartId);
+
+            $pdo->commit();
+
+            if ($paymentMethod === 'ewallet') {
+                flash('success', 'Order placed and approved. PV has been distributed.');
+            } else {
+                flash('success', 'Order placed. Admin will review your payment proof.');
+            }
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            flash('error', $e->getMessage());
+        }
+
+        redirect('/?page=repeat_purchases');
+    }
+
     public function genealogy(): void
     {
         Auth::guard('member');

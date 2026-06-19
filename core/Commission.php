@@ -417,36 +417,29 @@ class Commission
      */
     private static function meetsPersonalPvRequirement(int $userId): bool
     {
-        $req = (float)setting('personal_pv_requirement', '0.0000');
-        if ($req <= 0.00) {
+        $user = User::find($userId);
+        if (!$user) return false;
+        $pkg = Package::find((int)$user['package_id']);
+        $req = (float)($pkg['personal_pv_requirement'] ?? 0);
+        if ($req <= 0) {
             return true;
         }
-        $user = User::find($userId);
-        return $user && (float)$user['personal_pv'] >= $req;
+        return (float)$user['personal_pv'] >= $req;
     }
 
-    public static function processProductPV(int $purchaseId): void
+    public static function processProductPV(int $orderId): void
     {
-        $pdo = db();
-        $st = $pdo->prepare("
-            SELECT o.id, o.member_id, o.total_pv AS total_pv, oi.product_id,
-                   p.name AS product_name, p.pv_value
-            FROM   repeat_purchase_orders o
-            JOIN   repeat_purchase_order_items oi ON oi.order_id = o.id
-            JOIN   products p ON p.id = oi.product_id
-            WHERE  o.id = ? AND o.status = 'approved'
-            LIMIT 1
-        ");
-        $st->execute([$purchaseId]);
-        $purchase = $st->fetch();
-        if (!$purchase) return;
+        $order = RepeatPurchaseOrder::find($orderId);
+        if (!$order || $order['status'] !== 'approved') return;
 
-        $memberId = (int)$purchase['member_id'];
-        $totalPv  = (float)$purchase['total_pv'];
+        $memberId = (int)$order['member_id'];
+        $totalPv  = (float)$order['total_pv'];
         if ($totalPv <= 0.00) return;
 
         $buyer = User::find($memberId);
         if (!$buyer || $buyer['status'] !== 'active') return;
+
+        $pdo = db();
 
         // 1. Buyer receives Personal PV
         $pdo->prepare('UPDATE users SET personal_pv = personal_pv + ? WHERE id = ?')
@@ -454,7 +447,7 @@ class Commission
         self::recordPvTransaction($memberId, 'product_personal', $totalPv, $memberId, 'repeat_purchase');
 
         // 2. Group PV flows up the sponsor chain to active uplines who meet the
-        //    optional Personal PV requirement.
+        //    optional Personal PV requirement (read from each upline's own package).
         $cur = (int)$buyer['sponsor_id'];
         $visited = [$memberId => true];
         while ($cur > 0 && !isset($visited[$cur])) {
@@ -471,7 +464,11 @@ class Commission
             $cur = (int)$upline['sponsor_id'];
         }
 
-        // 3. Product PV also flows up the binary tree and may trigger pairing bonuses
+        // 3. Pay yourself first: buyer receives binary PV on their chosen leg
+        $buyerSide = $order['binary_position'];
+        self::applyBinaryPv($memberId, $buyerSide, $totalPv, $memberId, 'repeat_purchase');
+
+        // 4. Product PV also flows up the binary tree (reads each user's fixed binary_position)
         self::processBinaryPV($memberId, $totalPv);
     }
 

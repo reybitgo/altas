@@ -230,4 +230,19 @@ class Cart
         $totals = self::getTotals((int)$cart['id']);
         return (int)$totals['total_items'];
     }
+
+    public static function validateStock(int $cartId): array
+    {
+        $errors = [];
+        $items = self::getItems($cartId);
+        foreach ($items as $item) {
+            $productId = (int)$item['product_id'];
+            $requested = (int)$item['quantity'];
+            $available = Product::availableStock($productId);
+            if ($requested > $available) {
+                $errors[] = "{$item['product_name']}: requested {$requested}, only {$available} available.";
+            }
+        }
+        return $errors;
+    }
 }
