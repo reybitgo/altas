@@ -429,10 +429,13 @@ class Commission
     {
         $pdo = db();
         $st = $pdo->prepare("
-            SELECT rp.*, p.name AS product_name, p.pv_value
-            FROM   repeat_purchases rp
-            JOIN   products p ON p.id = rp.product_id
-            WHERE  rp.id = ? AND rp.status = 'approved'
+            SELECT o.id, o.member_id, o.total_pv AS total_pv, oi.product_id,
+                   p.name AS product_name, p.pv_value
+            FROM   repeat_purchase_orders o
+            JOIN   repeat_purchase_order_items oi ON oi.order_id = o.id
+            JOIN   products p ON p.id = oi.product_id
+            WHERE  o.id = ? AND o.status = 'approved'
+            LIMIT 1
         ");
         $st->execute([$purchaseId]);
         $purchase = $st->fetch();

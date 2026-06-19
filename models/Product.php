@@ -33,10 +33,31 @@ class Product
         return self::all(true);
     }
 
+    public static function reservedStock(int $productId): int
+    {
+        $st = db()->prepare(
+            "SELECT COALESCE(SUM(oi.quantity), 0)
+               FROM repeat_purchase_order_items oi
+               JOIN repeat_purchase_orders o ON o.id = oi.order_id
+              WHERE oi.product_id = ? AND o.status IN ('pending','paid','approved')"
+        );
+        $st->execute([$productId]);
+        return (int)$st->fetchColumn();
+    }
+
+    public static function availableStock(int $productId): int
+    {
+        $product = self::find($productId);
+        if (!$product) {
+            return 0;
+        }
+        return max(0, (int)$product['stock'] - self::reservedStock($productId));
+    }
+
     /**
      * Save or update a product.
      *
-     * @param array $data name, price, pv_value, status, image_url, short_description, description
+     * @param array $data name, price, pv_value, stock, status, image_url, short_description, description
      */
     public static function save(array $data, ?int $id = null): int
     {
@@ -46,6 +67,7 @@ class Product
             'name'             => trim($data['name'] ?? ''),
             'price'            => (float)($data['price'] ?? 0),
             'pv_value'         => (float)($data['pv_value'] ?? 0),
+            'stock'            => (int)($data['stock'] ?? 0),
             'image_url'        => $data['image_url'] ?? null,
             'short_description'=> trim($data['short_description'] ?? ''),
             'description'      => trim($data['description'] ?? ''),
@@ -79,8 +101,7 @@ class Product
 
     public static function delete(int $id): bool
     {
-        // Do not allow deletion if repeat purchases reference the product
-        $inUse = (int)db()->query("SELECT COUNT(*) FROM repeat_purchases WHERE product_id = {$id}")->fetchColumn();
+        $inUse = (int)db()->query("SELECT COUNT(*) FROM repeat_purchase_order_items WHERE product_id = {$id}")->fetchColumn();
         if ($inUse > 0) {
             return false;
         }

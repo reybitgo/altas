@@ -22,7 +22,7 @@ class AdminController
             'perminact'     => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role='member' AND cap_status='perminact'")->fetchColumn(),
             'react_revenue' => (float)$pdo->query("SELECT COALESCE(SUM(amount_paid),0) FROM reactivations WHERE status='completed'")->fetchColumn(),
             'dfi_today'     => (float)$pdo->query("SELECT COALESCE(SUM(amount),0) FROM daily_fixed_income_log WHERE DATE(created_at)=CURDATE()")->fetchColumn(),
-            'pending_repeat_purchases' => (int)$pdo->query("SELECT COUNT(*) FROM repeat_purchases WHERE status='pending'")->fetchColumn(),
+            'pending_repeat_purchases' => (int)$pdo->query("SELECT COUNT(*) FROM repeat_purchase_orders WHERE status='pending'")->fetchColumn(),
         ];
 
         require 'views/admin/dashboard.php';
