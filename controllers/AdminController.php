@@ -390,72 +390,25 @@ class AdminController
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  REPEAT PURCHASES
-    // ══════════════════════════════════════════════════════════════════════════
-
-    public function repeatPurchases(): void
-    {
-        Auth::guard('admin');
-        $status  = $_GET['status'] ?? 'pending';
-        $page    = max(1, (int)($_GET['pg'] ?? 1));
-        $perPage = per_page();
-        $result  = $status === 'pending'
-            ? RepeatPurchase::pending($page, $perPage)
-            : RepeatPurchase::all($page, $perPage);
-        require 'views/admin/repeat_purchases.php';
-    }
-
-    public function approveRepeatPurchase(): void
-    {
-        Auth::guard('admin');
-        csrf_verify();
-
-        $id = (int)($_POST['id'] ?? 0);
-        if (RepeatPurchase::approve($id, Auth::id())) {
-            flash('success', 'Purchase approved and PV distributed.');
-        } else {
-            flash('error', 'Could not approve purchase.');
-        }
-        redirect('/?page=admin_repeat_purchases');
-    }
-
-    public function rejectRepeatPurchase(): void
-    {
-        Auth::guard('admin');
-        csrf_verify();
-
-        $id = (int)($_POST['id'] ?? 0);
-        if (RepeatPurchase::reject($id, Auth::id())) {
-            flash('success', 'Purchase rejected.');
-        } else {
-            flash('error', 'Could not reject purchase.');
-        }
-        redirect('/?page=admin_repeat_purchases');
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    //  REPEAT PURCHASE ORDERS (Phase 7)
+    //  REPEAT PURCHASE ORDERS
     // ══════════════════════════════════════════════════════════════════════════
 
     public function repeatPurchaseOrders(): void
     {
         Auth::guard('admin');
 
-        $page   = max(1, (int)($_GET['pg'] ?? 1));
-        $status = $_GET['status'] ?? 'pending';
+        $page    = max(1, (int)($_GET['pg'] ?? 1));
+        $status  = $_GET['status'] ?? 'pending';
+        $perPage = per_page();
 
         $result = match ($status) {
-            'paid'    => RepeatPurchaseOrder::paid($page),
-            'all'     => RepeatPurchaseOrder::all($page),
-            default   => RepeatPurchaseOrder::pending($page),
+            'paid'    => RepeatPurchaseOrder::paid($page, $perPage),
+            'all'     => RepeatPurchaseOrder::all($page, $perPage),
+            default   => RepeatPurchaseOrder::pending($page, $perPage),
         };
 
         $pageTitle = 'Repeat Purchase Orders';
-        include 'views/partials/head.php';
-        include 'views/partials/topbar.php';
-        include 'views/partials/sidebar_admin.php';
-        include 'views/admin/repeat_purchases.php';
-        include 'views/partials/footer.php';
+        require 'views/admin/repeat_purchases.php';
     }
 
     public function markRepeatOrderPaid(): void
@@ -470,7 +423,7 @@ class AdminController
         } catch (RuntimeException $e) {
             flash('error', $e->getMessage());
         }
-        redirect('/?page=admin_repeat_purchase_orders');
+        redirect('/?page=admin_repeat_purchases&status=paid');
     }
 
     public function approveRepeatOrder(): void
@@ -485,7 +438,7 @@ class AdminController
         } catch (RuntimeException $e) {
             flash('error', $e->getMessage());
         }
-        redirect('/?page=admin_repeat_purchase_orders');
+        redirect('/?page=admin_repeat_purchases');
     }
 
     public function rejectRepeatOrder(): void
@@ -500,7 +453,7 @@ class AdminController
         } catch (RuntimeException $e) {
             flash('error', $e->getMessage());
         }
-        redirect('/?page=admin_repeat_purchase_orders');
+        redirect('/?page=admin_repeat_purchases');
     }
 
     // ── Registration Codes ────────────────────────────────────────────────────

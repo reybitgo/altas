@@ -44,7 +44,10 @@ class RepeatPurchaseOrder
             ORDER BY o.created_at DESC
             LIMIT ? OFFSET ?
         ");
-        $st->execute([$memberId, $perPage, $offset]);
+        $st->bindValue(1, $memberId, PDO::PARAM_INT);
+        $st->bindValue(2, $perPage, PDO::PARAM_INT);
+        $st->bindValue(3, $offset, PDO::PARAM_INT);
+        $st->execute();
 
         return [
             'data'        => $st->fetchAll(),
@@ -59,20 +62,20 @@ class RepeatPurchaseOrder
 
     public static function pending(int $page = 1, int $perPage = 25): array
     {
-        return self->_paginate("status = 'pending'", $page, $perPage);
+        return static::paginate("o.status = 'pending'", $page, $perPage);
     }
 
     public static function paid(int $page = 1, int $perPage = 25): array
     {
-        return self->_paginate("status = 'paid'", $page, $perPage);
+        return static::paginate("o.status = 'paid'", $page, $perPage);
     }
 
     public static function all(int $page = 1, int $perPage = 25): array
     {
-        return self->_paginate('1=1', $page, $perPage);
+        return static::paginate('1=1', $page, $perPage);
     }
 
-    private static function _paginate(string $where, int $page, int $perPage): array
+    protected static function paginate(string $where, int $page, int $perPage): array
     {
         $pdo = db();
         $countSt = $pdo->prepare("SELECT COUNT(*) FROM repeat_purchase_orders o WHERE $where");
@@ -85,14 +88,27 @@ class RepeatPurchaseOrder
 
         $st = $pdo->prepare("
             SELECT o.*, m.username AS member_username, m.full_name AS member_full_name,
+                   fi.product_name, fi.product_image, fi.quantity,
                    (SELECT COUNT(*) FROM repeat_purchase_order_items oi WHERE oi.order_id = o.id) AS item_count
             FROM   repeat_purchase_orders o
             JOIN   users m ON m.id = o.member_id
+            LEFT JOIN (
+                SELECT oi.order_id,
+                       MIN(oi.product_id) AS product_id,
+                       MIN(oi.quantity)   AS quantity,
+                       MIN(p.name)        AS product_name,
+                       MIN(p.image_url)   AS product_image
+                FROM   repeat_purchase_order_items oi
+                JOIN   products p ON p.id = oi.product_id
+                GROUP BY oi.order_id
+            ) fi ON fi.order_id = o.id
             WHERE  $where
             ORDER BY o.created_at DESC
             LIMIT ? OFFSET ?
         ");
-        $st->execute([$perPage, $offset]);
+        $st->bindValue(1, $perPage, PDO::PARAM_INT);
+        $st->bindValue(2, $offset, PDO::PARAM_INT);
+        $st->execute();
 
         return [
             'data'        => $st->fetchAll(),

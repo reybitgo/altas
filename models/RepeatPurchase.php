@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * @deprecated This model is retained for backward compatibility.
+ * All new order operations use RepeatPurchaseOrder with the cart-based flow.
+ */
 class RepeatPurchase
 {
     public static function find(int $id): ?array

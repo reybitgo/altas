@@ -152,25 +152,6 @@ class MemberController
         include 'views/partials/footer.php';
     }
 
-    public function doRepeatPurchase(): void
-    {
-        Auth::guard('member');
-        csrf_verify();
-
-        $user      = Auth::user();
-        $productId = (int)($_POST['product_id'] ?? 0);
-        $quantity  = max(1, (int)($_POST['quantity'] ?? 1));
-
-        try {
-            RepeatPurchase::create($user['id'], $productId, $quantity);
-            flash('success', 'Purchase request submitted. It will be reviewed by an admin.');
-        } catch (Throwable $e) {
-            flash('error', $e->getMessage());
-        }
-
-        redirect('/?page=repeat_purchases');
-    }
-
     public function addToCart(): void
     {
         Auth::guard('member');
