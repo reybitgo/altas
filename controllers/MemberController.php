@@ -164,6 +164,56 @@ class MemberController
         redirect('/?page=repeat_purchases');
     }
 
+    public function addToCart(): void
+    {
+        Auth::guard('member');
+        csrf_verify();
+
+        $productId = (int)($_POST['product_id'] ?? 0);
+        $quantity  = max(1, (int)($_POST['quantity'] ?? 1));
+
+        try {
+            $cart = Cart::getOrCreate(Auth::id());
+            Cart::addItem((int)$cart['id'], $productId, $quantity);
+            flash('success', 'Product added to cart.');
+        } catch (Throwable $e) {
+            flash('error', $e->getMessage());
+        }
+
+        redirect('/?page=repeat_purchases');
+    }
+
+    public function updateCartItem(): void
+    {
+        Auth::guard('member');
+        csrf_verify();
+
+        $itemId   = (int)($_POST['item_id'] ?? 0);
+        $quantity = max(1, (int)($_POST['quantity'] ?? 1));
+
+        try {
+            Cart::updateItemQuantity($itemId, $quantity);
+            flash('success', 'Cart updated.');
+        } catch (Throwable $e) {
+            flash('error', $e->getMessage());
+        }
+
+        redirect('/?page=repeat_purchases');
+    }
+
+    public function removeCartItem(): void
+    {
+        Auth::guard('member');
+        csrf_verify();
+
+        $itemId = (int)($_POST['item_id'] ?? 0);
+
+        Cart::removeItemById($itemId);
+        flash('success', 'Item removed from cart.');
+
+        redirect('/?page=repeat_purchases');
+    }
+
     public function genealogy(): void
     {
         Auth::guard('member');

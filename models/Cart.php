@@ -181,4 +181,53 @@ class Cart
         $st = db()->prepare("DELETE FROM cart_items WHERE cart_id = ?");
         return $st->execute([$cartId]);
     }
+
+    public static function updateItemQuantity(int $itemId, int $quantity): bool
+    {
+        if ($quantity < 0) {
+            throw new InvalidArgumentException('Quantity cannot be negative.');
+        }
+        if ($quantity === 0) {
+            return self::removeItemById($itemId);
+        }
+
+        $st = db()->prepare("
+            SELECT ci.id, ci.cart_id, ci.product_id, p.stock
+            FROM   cart_items ci
+            JOIN   products p ON p.id = ci.product_id
+            WHERE  ci.id = ?
+            LIMIT 1
+        ");
+        $st->execute([$itemId]);
+        $item = $st->fetch();
+        if (!$item) {
+            throw new InvalidArgumentException('Cart item not found.');
+        }
+
+        $available = Product::availableStock((int)$item['product_id']);
+        if ($quantity > $available) {
+            throw new InvalidArgumentException(
+                "Insufficient stock. Requested {$quantity}, only {$available} available."
+            );
+        }
+
+        $st = db()->prepare("UPDATE cart_items SET quantity = ?, updated_at = NOW() WHERE id = ?");
+        return $st->execute([$quantity, $itemId]);
+    }
+
+    public static function removeItemById(int $itemId): bool
+    {
+        $st = db()->prepare("DELETE FROM cart_items WHERE id = ?");
+        return $st->execute([$itemId]);
+    }
+
+    public static function itemCountForMember(int $memberId): int
+    {
+        $cart = self::getActive($memberId);
+        if (!$cart) {
+            return 0;
+        }
+        $totals = self::getTotals((int)$cart['id']);
+        return (int)$totals['total_items'];
+    }
 }

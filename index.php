@@ -321,6 +321,9 @@ $routes = [
     // Repeat-purchase products
     'repeat_purchases'   => ['MemberController', 'repeatPurchases',   'member'],
     'do_repeat_purchase' => ['MemberController', 'doRepeatPurchase',  'member'],
+    'add_to_cart'        => ['MemberController', 'addToCart',         'member'],
+    'update_cart_item'   => ['MemberController', 'updateCartItem',    'member'],
+    'remove_cart_item'   => ['MemberController', 'removeCartItem',    'member'],
 
     // ── Admin ─────────────────────────────────────────
     'admin'              => ['AdminController',  'dashboard',       'admin'],
