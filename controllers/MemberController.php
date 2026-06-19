@@ -278,8 +278,6 @@ class MemberController
 
         $pageTitle = 'Checkout';
         include 'views/partials/head.php';
-        include 'views/partials/topbar.php';
-        include 'views/partials/sidebar_member.php';
         include 'views/member/checkout.php';
         include 'views/partials/footer.php';
     }
