@@ -45,6 +45,9 @@ function renderAdminNav($cp, $user, $initial, $pendingPayouts, $pendingMembers)
     <a href="<?= APP_URL ?>/?page=admin_repeat_purchases" class="nav-item-link <?= $cp === 'admin_repeat_purchases' ? 'active' : '' ?>">
       <span class="nav-icon">🛒</span> Repeat Purchases
     </a>
+    <a href="<?= APP_URL ?>/?page=cart" class="nav-item-link <?= $cp === 'cart' ? 'active' : '' ?>">
+      <span class="nav-icon">🛍️</span> Cart
+    </a>
     <a href="<?= APP_URL ?>/?page=admin_codes" class="nav-item-link <?= $cp === 'admin_codes' ? 'active' : '' ?>">
       <span class="nav-icon">🎟️</span> Reg Codes
     </a>

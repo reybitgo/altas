@@ -70,8 +70,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- ✅ PASS — Page loads with correct data
-- [ ] FAIL — Page error, missing data, or layout broken
+- [✅] PASS — Page loads with correct data
+- [] FAIL — Page error, missing data, or layout broken
 
 ---
 

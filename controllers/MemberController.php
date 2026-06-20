@@ -152,6 +152,25 @@ class MemberController
         include 'views/partials/footer.php';
     }
 
+    /**
+     * Dedicated cart page (full-page view of the cart drawer contents).
+     * Reachable from the member/admin sidebar. Works for admins because
+     * Auth::guard('member') does not block admins.
+     */
+    public function cart(): void
+    {
+        Auth::guard('member');
+
+        $cart       = Cart::getOrCreate(Auth::id());
+        $cartItems  = Cart::getItems((int)$cart['id']);
+        $cartTotals = Cart::getTotals((int)$cart['id']);
+
+        $pageTitle = 'Cart';
+        include 'views/partials/head.php';
+        include 'views/member/cart.php';
+        include 'views/partials/footer.php';
+    }
+
     public function addToCart(): void
     {
         Auth::guard('member');

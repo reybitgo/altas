@@ -143,40 +143,32 @@ class RepeatPurchaseOrder
         $totalPv   = (float)$totals['total_pv'];
         $totalPrice = (float)$totals['total_price'];
 
-        $pdo->beginTransaction();
-        try {
-            $st = $pdo->prepare("
-                INSERT INTO repeat_purchase_orders
-                  (member_id, total_pv, total_price, binary_position, payment_method, proof_image, status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
-            ");
-            $st->execute([$memberId, $totalPv, $totalPrice, $binaryPosition, $paymentMethod, $proofImage]);
-            $orderId = (int)$pdo->lastInsertId();
+        $st = $pdo->prepare("
+            INSERT INTO repeat_purchase_orders
+              (member_id, total_pv, total_price, binary_position, payment_method, proof_image, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
+        ");
+        $st->execute([$memberId, $totalPv, $totalPrice, $binaryPosition, $paymentMethod, $proofImage]);
+        $orderId = (int)$pdo->lastInsertId();
 
-            $itemSt = $pdo->prepare("
-                INSERT INTO repeat_purchase_order_items
-                  (order_id, product_id, quantity, unit_price, unit_pv, total_price, total_pv)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ");
-            foreach ($items as $item) {
-                $itemSt->execute([
-                    $orderId,
-                    (int)$item['product_id'],
-                    (int)$item['quantity'],
-                    (float)$item['unit_price'],
-                    (float)$item['unit_pv'],
-                    (float)$item['unit_price'] * (int)$item['quantity'],
-                    (float)$item['unit_pv'] * (int)$item['quantity'],
-                ]);
-            }
-
-            Cart::markConverted($cartId);
-
-            $pdo->commit();
-        } catch (Throwable $e) {
-            $pdo->rollBack();
-            throw $e;
+        $itemSt = $pdo->prepare("
+            INSERT INTO repeat_purchase_order_items
+              (order_id, product_id, quantity, unit_price, unit_pv, total_price, total_pv)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+        foreach ($items as $item) {
+            $itemSt->execute([
+                $orderId,
+                (int)$item['product_id'],
+                (int)$item['quantity'],
+                (float)$item['unit_price'],
+                (float)$item['unit_pv'],
+                (float)$item['unit_price'] * (int)$item['quantity'],
+                (float)$item['unit_pv'] * (int)$item['quantity'],
+            ]);
         }
+
+        Cart::markConverted($cartId);
 
         return $orderId;
     }

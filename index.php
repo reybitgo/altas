@@ -320,6 +320,7 @@ $routes = [
 
     // Repeat-purchase products
     'repeat_purchases'   => ['MemberController', 'repeatPurchases',   'member'],
+    'cart'               => ['MemberController', 'cart',               'member'],
     'add_to_cart'        => ['MemberController', 'addToCart',         'member'],
     'update_cart_item'   => ['MemberController', 'updateCartItem',    'member'],
     'remove_cart_item'   => ['MemberController', 'removeCartItem',    'member'],
