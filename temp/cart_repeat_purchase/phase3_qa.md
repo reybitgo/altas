@@ -132,8 +132,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Order shows with status "approved" in the All tab
-- [ ] FAIL — Order is in Pending, or missing from All tab
+- [✅] PASS — Order shows with status "approved" in the All tab
+- [] FAIL — Order is in Pending, or missing from All tab
 
 ---
 
@@ -151,8 +151,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Personal PV increased by the order's total PV
-- [ ] FAIL — Personal PV unchanged
+- [✅] PASS — Personal PV increased by the order's total PV
+- [] FAIL — Personal PV unchanged
 
 ---
 
@@ -181,8 +181,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Success flash, file uploaded, order created
-- [ ] FAIL — Error about proof upload, or order not created
+- [✅] PASS — Success flash, file uploaded, order created
+- [] FAIL — Error about proof upload, or order not created
 
 ---
 

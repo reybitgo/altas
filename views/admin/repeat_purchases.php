@@ -326,10 +326,15 @@
                       <ul class="dropdown-menu dropdown-menu-end">
                         <?php if ($rp['status'] === 'pending'): ?>
                           <li>
-                            <form method="POST" action="<?= APP_URL ?>/?page=admin_mark_repeat_purchases" class="d-inline w-100">
+                            <form method="POST" action="<?= APP_URL ?>/?page=admin_mark_repeat_purchases" class="d-inline w-100 confirm-action-form"
+                                  data-confirm-title="Mark Order as Paid?"
+                                  data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be marked as <strong>Paid</strong>. Continue?"
+                                  data-confirm-btn-text="Mark Paid"
+                                  data-confirm-btn-class="btn-info"
+                                  data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
                               <?= csrf_field() ?>
                               <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                              <button type="submit" class="dropdown-item"
+                              <button type="button" class="dropdown-item confirm-action-btn"
                                 <?= empty($rp['proof_image']) ? 'disabled title="No proof uploaded"' : '' ?>
                                 style="color:#0ea5e9;">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -339,10 +344,15 @@
                           </li>
                           <li><hr class="dropdown-divider"></li>
                           <li>
-                            <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="d-inline w-100" onsubmit="return confirm('Reject this order? No PV will be distributed.')">
+                            <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="d-inline w-100 confirm-action-form"
+                                  data-confirm-title="Reject Order?"
+                                  data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be <strong>rejected</strong>. No PV will be distributed. This action cannot be undone."
+                                  data-confirm-btn-text="Reject Order"
+                                  data-confirm-btn-class="btn-danger"
+                                  data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
                               <?= csrf_field() ?>
                               <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                              <button type="submit" class="dropdown-item text-danger">
+                              <button type="button" class="dropdown-item text-danger confirm-action-btn">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                 Reject
                               </button>
@@ -350,10 +360,15 @@
                           </li>
                         <?php elseif ($rp['status'] === 'paid'): ?>
                           <li>
-                            <form method="POST" action="<?= APP_URL ?>/?page=admin_approve_repeat_purchase" class="d-inline w-100">
+                            <form method="POST" action="<?= APP_URL ?>/?page=admin_approve_repeat_purchase" class="d-inline w-100 confirm-action-form"
+                                  data-confirm-title="Approve Order & Distribute PV?"
+                                  data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be <strong>approved</strong> and PV will be distributed to the member's binary tree. Continue?"
+                                  data-confirm-btn-text="Approve Order"
+                                  data-confirm-btn-class="btn-success"
+                                  data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
                               <?= csrf_field() ?>
                               <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                              <button type="submit" class="dropdown-item" style="color:#10b981;">
+                              <button type="button" class="dropdown-item confirm-action-btn" style="color:#10b981;">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 Approve
                               </button>
@@ -361,10 +376,15 @@
                           </li>
                           <li><hr class="dropdown-divider"></li>
                           <li>
-                            <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="d-inline w-100" onsubmit="return confirm('Reject this order? No PV will be distributed.')">
+                            <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="d-inline w-100 confirm-action-form"
+                                  data-confirm-title="Reject Order?"
+                                  data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be <strong>rejected</strong>. No PV will be distributed. This action cannot be undone."
+                                  data-confirm-btn-text="Reject Order"
+                                  data-confirm-btn-class="btn-danger"
+                                  data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
                               <?= csrf_field() ?>
                               <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                              <button type="submit" class="dropdown-item text-danger">
+                              <button type="button" class="dropdown-item text-danger confirm-action-btn">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                 Reject
                               </button>
@@ -394,5 +414,92 @@
 </div>
   </div>
 </div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="actionConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-content" style="border-radius:.65rem;border:1px solid #e5e7eb;box-shadow:0 16px 48px rgba(0,0,0,.12);">
+      <div class="modal-body p-4 text-center">
+        <div class="mx-auto mb-3 d-flex align-items-center justify-content-center" id="confirmModalIcon"
+             style="width:56px;height:56px;border-radius:50%;background:#fff7ed;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <h6 class="fw-bold mb-2" id="confirmModalTitle">Confirm Action</h6>
+        <p class="text-muted mb-0" style="font-size:.85rem;line-height:1.5;" id="confirmModalMessage">Are you sure?</p>
+      </div>
+      <div class="modal-footer border-0 pt-0 pb-3 px-4 justify-content-center gap-2">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:.45rem;font-size:.85rem;padding:.4rem 1.1rem;">Cancel</button>
+        <button type="button" class="btn" id="confirmModalBtn" style="border-radius:.45rem;font-size:.85rem;padding:.4rem 1.1rem;">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var modalEl = document.getElementById('actionConfirmModal');
+  if (!modalEl) return;
+
+  var titleEl = document.getElementById('confirmModalTitle');
+  var msgEl   = document.getElementById('confirmModalMessage');
+  var btnEl   = document.getElementById('confirmModalBtn');
+  var iconEl  = document.getElementById('confirmModalIcon');
+  var currentForm = null;
+
+  var iconConfigs = {
+    'btn-danger':  { bg: '#fef2f2', stroke: '#ef4444', svg: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>' },
+    'btn-success': { bg: '#ecfdf5', stroke: '#10b981', svg: '<polyline points="20 6 9 17 4 12"></polyline>' },
+    'btn-info':    { bg: '#f0f9ff', stroke: '#0ea5e9', svg: '<polyline points="20 6 9 17 4 12"></polyline>' },
+  };
+
+  // Bootstrap modal event: fired when modal is about to show
+  modalEl.addEventListener('show.bs.modal', function(e) {
+    // Find the button that triggered the modal
+    var btn = e.relatedTarget;
+    if (!btn) return;
+
+    var form = btn.closest('.confirm-action-form');
+    if (!form || btn.disabled) {
+      e.preventDefault();
+      return;
+    }
+
+    currentForm = form;
+    var title   = form.getAttribute('data-confirm-title')   || 'Confirm Action';
+    var message = form.getAttribute('data-confirm-message') || 'Are you sure?';
+    var btnText = form.getAttribute('data-confirm-btn-text') || 'Confirm';
+    var btnClass = form.getAttribute('data-confirm-btn-class') || 'btn-primary';
+
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl)   msgEl.innerHTML = message;
+
+    // Style confirm button
+    btnEl.className = 'btn ' + btnClass;
+    btnEl.textContent = btnText;
+
+    // Style icon
+    var cfg = iconConfigs[btnClass] || iconConfigs['btn-info'];
+    if (iconEl) {
+      iconEl.style.background = cfg.bg;
+      iconEl.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="' + cfg.stroke + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + cfg.svg + '</svg>';
+    }
+  });
+
+  // Confirm button click: submit the stored form
+  document.getElementById('confirmModalBtn').addEventListener('click', function() {
+    if (currentForm) {
+      currentForm.submit();
+    } else {
+      var modalInstance = bootstrap.Modal.getInstance(modalEl);
+      if (modalInstance) modalInstance.hide();
+    }
+  });
+
+  // Reset on close
+  modalEl.addEventListener('hidden.bs.modal', function() {
+    currentForm = null;
+  });
+})();
+</script>
 
 <?php require 'views/partials/footer.php'; ?>
