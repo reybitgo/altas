@@ -59,28 +59,6 @@
   .action-btn:hover { transform: translateY(-1px); }
   .action-btn:active { transform: translateY(0); }
 
-  .action-dropdown .dropdown-toggle {
-    padding: .3rem .55rem; font-size: .78rem; font-weight: 500;
-    border-radius: .45rem; border: 1px solid #e5e7eb; background: #fff; color: #374151;
-    transition: all .12s ease; display: inline-flex; align-items: center; gap: .35rem;
-  }
-  .action-dropdown .dropdown-toggle:hover { border-color: #d1d5db; background: #f9fafb; }
-  .action-dropdown .dropdown-toggle:active { background: #f3f4f6; }
-  .action-dropdown .dropdown-toggle::after { font-size: .7rem; margin-left: .25rem; }
-  .action-dropdown .dropdown-menu { min-width: 10rem; font-size: .82rem; border-radius: .55rem; padding: .3rem; border: 1px solid #e5e7eb; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
-  .action-dropdown .dropdown-item { border-radius: .35rem; padding: .45rem .6rem; display: flex; align-items: center; gap: .5rem; }
-  .action-dropdown .dropdown-item:hover { background: #f3f4f6; }
-  .action-dropdown .dropdown-item.text-danger:hover { background: #fef2f2; }
-  .action-dropdown .dropdown-divider { margin: .25rem .3rem; border-color: #e5e7eb; }
-  .action-dropdown .dropdown-item:disabled { opacity: .45; pointer-events: none; }
-
-  /* Dropdown button when only one action is available */
-  .action-dropdown .dropdown-toggle.btn-icon {
-    padding: .3rem;
-    width: 32px; height: 32px;
-    justify-content: center;
-  }
-
   .order-id { font-family: var(--font-mono, monospace); font-weight: 600; font-size: .875rem; }
   .order-amount { font-family: var(--font-mono, monospace); font-weight: 600; font-size: .9rem; }
   .order-amount .pv { font-size: .75rem; color: #10b981; font-weight: 500; }
@@ -143,18 +121,18 @@
       </a>
     </div>
     <div class="col-6 col-md">
-      <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=approved" class="text-decoration-none">
-        <div class="stat-card <?= $status === 'approved' ? 'active' : '' ?>">
-          <div class="stat-value text-success"><?= $status === 'approved' ? $totalCount : '—' ?></div>
-          <div class="stat-label">Approved</div>
-        </div>
-      </a>
-    </div>
-    <div class="col-6 col-md">
       <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=paid" class="text-decoration-none">
         <div class="stat-card <?= $status === 'paid' ? 'active' : '' ?>">
           <div class="stat-value text-info"><?= $status === 'paid' ? $totalCount : '—' ?></div>
           <div class="stat-label">Paid</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md">
+      <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=approved" class="text-decoration-none">
+        <div class="stat-card <?= $status === 'approved' ? 'active' : '' ?>">
+          <div class="stat-value text-success"><?= $status === 'approved' ? $totalCount : '—' ?></div>
+          <div class="stat-label">Approved</div>
         </div>
       </a>
     </div>
@@ -180,11 +158,11 @@
       <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=pending" class="btn <?= $status === 'pending' ? 'btn-primary' : 'btn-outline-secondary' ?>">
         <span class="status-dot" style="background:#f59e0b;"></span>Pending
       </a>
-      <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=approved" class="btn <?= $status === 'approved' ? 'btn-primary' : 'btn-outline-secondary' ?>">
-        <span class="status-dot" style="background:#10b981;"></span>Approved
-      </a>
       <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=paid" class="btn <?= $status === 'paid' ? 'btn-primary' : 'btn-outline-secondary' ?>">
         <span class="status-dot" style="background:#3b82f6;"></span>Paid
+      </a>
+      <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=approved" class="btn <?= $status === 'approved' ? 'btn-primary' : 'btn-outline-secondary' ?>">
+        <span class="status-dot" style="background:#10b981;"></span>Approved
       </a>
       <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=all" class="btn <?= $status === 'all' ? 'btn-primary' : 'btn-outline-secondary' ?>">
         <span class="status-dot" style="background:#9ca3af;"></span>All
@@ -205,13 +183,13 @@
             <th class="text-center hide-xs">Proof</th>
             <th class="text-center">Status</th>
             <th class="text-center hide-sm">Date</th>
-            <th class="text-end" style="padding-right:1rem;">Actions</th>
+            <?php if ($status !== 'approved'): ?><th class="text-end" style="padding-right:1rem;">Actions</th><?php endif; ?>
           </tr>
         </thead>
         <tbody>
           <?php if (empty($result['data'])): ?>
             <tr>
-              <td colspan="7">
+              <td colspan="<?= $status === 'approved' ? 6 : 7 ?>">
                 <div class="empty-state">
                   <div class="empty-state-icon">🛒</div>
                   <div class="empty-state-text">No <?= e($status) ?> orders found.</div>
@@ -316,87 +294,68 @@
                 </td>
 
                 <!-- Actions -->
-                <td class="text-end" style="padding-right:1rem; min-width:100px;">
-                  <div class="dropdown action-dropdown">
-                    <?php if ($rp['status'] === 'pending' || $rp['status'] === 'paid'): ?>
-                      <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
-                        Actions
-                      </button>
-                      <ul class="dropdown-menu dropdown-menu-end">
-                        <?php if ($rp['status'] === 'pending'): ?>
-                          <li>
-                            <form method="POST" action="<?= APP_URL ?>/?page=admin_mark_repeat_purchases" class="d-inline w-100 confirm-action-form"
-                                  data-confirm-title="Mark Order as Paid?"
-                                  data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be marked as <strong>Paid</strong>. Continue?"
-                                  data-confirm-btn-text="Mark Paid"
-                                  data-confirm-btn-class="btn-info"
-                                  data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
-                              <?= csrf_field() ?>
-                              <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                              <button type="button" class="dropdown-item confirm-action-btn"
-                                <?= empty($rp['proof_image']) ? 'disabled title="No proof uploaded"' : '' ?>
-                                style="color:#0ea5e9;">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                Mark Paid
-                              </button>
-                            </form>
-                          </li>
-                          <li><hr class="dropdown-divider"></li>
-                          <li>
-                            <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="d-inline w-100 confirm-action-form"
-                                  data-confirm-title="Reject Order?"
-                                  data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be <strong>rejected</strong>. No PV will be distributed. This action cannot be undone."
-                                  data-confirm-btn-text="Reject Order"
-                                  data-confirm-btn-class="btn-danger"
-                                  data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
-                              <?= csrf_field() ?>
-                              <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                              <button type="button" class="dropdown-item text-danger confirm-action-btn">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                Reject
-                              </button>
-                            </form>
-                          </li>
-                        <?php elseif ($rp['status'] === 'paid'): ?>
-                          <li>
-                            <form method="POST" action="<?= APP_URL ?>/?page=admin_approve_repeat_purchase" class="d-inline w-100 confirm-action-form"
-                                  data-confirm-title="Approve Order & Distribute PV?"
-                                  data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be <strong>approved</strong> and PV will be distributed to the member's binary tree. Continue?"
-                                  data-confirm-btn-text="Approve Order"
-                                  data-confirm-btn-class="btn-success"
-                                  data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
-                              <?= csrf_field() ?>
-                              <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                              <button type="button" class="dropdown-item confirm-action-btn" style="color:#10b981;">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                Approve
-                              </button>
-                            </form>
-                          </li>
-                          <li><hr class="dropdown-divider"></li>
-                          <li>
-                            <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="d-inline w-100 confirm-action-form"
-                                  data-confirm-title="Reject Order?"
-                                  data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be <strong>rejected</strong>. No PV will be distributed. This action cannot be undone."
-                                  data-confirm-btn-text="Reject Order"
-                                  data-confirm-btn-class="btn-danger"
-                                  data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
-                              <?= csrf_field() ?>
-                              <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                              <button type="button" class="dropdown-item text-danger confirm-action-btn">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                Reject
-                              </button>
-                            </form>
-                          </li>
-                        <?php endif; ?>
-                      </ul>
-                    <?php else: ?>
-                      <span class="text-muted" style="font-size:.75rem;">—</span>
-                    <?php endif; ?>
-                  </div>
+                <?php if ($status !== 'approved'): ?>
+                <td style="padding-right:1rem; min-width:140px;">
+                  <?php if ($rp['status'] === 'pending' || $rp['status'] === 'paid'): ?>
+                    <div class="d-flex gap-1 flex-wrap justify-content-end">
+                      <?php if ($rp['status'] === 'pending'): ?>
+                        <form method="POST" action="<?= APP_URL ?>/?page=admin_mark_repeat_purchases" class="confirm-action-form"
+                              data-confirm-title="Mark Order as Paid?"
+                              data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be marked as <strong>Paid</strong>. Continue?"
+                              data-confirm-btn-text="Mark Paid"
+                              data-confirm-btn-class="btn-info"
+                              data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
+                          <?= csrf_field() ?>
+                          <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
+                          <button type="button" class="btn btn-sm btn-success confirm-action-btn"
+                            <?= empty($rp['proof_image']) ? 'disabled title="No proof uploaded"' : '' ?>>
+                            ✓ Mark Paid
+                          </button>
+                        </form>
+                        <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="confirm-action-form"
+                              data-confirm-title="Reject Order?"
+                              data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be <strong>rejected</strong>. No PV will be distributed. This action cannot be undone."
+                              data-confirm-btn-text="Reject Order"
+                              data-confirm-btn-class="btn-danger"
+                              data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
+                          <?= csrf_field() ?>
+                          <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
+                          <button type="button" class="btn btn-sm btn-danger confirm-action-btn">
+                            ✕ Reject
+                          </button>
+                        </form>
+                      <?php elseif ($rp['status'] === 'paid'): ?>
+                        <form method="POST" action="<?= APP_URL ?>/?page=admin_approve_repeat_purchase" class="confirm-action-form"
+                              data-confirm-title="Approve Order & Distribute PV?"
+                              data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be <strong>approved</strong> and PV will be distributed to the member's binary tree. Continue?"
+                              data-confirm-btn-text="Approve Order"
+                              data-confirm-btn-class="btn-success"
+                              data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
+                          <?= csrf_field() ?>
+                          <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
+                          <button type="button" class="btn btn-sm btn-success confirm-action-btn">
+                            ✓ Approve
+                          </button>
+                        </form>
+                        <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="confirm-action-form"
+                              data-confirm-title="Reject Order?"
+                              data-confirm-message="Order <strong>##<?= (int)$rp['id'] ?></strong> will be <strong>rejected</strong>. No PV will be distributed. This action cannot be undone."
+                              data-confirm-btn-text="Reject Order"
+                              data-confirm-btn-class="btn-danger"
+                              data-bs-toggle="modal" data-bs-target="#actionConfirmModal">
+                          <?= csrf_field() ?>
+                          <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
+                          <button type="button" class="btn btn-sm btn-danger confirm-action-btn">
+                            ✕ Reject
+                          </button>
+                        </form>
+                      <?php endif; ?>
+                    </div>
+                  <?php else: ?>
+                    <span class="text-muted" style="font-size:.75rem;">—</span>
+                  <?php endif; ?>
                 </td>
+                <?php endif; ?>
               </tr>
             <?php endforeach; ?>
           <?php endif; ?>

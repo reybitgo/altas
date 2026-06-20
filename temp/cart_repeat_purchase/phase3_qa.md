@@ -204,8 +204,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Order visible in Pending with proof thumbnail
-- [ ] FAIL — Order missing, or proof not shown
+- [✅] PASS — Order visible in Pending with proof thumbnail
+- [] FAIL — Order missing, or proof not shown
 
 ---
 
@@ -224,8 +224,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Status changed to "paid", moved to Paid tab
-- [ ] FAIL — Error flash, or status not changed
+- [✅] PASS — Status changed to "paid", moved to Paid tab
+- [] FAIL — Error flash, or status not changed
 
 ---
 
@@ -244,8 +244,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Status changed to "approved", PV distributed
-- [ ] FAIL — Error flash, or status not changed
+- [✅] PASS — Status changed to "approved", PV distributed
+- [] FAIL — Error flash, or status not changed
 
 ---
 
@@ -263,7 +263,7 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Personal PV increased by the second order's PV
+- [✅] PASS — Personal PV increased by the second order's PV
 - [ ] FAIL — Personal PV unchanged
 
 ---
@@ -288,8 +288,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Status changed to "rejected", confirm dialog appeared
-- [ ] FAIL — No confirm dialog, or status not changed
+- [✅] PASS — Status changed to "rejected", confirm dialog appeared
+- [] FAIL — No confirm dialog, or status not changed
 
 ---
 
@@ -307,8 +307,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Personal PV unchanged by the rejected order
-- [ ] FAIL — Personal PV increased (PV leaked to rejected order)
+- [✅] PASS — Personal PV unchanged by the rejected order
+- [] FAIL — Personal PV increased (PV leaked to rejected order)
 
 ---
 
@@ -329,8 +329,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Product cannot be purchased, or stock error shown at checkout
-- [ ] FAIL — Member can still add/purchase the out-of-stock product
+- [✅] PASS — Product cannot be purchased, or stock error shown at checkout
+- [] FAIL — Member can still add/purchase the out-of-stock product
 
 **Cleanup:** Restore stock: `UPDATE products SET stock = 100 WHERE id = 7;`
 
@@ -350,7 +350,7 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Redirected to Repeat Purchases with flash message
+- [✅] PASS — Redirected to Repeat Purchases with flash message
 - [ ] FAIL — Checkout page loads with empty order, or error page
 
 ---
@@ -371,8 +371,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — E-Wallet option warns about insufficient balance, member cannot use it
-- [ ] FAIL — E-Wallet option is selectable and allows checkout, causing an error later
+- [✅] PASS — E-Wallet option warns about insufficient balance, member cannot use it
+- [] FAIL — E-Wallet option is selectable and allows checkout, causing an error later
 
 **Cleanup:** Restore the balance to ₱50,000+
 
@@ -396,8 +396,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — All three tabs work and filter correctly
-- [ ] FAIL — Tabs missing, or filter shows wrong orders
+- [✅] PASS — All three tabs work and filter correctly
+- [] FAIL — Tabs missing, or filter shows wrong orders
 
 ---
 
@@ -416,8 +416,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — All columns visible and correct
-- [ ] FAIL — Missing columns, broken layout, or wrong data
+- [✅] PASS — All columns visible and correct
+- [] FAIL — Missing columns, broken layout, or wrong data
 
 ---
 
@@ -436,8 +436,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Mark Paid disabled, tooltip shown
-- [ ] FAIL — Mark Paid is clickable, or order goes through without proof
+- [✅] PASS — Mark Paid disabled, tooltip shown
+- [] FAIL — Mark Paid is clickable, or order goes through without proof
 
 ---
 
