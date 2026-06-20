@@ -59,6 +59,28 @@
   .action-btn:hover { transform: translateY(-1px); }
   .action-btn:active { transform: translateY(0); }
 
+  .action-dropdown .dropdown-toggle {
+    padding: .3rem .55rem; font-size: .78rem; font-weight: 500;
+    border-radius: .45rem; border: 1px solid #e5e7eb; background: #fff; color: #374151;
+    transition: all .12s ease; display: inline-flex; align-items: center; gap: .35rem;
+  }
+  .action-dropdown .dropdown-toggle:hover { border-color: #d1d5db; background: #f9fafb; }
+  .action-dropdown .dropdown-toggle:active { background: #f3f4f6; }
+  .action-dropdown .dropdown-toggle::after { font-size: .7rem; margin-left: .25rem; }
+  .action-dropdown .dropdown-menu { min-width: 10rem; font-size: .82rem; border-radius: .55rem; padding: .3rem; border: 1px solid #e5e7eb; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+  .action-dropdown .dropdown-item { border-radius: .35rem; padding: .45rem .6rem; display: flex; align-items: center; gap: .5rem; }
+  .action-dropdown .dropdown-item:hover { background: #f3f4f6; }
+  .action-dropdown .dropdown-item.text-danger:hover { background: #fef2f2; }
+  .action-dropdown .dropdown-divider { margin: .25rem .3rem; border-color: #e5e7eb; }
+  .action-dropdown .dropdown-item:disabled { opacity: .45; pointer-events: none; }
+
+  /* Dropdown button when only one action is available */
+  .action-dropdown .dropdown-toggle.btn-icon {
+    padding: .3rem;
+    width: 32px; height: 32px;
+    justify-content: center;
+  }
+
   .order-id { font-family: var(--font-mono, monospace); font-weight: 600; font-size: .875rem; }
   .order-amount { font-family: var(--font-mono, monospace); font-weight: 600; font-size: .9rem; }
   .order-amount .pv { font-size: .75rem; color: #10b981; font-weight: 500; }
@@ -112,7 +134,7 @@
     // For now, we estimate based on current view
   ?>
   <div class="row g-2 mb-4">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md">
       <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=pending" class="text-decoration-none">
         <div class="stat-card <?= $status === 'pending' ? 'active' : '' ?>">
           <div class="stat-value text-warning"><?= $status === 'pending' ? $totalCount : '—' ?></div>
@@ -120,7 +142,15 @@
         </div>
       </a>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md">
+      <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=approved" class="text-decoration-none">
+        <div class="stat-card <?= $status === 'approved' ? 'active' : '' ?>">
+          <div class="stat-value text-success"><?= $status === 'approved' ? $totalCount : '—' ?></div>
+          <div class="stat-label">Approved</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md">
       <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=paid" class="text-decoration-none">
         <div class="stat-card <?= $status === 'paid' ? 'active' : '' ?>">
           <div class="stat-value text-info"><?= $status === 'paid' ? $totalCount : '—' ?></div>
@@ -128,7 +158,7 @@
         </div>
       </a>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md">
       <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=all" class="text-decoration-none">
         <div class="stat-card <?= $status === 'all' ? 'active' : '' ?>">
           <div class="stat-value text-dark"><?= $totalCount ?></div>
@@ -136,7 +166,7 @@
         </div>
       </a>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md">
       <div class="stat-card" style="border-color: #e5e7eb;">
         <div class="stat-value text-success"><?= number_format((float)($result['data'][0]['total_pv'] ?? 0), 0) ?>+</div>
         <div class="stat-label">PV This Page</div>
@@ -149,6 +179,9 @@
     <div class="btn-group btn-group-sm">
       <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=pending" class="btn <?= $status === 'pending' ? 'btn-primary' : 'btn-outline-secondary' ?>">
         <span class="status-dot" style="background:#f59e0b;"></span>Pending
+      </a>
+      <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=approved" class="btn <?= $status === 'approved' ? 'btn-primary' : 'btn-outline-secondary' ?>">
+        <span class="status-dot" style="background:#10b981;"></span>Approved
       </a>
       <a href="<?= APP_URL ?>/?page=admin_repeat_purchases&status=paid" class="btn <?= $status === 'paid' ? 'btn-primary' : 'btn-outline-secondary' ?>">
         <span class="status-dot" style="background:#3b82f6;"></span>Paid
@@ -229,10 +262,15 @@
                 </td>
 
                 <!-- Proof -->
-                <td class="text-center hide-xs">
-                  <?php if (!empty($rp['proof_image'])): ?>
+                <td class="text-center hide-xs" style="min-width:56px;">
+                  <?php
+                    $hasProof = !empty($rp['proof_image']);
+                    $proofPath = $hasProof ? dirname(dirname(__DIR__)) . '/uploads/' . $rp['proof_image'] : '';
+                    $proofExists = $hasProof && file_exists($proofPath);
+                  ?>
+                  <?php if ($proofExists): ?>
                     <a href="<?= APP_URL ?>/uploads/<?= e($rp['proof_image']) ?>" target="_blank" rel="noopener" title="View proof">
-                      <img src="<?= APP_URL ?>/uploads/<?= e($rp['proof_image']) ?>" alt="Proof" class="proof-thumb" loading="lazy">
+                      <img src="<?= APP_URL ?>/uploads/<?= e($rp['proof_image']) ?>" alt="Proof" class="proof-thumb" loading="lazy" onerror="this.parentElement.outerHTML='<span class=\'text-muted\' style=\'font-size:.75rem;\'>—</span>';">
                     </a>
                   <?php else: ?>
                     <span class="text-muted" style="font-size:.75rem;">—</span>
@@ -278,47 +316,66 @@
                 </td>
 
                 <!-- Actions -->
-                <td class="text-end" style="padding-right:1rem; min-width:160px;">
-                  <?php if ($rp['status'] === 'pending'): ?>
-                    <form method="POST" action="<?= APP_URL ?>/?page=admin_mark_repeat_purchases" class="d-inline">
-                      <?= csrf_field() ?>
-                      <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                      <button type="submit"
-                        class="action-btn btn-info text-white border-0"
-                        <?= empty($rp['proof_image']) ? 'disabled title="No proof uploaded"' : '' ?>
-                        style="background:#0ea5e9;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        Mark Paid
+                <td class="text-end" style="padding-right:1rem; min-width:100px;">
+                  <div class="dropdown action-dropdown">
+                    <?php if ($rp['status'] === 'pending' || $rp['status'] === 'paid'): ?>
+                      <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                        Actions
                       </button>
-                    </form>
-                    <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="d-inline" onsubmit="return confirm('Reject this order? No PV will be distributed.')">
-                      <?= csrf_field() ?>
-                      <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                      <button type="submit" class="action-btn btn-outline-danger" style="border-color:#ef4444;color:#ef4444;background:#fff;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        Reject
-                      </button>
-                    </form>
-                  <?php elseif ($rp['status'] === 'paid'): ?>
-                    <form method="POST" action="<?= APP_URL ?>/?page=admin_approve_repeat_purchase" class="d-inline">
-                      <?= csrf_field() ?>
-                      <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                      <button type="submit" class="action-btn btn-success text-white border-0" style="background:#10b981;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        Approve
-                      </button>
-                    </form>
-                    <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="d-inline" onsubmit="return confirm('Reject this order? No PV will be distributed.')">
-                      <?= csrf_field() ?>
-                      <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
-                      <button type="submit" class="action-btn btn-outline-danger" style="border-color:#ef4444;color:#ef4444;background:#fff;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        Reject
-                      </button>
-                    </form>
-                  <?php else: ?>
-                    <span class="text-muted" style="font-size:.75rem;">No action</span>
-                  <?php endif; ?>
+                      <ul class="dropdown-menu dropdown-menu-end">
+                        <?php if ($rp['status'] === 'pending'): ?>
+                          <li>
+                            <form method="POST" action="<?= APP_URL ?>/?page=admin_mark_repeat_purchases" class="d-inline w-100">
+                              <?= csrf_field() ?>
+                              <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
+                              <button type="submit" class="dropdown-item"
+                                <?= empty($rp['proof_image']) ? 'disabled title="No proof uploaded"' : '' ?>
+                                style="color:#0ea5e9;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Mark Paid
+                              </button>
+                            </form>
+                          </li>
+                          <li><hr class="dropdown-divider"></li>
+                          <li>
+                            <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="d-inline w-100" onsubmit="return confirm('Reject this order? No PV will be distributed.')">
+                              <?= csrf_field() ?>
+                              <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
+                              <button type="submit" class="dropdown-item text-danger">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                Reject
+                              </button>
+                            </form>
+                          </li>
+                        <?php elseif ($rp['status'] === 'paid'): ?>
+                          <li>
+                            <form method="POST" action="<?= APP_URL ?>/?page=admin_approve_repeat_purchase" class="d-inline w-100">
+                              <?= csrf_field() ?>
+                              <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
+                              <button type="submit" class="dropdown-item" style="color:#10b981;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Approve
+                              </button>
+                            </form>
+                          </li>
+                          <li><hr class="dropdown-divider"></li>
+                          <li>
+                            <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="d-inline w-100" onsubmit="return confirm('Reject this order? No PV will be distributed.')">
+                              <?= csrf_field() ?>
+                              <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
+                              <button type="submit" class="dropdown-item text-danger">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                Reject
+                              </button>
+                            </form>
+                          </li>
+                        <?php endif; ?>
+                      </ul>
+                    <?php else: ?>
+                      <span class="text-muted" style="font-size:.75rem;">—</span>
+                    <?php endif; ?>
+                  </div>
                 </td>
               </tr>
             <?php endforeach; ?>

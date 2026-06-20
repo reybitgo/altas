@@ -402,9 +402,10 @@ class AdminController
         $perPage = per_page();
 
         $result = match ($status) {
-            'paid'    => RepeatPurchaseOrder::paid($page, $perPage),
-            'all'     => RepeatPurchaseOrder::all($page, $perPage),
-            default   => RepeatPurchaseOrder::pending($page, $perPage),
+            'paid'     => RepeatPurchaseOrder::paid($page, $perPage),
+            'approved' => RepeatPurchaseOrder::approved($page, $perPage),
+            'all'      => RepeatPurchaseOrder::all($page, $perPage),
+            default    => RepeatPurchaseOrder::pending($page, $perPage),
         };
 
         $pageTitle = 'Repeat Purchase Orders';

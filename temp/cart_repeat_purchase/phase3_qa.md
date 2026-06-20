@@ -92,8 +92,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Success flash shown, redirected
-- [ ] FAIL — Error flash, page not redirected, or cart still has items
+- [✅] PASS — Success flash shown, redirected
+- [] FAIL — Error flash, page not redirected, or cart still has items
 
 ---
 
@@ -109,8 +109,8 @@ This QA validates the checkout flow (e-wallet instant + external payment with pr
 
 **Pass / Fail:**
 
-- [ ] PASS — Balance reduced correctly
-- [ ] FAIL — Balance unchanged or wrong amount deducted
+- [✅] PASS — Balance reduced correctly
+- [] FAIL — Balance unchanged or wrong amount deducted
 
 ---
 

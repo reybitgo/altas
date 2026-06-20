@@ -70,6 +70,11 @@ class RepeatPurchaseOrder
         return static::paginate("o.status = 'paid'", $page, $perPage);
     }
 
+    public static function approved(int $page = 1, int $perPage = 25): array
+    {
+        return static::paginate("o.status = 'approved'", $page, $perPage);
+    }
+
     public static function all(int $page = 1, int $perPage = 25): array
     {
         return static::paginate('1=1', $page, $perPage);
