@@ -12,12 +12,22 @@ $initial = strtoupper(substr($user['username'] ?? 'U', 0, 1));
 $name    = $user['full_name'] ?: ('@' . $user['username']);
 $view    = $_GET['view'] ?? '';
 
+// Compute cart badge count
+$cartBadge = 0;
+if (class_exists('Cart') && Auth::check()) {
+    $_cart = Cart::getOrCreate(Auth::id());
+    if ($_cart && !empty($_cart['id'])) {
+        $cartItems = Cart::getItems((int)$_cart['id']);
+        $cartBadge = empty($cartItems) ? 0 : (int)array_sum(array_column($cartItems, 'quantity'));
+    }
+}
+
 // Build nav items
 $nav = [
   ['page' => 'dashboard', 'icon' => '🏠', 'label' => 'Dashboard',        'pages' => ['dashboard']],
   ['page' => 'earnings',  'icon' => '💰', 'label' => 'Earnings',         'pages' => ['earnings']],
   ['page' => 'repeat_purchases', 'icon' => '🛒', 'label' => 'Repeat Purchases', 'pages' => ['repeat_purchases']],
-  ['page' => 'cart', 'icon' => '🛍️', 'label' => 'Cart', 'pages' => ['cart']],
+  ['page' => 'cart', 'icon' => '🛍️', 'label' => 'Cart', 'pages' => ['cart'], 'badge' => $cartBadge],
   ['page' => 'cap_status', 'icon' => '🛡️', 'label' => 'Lifetime Cap',     'pages' => ['cap_status']],
   ['page' => 'dfi_history', 'icon' => '📅', 'label' => 'DFI History',      'pages' => ['dfi_history']],
   'SEPARATOR:Network',
@@ -76,6 +86,9 @@ function renderSidebarNav($nav, $cp, $user, $view, $initial, $name)
       <a href="<?= $href ?>" <?= $target ?> class="nav-item-link <?= $active ? 'active' : '' ?>">
         <span class="nav-icon"><?= $item['icon'] ?></span>
         <?= e($item['label']) ?>
+        <?php if (!empty($item['badge'])): ?>
+          <span class="badge rounded-pill ms-auto" style="font-size:.65rem;background:#dc3545;color:#fff;min-width:1.4rem;text-align:center;"><?= (int)$item['badge'] ?></span>
+        <?php endif; ?>
       </a>
     <?php endforeach; ?>
     <a href="<?= APP_URL ?>/?page=logout" class="nav-item-link">
