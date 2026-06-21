@@ -46,9 +46,15 @@ function e(mixed $val): string
 
 /**
  * Format a number as Philippine Peso.
+ *
+ * Accepts null defensively: SQL aggregates like SUM() return NULL on empty
+ * result sets, and a stray NULL here used to crash the whole page with a
+ * TypeError. Coerce it to 0.0 so a "no data yet" state renders as ₱0.00
+ * instead of a fatal error.
  */
-function fmt_money(float $n, bool $showSign = false): string
+function fmt_money(float|null $n, bool $showSign = false): string
 {
+    $n = (float)($n ?? 0);
     $formatted = '₱' . number_format(abs($n), 2);
     if ($showSign && $n < 0) return '-' . $formatted;
     if ($showSign && $n > 0) return '+' . $formatted;

@@ -167,13 +167,16 @@ class Code
 
     public static function stats(): array
     {
+        // SUM() returns NULL when the table is empty (e.g. right after a reset
+        // wipes all reg_codes). COALESCE each aggregate to 0 so callers get a
+        // numeric value instead of null, which would crash fmt_money().
         return db()->query("
             SELECT
               COUNT(*)                                                AS total,
-              SUM(CASE WHEN status='unused'  THEN 1 ELSE 0 END)      AS unused,
-              SUM(CASE WHEN status='used'    THEN 1 ELSE 0 END)       AS used,
-              SUM(CASE WHEN status='expired' THEN 1 ELSE 0 END)       AS expired,
-              SUM(CASE WHEN status='used'    THEN price ELSE 0 END)   AS revenue
+              COALESCE(SUM(CASE WHEN status='unused'  THEN 1 ELSE 0 END), 0)      AS unused,
+              COALESCE(SUM(CASE WHEN status='used'    THEN 1 ELSE 0 END), 0)       AS used,
+              COALESCE(SUM(CASE WHEN status='expired' THEN 1 ELSE 0 END), 0)       AS expired,
+              COALESCE(SUM(CASE WHEN status='used'    THEN price ELSE 0 END), 0)   AS revenue
             FROM reg_codes
         ")->fetch();
     }

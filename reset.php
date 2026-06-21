@@ -173,17 +173,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
       $pdo->exec("ALTER TABLE package_indirect_levels AUTO_INCREMENT = 1");
       $logs[] = ['ok', 'Cleared all packages'];
 
-      // Re-seed default Starter package (PV-based defaults)
+      // Re-seed default Starter package (PV-based defaults).
+      // NOTE: column list is exhaustive on purpose. The deployed `packages`
+      // table may carry legacy NOT NULL-without-DEFAULT columns (notably
+      // `pairing_bonus`) that pre-date install.sql's consolidated schema, and
+      // STRICT_TRANS_TABLES will reject an INSERT that omits them. Listing
+      // every column defensively sidesteps that schema drift.
       $pdo->exec("INSERT INTO packages (
-                id, name, entry_fee, package_pv_rate, binary_pv_pct, pairing_pv_pct, daily_pair_pv_cap,
-                direct_ref_pv_pct,
+                id, name, entry_fee, package_pv_rate, binary_pv_pct,
+                pairing_bonus, daily_pair_cap,
+                pairing_pv_pct, daily_pair_pv_cap,
+                direct_ref_bonus, direct_ref_pv_pct,
                 lifetime_cap_multiplier, reactivation_fee, reactivation_window_days,
-                daily_fixed_income, daily_fixed_income_days, dfi_pv_pct, status
+                daily_fixed_income, daily_fixed_income_days, dfi_pv_pct,
+                personal_pv_requirement, status
             ) VALUES (
-                1, 'Starter', 10000.00, 100.00, 20.00, 20.00, 30000.00,
-                5.00,
+                1, 'Starter', 10000.00, 100.00, 20.00,
+                0.00, 3,
+                20.00, 30000.00,
+                0.00, 5.00,
                 3.00, 10000.00, 15,
-                100.00, 90, 0.00, 'active'
+                100.00, 90, 0.00,
+                0.00, 'active'
             )");
       $pdo->exec("INSERT INTO package_indirect_levels (package_id, level, bonus, pv_pct) VALUES
                 (1,1,300,3.00),(1,2,200,2.00),(1,3,150,1.50),(1,4,100,1.00),(1,5,100,1.00),
