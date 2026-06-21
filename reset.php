@@ -23,31 +23,15 @@ date_default_timezone_set('Asia/Manila');
 
 require_once __DIR__ . '/config/db.php';
 
-function generate_code(): string
-{
-  $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  $len   = strlen($chars);
-  $parts = [];
-  for ($i = 0; $i < 3; $i++) {
-    $part = '';
-    for ($j = 0; $j < 4; $j++) $part .= $chars[random_int(0, $len - 1)];
-    $parts[] = $part;
-  }
-  return implode('-', $parts);
-}
-
 // ── Handle POST (actual reset) ─────────────────────────────────────────────
 $result  = null;
 $error   = null;
 $logs    = [];
-$newCodes = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset') {
 
   $keepPackages = isset($_POST['keep_packages']);
   $keepAdmin    = true; // always keep admin
-  $newCodeQty   = max(1, min(50, (int)($_POST['code_qty'] ?? 5)));
-  $newCodePkg   = (int)($_POST['code_pkg'] ?? 1);
 
   try {
     $pdo = db();
@@ -87,6 +71,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
     $pdo->exec("DELETE FROM user_cd_status");
     $logs[] = ['ok', 'Cleared CD status records'];
 
+    // Clear PV transactions (Phase 2+)
+    $pdo->exec("DELETE FROM pv_transactions");
+    $logs[] = ['ok', 'Cleared PV transactions'];
+
+    // Clear repeat purchase tables (Phase 5/7)
+    $pdo->exec("DELETE FROM repeat_purchase_order_items");
+    $logs[] = ['ok', 'Cleared repeat purchase order items'];
+
+    $pdo->exec("DELETE FROM repeat_purchase_orders");
+    $logs[] = ['ok', 'Cleared repeat purchase orders'];
+
+    $pdo->exec("DELETE FROM cart_items");
+    $logs[] = ['ok', 'Cleared cart items'];
+
+    $pdo->exec("DELETE FROM carts");
+    $logs[] = ['ok', 'Cleared carts'];
+
     // v2: Clear uploaded reactivation proof images
     $proofDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'reactivation_proofs';
     if (is_dir($proofDir)) {
@@ -98,6 +99,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
         }
       }
       $logs[] = ['ok', "Cleared {$cleared} reactivation proof image(s)"];
+    }
+
+    // Phase 7: Clear uploaded repeat-purchase proof images
+    // (repeat_purchase_orders rows are deleted above, but their proof_image
+    //  files on disk must be unlinked too, or they become orphans.)
+    $rpProofDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repeat_purchase_proofs';
+    if (is_dir($rpProofDir)) {
+      $cleared = 0;
+      foreach (glob($rpProofDir . '/*') as $f) {
+        if (is_file($f)) {
+          unlink($f);
+          $cleared++;
+        }
+      }
+      $logs[] = ['ok', "Cleared {$cleared} repeat-purchase proof image(s)"];
     }
 
     // 3. Clear all registration codes
@@ -131,13 +147,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
             cd_active             = 0,
             ewallet_sent_today      = 0.00,
             ewallet_sent_this_week  = 0.00,
-            last_login            = NULL
+            last_login            = NULL,
+            left_pv               = 0.00,
+            right_pv              = 0.00,
+            paired_pv             = 0.00,
+            paired_pv_today       = 0.00,
+            flushed_pv            = 0.00,
+            personal_pv           = 0.00,
+            group_pv              = 0.00
             WHERE role = 'admin'
         ");
     $logs[] = ['ok', 'Reset admin to clean install state (counters, balances, tree placement, package all cleared)'];
 
     // 5. Reset auto-increment counters
-    foreach (['users', 'commissions', 'ewallet_ledger', 'payout_requests', 'reg_codes', 'reactivations', 'daily_fixed_income_log', 'ewallet_transfers', 'ewallet_admin_topups', 'cd_ledger', 'user_cd_status'] as $tbl) {
+    foreach (['users', 'commissions', 'ewallet_ledger', 'payout_requests', 'reg_codes', 'reactivations', 'daily_fixed_income_log', 'ewallet_transfers', 'ewallet_admin_topups', 'cd_ledger', 'user_cd_status', 'pv_transactions', 'carts', 'cart_items', 'repeat_purchase_orders', 'repeat_purchase_order_items'] as $tbl) {
       $pdo->exec("ALTER TABLE {$tbl} AUTO_INCREMENT = 1");
     }
     $logs[] = ['ok', 'Reset auto-increment counters'];
@@ -166,31 +189,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
                 (1,1,300,3.00),(1,2,200,2.00),(1,3,150,1.50),(1,4,100,1.00),(1,5,100,1.00),
                 (1,6,50,0.50),(1,7,50,0.50),(1,8,50,0.50),(1,9,50,0.50),(1,10,50,0.50)");
       $logs[] = ['ok', 'Re-seeded default Starter package'];
-      $newCodePkg = 1;
     }
 
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
 
-    // 7. Generate fresh registration codes
-    $adminId = (int)$pdo->query("SELECT id FROM users WHERE role='admin' LIMIT 1")->fetchColumn();
-    $pkgExists = (int)$pdo->query("SELECT COUNT(*) FROM packages WHERE id={$newCodePkg}")->fetchColumn();
-    if (!$pkgExists) $newCodePkg = (int)$pdo->query("SELECT id FROM packages LIMIT 1")->fetchColumn();
-
-    $pkgName = $pdo->query("SELECT name FROM packages WHERE id={$newCodePkg}")->fetchColumn();
-    $st = $pdo->prepare("INSERT INTO reg_codes (code, package_id, price, created_by, is_cd) VALUES (?,?,?,?,0)");
-
-    for ($i = 0; $i < $newCodeQty; $i++) {
-      do {
-        $code = generate_code();
-        $exists = $pdo->query("SELECT COUNT(*) FROM reg_codes WHERE code='{$code}'")->fetchColumn();
-      } while ($exists);
-      $price = (float)$pdo->query("SELECT entry_fee + 0 FROM packages WHERE id={$newCodePkg}")->fetchColumn();
-      $st->execute([$code, $newCodePkg, $price, $adminId]);
-      $newCodes[] = $code;
-    }
-    $logs[] = ['ok', "Generated {$newCodeQty} fresh registration code(s) for package: {$pkgName}"];
-
-    // 8. Reset last_reset setting
+    // 7. Reset last_reset setting
     $pdo->exec("UPDATE settings SET value='' WHERE key_name='last_reset'");
     $logs[] = ['ok', 'Reset last_reset timestamp'];
 
@@ -674,22 +677,9 @@ try {
             </div>
           <?php endforeach; ?>
         </div>
-        <?php if (!empty($newCodes)): ?>
-          <hr style="border:none;border-top:1px solid rgba(18,160,92,.2);margin:0 1.25rem;">
-          <div style="padding:.75rem 1.25rem .5rem;font-size:.72rem;color:#4ade80;font-weight:700;letter-spacing:.5px;text-transform:uppercase;">
-            🎟️ Fresh Registration Codes — Click to copy
-          </div>
-          <div class="codes-grid">
-            <?php foreach ($newCodes as $c): ?>
-              <div class="code-chip" onclick="copyCode(this, '<?= htmlspecialchars($c) ?>')" title="Click to copy">
-                <?= htmlspecialchars($c) ?>
-              </div>
-            <?php endforeach; ?>
-          </div>
-          <div style="padding:.5rem 1.25rem .875rem;font-size:.72rem;color:#5a6a88;">
-            Login: <strong style="color:#9ca8c0;">admin</strong> / <strong style="color:#9ca8c0;">Admin@1234</strong>
-          </div>
-        <?php endif; ?>
+        <div style="padding:.5rem 1.25rem .875rem;font-size:.72rem;color:#5a6a88;">
+          Login: <strong style="color:#9ca8c0;">admin</strong> / <strong style="color:#9ca8c0;">Admin@1234</strong>
+        </div>
       </div>
 
       <div style="text-align:center;margin-bottom:1.5rem;">
@@ -791,20 +781,6 @@ try {
                 </label>
               </div>
 
-              <div class="form-group">
-                <label for="code_pkg">Generate codes for package</label>
-                <select name="code_pkg" id="code_pkg">
-                  <?php foreach ($packages as $pkg): ?>
-                    <option value="<?= $pkg['id'] ?>"><?= htmlspecialchars($pkg['name']) ?> — entry ₱<?= number_format($pkg['entry_fee'], 2) ?></option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="code_qty">How many fresh codes to generate</label>
-                <input type="number" name="code_qty" id="code_qty" min="1" max="50" value="5">
-              </div>
-
               <button type="submit" class="btn-reset" id="resetBtn" disabled>
                 🗑️ Reset Database
               </button>
@@ -823,9 +799,6 @@ try {
 
   </div><!-- .container -->
 
-  <!-- Toast -->
-  <div id="toast" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1e2a45;border:1px solid #3b6ff0;color:#8fb4ff;font-size:.8rem;font-weight:600;padding:.5rem 1.25rem;border-radius:999px;font-family:monospace;letter-spacing:.5px;z-index:9999;"></div>
-
   <script>
     // ── Confirm input unlock ───────────────────────────────────────────────────
     const confirmInput = document.getElementById('confirmInput');
@@ -838,42 +811,6 @@ try {
         resetBtn.classList.toggle('enabled', ok);
         resetBtn.disabled = !ok;
       });
-    }
-
-    // ── Packages toggle — update package select visibility ────────────────────
-    const keepPkg = document.getElementById('keepPkg');
-    const pkgSel = document.getElementById('code_pkg');
-    if (keepPkg && pkgSel) {
-      keepPkg.addEventListener('change', function() {
-        pkgSel.disabled = !this.checked;
-        if (!this.checked) pkgSel.style.opacity = '.4';
-        else pkgSel.style.opacity = '1';
-      });
-    }
-
-    // ── Copy code chip ────────────────────────────────────────────────────────
-    function copyCode(el, code) {
-      navigator.clipboard.writeText(code).then(() => {
-        showToast('Copied: ' + code);
-        el.style.background = 'rgba(18,160,92,.2)';
-        el.style.borderColor = 'rgba(18,160,92,.4)';
-        el.style.color = '#4ade80';
-        setTimeout(() => {
-          el.style.background = '';
-          el.style.borderColor = '';
-          el.style.color = '';
-        }, 1500);
-      });
-    }
-
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.style.display = 'block';
-      clearTimeout(t._timer);
-      t._timer = setTimeout(() => {
-        t.style.display = 'none';
-      }, 2000);
     }
 
     // ── Prevent accidental double-submit ─────────────────────────────────────
