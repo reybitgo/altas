@@ -175,7 +175,7 @@
                     <?php if ($h['status'] === 'pending'): ?>
                       <span class="badge bg-warning-subtle text-warning" style="font-size:.72rem;">⏳ Pending</span>
                     <?php elseif ($h['status'] === 'paid'): ?>
-                      <span class="badge bg-info-subtle text-info" style="font-size:.72rem;">💳 Paid</span>
+                      <span class="badge bg-info-subtle text-info" style="font-size:.72rem;">Paid</span>
                     <?php elseif ($h['status'] === 'approved'): ?>
                       <span class="badge bg-success-subtle text-success" style="font-size:.72rem;">✓ Approved</span>
                     <?php elseif ($h['status'] === 'rejected'): ?>

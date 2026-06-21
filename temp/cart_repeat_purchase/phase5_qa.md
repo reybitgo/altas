@@ -9,6 +9,7 @@
 ## 🎯 What This Phase Tests
 
 This QA validates three admin-facing changes from Phase 5:
+
 1. **Admin Settings** — The global `personal_pv_requirement` setting is removed from the Settings page
 2. **Package Management** — Each package now has its own `personal_pv_requirement` field that can be edited in the Package modal
 3. **Product Management** — The admin Products page shows stock (available / total) and allows editing stock via the product modal
@@ -74,10 +75,11 @@ It also re-verifies the admin Repeat Purchases page styling (button actions, Pay
 **Pass / Fail:**
 
 - [✅] PASS — The Personal PV Gate section is completely gone from Settings
-- [ ] FAIL — The Personal PV Gate section still appears on the Settings page
+- [] FAIL — The Personal PV Gate section still appears on the Settings page
 
 **Screenshot to verify:**
 Take a screenshot of the Compensation Plan section in Settings. It should show only:
+
 - Binary toggle
 - Indirect Referral toggle
 - Default Lifetime Cap Multiplier
@@ -102,7 +104,7 @@ No purple/🚪 Personal PV Gate card below it.
 - On the right side of that same row (or directly below if binary is disabled), there is a field labeled:
   - **Personal PV Requirement (PV)**
 - It has a numeric input box with the current value (default is `0.00` if never set)
-- Below the input is helper text: *"Minimum Personal PV an upline must have to earn repeat-purchase indirect/PV bonuses. 0 = no gate."*
+- Below the input is helper text: _"Minimum Personal PV an upline must have to earn repeat-purchase indirect/PV bonuses. 0 = no gate."_
 
 **Pass / Fail:**
 
@@ -130,7 +132,7 @@ No purple/🚪 Personal PV Gate card below it.
 **Pass / Fail:**
 
 - [✅] PASS — Value is saved and persisted on re-open
-- [ ] FAIL — Value reverts to 0, or error flash appears
+- [] FAIL — Value reverts to 0, or error flash appears
 
 **Cleanup:** Set the value back to `0.00` after testing if you want no gate for other tests.
 
@@ -157,7 +159,7 @@ No purple/🚪 Personal PV Gate card below it.
 **Pass / Fail:**
 
 - [✅] PASS — The gate works correctly (upline below 500 gets nothing, above 500 gets Group PV)
-- [ ] FAIL — The upline gets Group PV even though their Personal PV is below the requirement
+- [] FAIL — The upline gets Group PV even though their Personal PV is below the requirement
 
 **Note:** This is a functional test of the underlying commission engine. If the upline's Personal PV is already above 500, this test won't prove the gate is working. You may need to temporarily reduce the upline's `personal_pv` via SQL for a true negative test.
 
@@ -186,12 +188,12 @@ UPDATE packages SET personal_pv_requirement = 0.00 WHERE id = 1;
   - `10 / 10` (green badge) — all stock is available
   - `5 / 10` (orange/yellow badge) — 5 reserved by pending orders, 5 available
   - `0 / 10` (gray badge) — all stock reserved, none available
-- Below the badge is small text: *"available / total"*
+- Below the badge is small text: _"available / total"_
 
 **Pass / Fail:**
 
 - [✅] PASS — Stock column is visible with correct available/total badges
-- [ ] FAIL — Stock column missing, or values are wrong
+- [] FAIL — Stock column missing, or values are wrong
 
 ---
 
@@ -224,12 +226,12 @@ UPDATE packages SET personal_pv_requirement = 0.00 WHERE id = 1;
 
 **Expected Result:**
 
-- A field labeled **Stock** with a red asterisk (*) is visible
+- A field labeled **Stock** with a red asterisk (\*) is visible
 - It has an **input group** with three elements:
   - Left button: **−** (minus)
   - Middle input: a number field showing `0` (or the current value for edits)
   - Right button: **+** (plus)
-- Below the input is helper text: *"Total physical inventory. Orders reserve from this count but never modify it. Set to 0 to disallow purchases until restocked."*
+- Below the input is helper text: _"Total physical inventory. Orders reserve from this count but never modify it. Set to 0 to disallow purchases until restocked."_
 
 **Pass / Fail:**
 
@@ -462,7 +464,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 **Expected Result:**
 
 - The **✓ Mark Paid** button is **disabled** (grayed out, cannot be clicked)
-- Hovering over the button shows a tooltip: *"No proof uploaded"*
+- Hovering over the button shows a tooltip: _"No proof uploaded"_
 - The **✕ Reject** button is still enabled (you can reject an order without proof)
 
 **Pass / Fail:**
@@ -485,7 +487,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 
 **Expected Result:**
 
-- Green flash: *"Order marked as paid."*
+- Green flash: _"Order marked as paid."_
 - Order disappears from Pending tab
 - Order appears in **Paid** tab with status 💳 Paid
 
@@ -494,7 +496,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 
 **Expected Result:**
 
-- Green flash: *"Order approved and PV distributed."*
+- Green flash: _"Order approved and PV distributed."_
 - Order disappears from Paid tab
 - Order appears in **All** tab with status ✓ Approved
 - In the **Approved** tab, the order shows **NO action buttons** (no Actions column)
@@ -517,7 +519,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 
 **Expected Result:**
 
-- Green flash: *"Order rejected."*
+- Green flash: _"Order rejected."_
 - Order disappears from Pending tab
 - Order appears in **All** tab with status ✕ Rejected
 - In the **Approved** tab, this order does NOT appear (because it's rejected, not approved)
@@ -541,7 +543,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 
 **Expected Result:**
 
-- Green flash: *"Settings saved."*
+- Green flash: _"Settings saved."_
 - No error flash about missing `personal_pv_requirement`
 - The page reloads and all settings are preserved
 
@@ -556,27 +558,27 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 
 Copy this to a notepad and check off each test as you go:
 
-| Test ID | Description                                           | Status          |
-| ------- | ----------------------------------------------------- | --------------- |
-| TC-501  | Personal PV Gate removed from Settings                | ☐ PASS / ☐ FAIL |
-| TC-502  | Personal PV Requirement field exists in Package modal | ☐ PASS / ☐ FAIL |
-| TC-503  | Package-level Personal PV Requirement saves correctly | ☐ PASS / ☐ FAIL |
-| TC-504  | Commission gate reads package-level value (functional)| ☐ PASS / ☐ FAIL |
-| TC-505  | Products table shows Stock column                     | ☐ PASS / ☐ FAIL |
-| TC-506  | Stock badge colors match available state              | ☐ PASS / ☐ FAIL |
-| TC-507  | Product modal has Stock input with stepper            | ☐ PASS / ☐ FAIL |
-| TC-508  | Stock stepper ± buttons work correctly                | ☐ PASS / ☐ FAIL |
-| TC-509  | Create product with stock saves correctly             | ☐ PASS / ☐ FAIL |
-| TC-510  | Edit product stock updates correctly                  | ☐ PASS / ☐ FAIL |
-| TC-511  | Available stock updates when orders reserve stock     | ☐ PASS / ☐ FAIL |
-| TC-512  | Tab order: Pending → Paid → Approved → All          | ☐ PASS / ☐ FAIL |
-| TC-513  | Approved tab has no Actions column                    | ☐ PASS / ☐ FAIL |
-| TC-514  | Payment column visible in all tabs                    | ☐ PASS / ☐ FAIL |
-| TC-515  | Action buttons are inline (not dropdown)              | ☐ PASS / ☐ FAIL |
-| TC-516  | Mark Paid disabled without proof                      | ☐ PASS / ☐ FAIL |
-| TC-517  | Full two-step admin workflow with buttons             | ☐ PASS / ☐ FAIL |
-| TC-518  | Reject from Pending tab works                         | ☐ PASS / ☐ FAIL |
-| TC-519  | Settings save without old personal_pv_requirement     | ☐ PASS / ☐ FAIL |
+| Test ID | Description                                            | Status          |
+| ------- | ------------------------------------------------------ | --------------- |
+| TC-501  | Personal PV Gate removed from Settings                 | ☐ PASS / ☐ FAIL |
+| TC-502  | Personal PV Requirement field exists in Package modal  | ☐ PASS / ☐ FAIL |
+| TC-503  | Package-level Personal PV Requirement saves correctly  | ☐ PASS / ☐ FAIL |
+| TC-504  | Commission gate reads package-level value (functional) | ☐ PASS / ☐ FAIL |
+| TC-505  | Products table shows Stock column                      | ☐ PASS / ☐ FAIL |
+| TC-506  | Stock badge colors match available state               | ☐ PASS / ☐ FAIL |
+| TC-507  | Product modal has Stock input with stepper             | ☐ PASS / ☐ FAIL |
+| TC-508  | Stock stepper ± buttons work correctly                 | ☐ PASS / ☐ FAIL |
+| TC-509  | Create product with stock saves correctly              | ☐ PASS / ☐ FAIL |
+| TC-510  | Edit product stock updates correctly                   | ☐ PASS / ☐ FAIL |
+| TC-511  | Available stock updates when orders reserve stock      | ☐ PASS / ☐ FAIL |
+| TC-512  | Tab order: Pending → Paid → Approved → All             | ☐ PASS / ☐ FAIL |
+| TC-513  | Approved tab has no Actions column                     | ☐ PASS / ☐ FAIL |
+| TC-514  | Payment column visible in all tabs                     | ☐ PASS / ☐ FAIL |
+| TC-515  | Action buttons are inline (not dropdown)               | ☐ PASS / ☐ FAIL |
+| TC-516  | Mark Paid disabled without proof                       | ☐ PASS / ☐ FAIL |
+| TC-517  | Full two-step admin workflow with buttons              | ☐ PASS / ☐ FAIL |
+| TC-518  | Reject from Pending tab works                          | ☐ PASS / ☐ FAIL |
+| TC-519  | Settings save without old personal_pv_requirement      | ☐ PASS / ☐ FAIL |
 
 ---
 
@@ -619,13 +621,12 @@ UPDATE packages SET personal_pv_requirement = 0.00;
 
 ## 🔍 What Changed in Phase 5 (Reference)
 
-| Area | Before | After |
-|------|--------|-------|
-| **Settings** | Global `personal_pv_requirement` field in Compensation Plan | Removed from Settings entirely |
-| **Packages** | No per-package PV gate | Each package has `personal_pv_requirement` in edit modal |
-| **Products** | No stock column, no stock input | Stock column (available/total) + stepper input in modal |
-| **Admin RP** | Dropdown "Actions" menu | Inline **✓/✕** buttons for Mark Paid/Approve/Reject |
-| **Admin RP** | No Payment column | Payment column added between Amount and Proof |
-| **Admin RP** | Tab order: Pending → Approved → Paid → All | Tab order: Pending → Paid → Approved → All |
-| **Admin RP** | Actions column shown in all tabs | Actions column hidden in **Approved** tab only |
-
+| Area         | Before                                                      | After                                                    |
+| ------------ | ----------------------------------------------------------- | -------------------------------------------------------- |
+| **Settings** | Global `personal_pv_requirement` field in Compensation Plan | Removed from Settings entirely                           |
+| **Packages** | No per-package PV gate                                      | Each package has `personal_pv_requirement` in edit modal |
+| **Products** | No stock column, no stock input                             | Stock column (available/total) + stepper input in modal  |
+| **Admin RP** | Dropdown "Actions" menu                                     | Inline **✓/✕** buttons for Mark Paid/Approve/Reject      |
+| **Admin RP** | No Payment column                                           | Payment column added between Amount and Proof            |
+| **Admin RP** | Tab order: Pending → Approved → Paid → All                  | Tab order: Pending → Paid → Approved → All               |
+| **Admin RP** | Actions column shown in all tabs                            | Actions column hidden in **Approved** tab only           |
