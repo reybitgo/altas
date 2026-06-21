@@ -31,6 +31,7 @@ $logs    = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset') {
 
   $keepPackages = isset($_POST['keep_packages']);
+  $keepProducts = isset($_POST['keep_products']);
   $keepAdmin    = true; // always keep admin
 
   try {
@@ -200,6 +201,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
                 (1,1,300,3.00),(1,2,200,2.00),(1,3,150,1.50),(1,4,100,1.00),(1,5,100,1.00),
                 (1,6,50,0.50),(1,7,50,0.50),(1,8,50,0.50),(1,9,50,0.50),(1,10,50,0.50)");
       $logs[] = ['ok', 'Re-seeded default Starter package'];
+    }
+
+    // 6b. Optionally clear products
+    if (!$keepProducts) {
+      // Delete uploaded product images first
+      $productImages = $pdo->query("SELECT image_url FROM products WHERE image_url IS NOT NULL")->fetchAll();
+      $cleared = 0;
+      foreach ($productImages as $row) {
+        $path = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $row['image_url'];
+        if ($row['image_url'] && is_file($path)) {
+          unlink($path);
+          $cleared++;
+        }
+      }
+      if ($cleared) {
+        $logs[] = ['ok', "Cleared {$cleared} product image(s)"];
+      }
+      $pdo->exec("DELETE FROM products");
+      $pdo->exec("ALTER TABLE products AUTO_INCREMENT = 1");
+      $logs[] = ['ok', 'Cleared all products'];
     }
 
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
@@ -761,6 +782,7 @@ try {
                 <li><span class="dot dot-red"></span><span class="text-red">All uploaded proof-of-payment images</span></li>
                 <li><span class="dot dot-red"></span><span class="text-red">All CD status records &amp; ledger entries</span></li>
                 <li><span class="dot dot-red"></span><span class="text-red">All registration codes</span></li>
+                <li id="prodClearItem"><span class="dot dot-red" id="prodDot"></span><span class="text-red" id="prodLabel">All products</span></li>
                 <li><span class="dot dot-yellow"></span><span class="text-yellow">Admin balance &amp; counters reset to zero</span></li>
                 <li><span class="dot dot-green"></span><span class="text-green">Admin account &amp; password kept</span></li>
                 <li><span class="dot dot-green"></span><span class="text-green">System settings kept</span></li>
@@ -788,6 +810,17 @@ try {
                   <div>
                     <div class="check-label">Keep existing packages</div>
                     <div class="check-hint">Uncheck to delete all packages and re-seed the default Starter package</div>
+                  </div>
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label>Products</label>
+                <label class="check-row">
+                  <input type="checkbox" name="keep_products" checked id="keepProds">
+                  <div>
+                    <div class="check-label">Keep existing products</div>
+                    <div class="check-hint">Uncheck to delete all products and their uploaded images</div>
                   </div>
                 </label>
               </div>
@@ -822,6 +855,22 @@ try {
         resetBtn.classList.toggle('enabled', ok);
         resetBtn.disabled = !ok;
       });
+    }
+
+    // ── Toggle "All products" line when keep-products checkbox changes ──────
+    const keepProds = document.getElementById('keepProds');
+    const prodItem  = document.getElementById('prodClearItem');
+    const prodDot   = document.getElementById('prodDot');
+    const prodLabel = document.getElementById('prodLabel');
+    if (keepProds && prodItem) {
+      const updateProductsLine = () => {
+        const kept = keepProds.checked;
+        prodDot.className          = 'dot ' + (kept ? 'dot-green' : 'dot-red');
+        prodLabel.className        = kept ? 'text-green' : 'text-red';
+        prodLabel.textContent      = kept ? 'Products kept' : 'All products';
+      };
+      keepProds.addEventListener('change', updateProductsLine);
+      updateProductsLine();
     }
 
     // ── Prevent accidental double-submit ─────────────────────────────────────
