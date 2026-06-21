@@ -214,6 +214,7 @@ class AdminController
             'daily_fixed_income'       => (float)($_POST['daily_fixed_income']       ?? 0),
             'daily_fixed_income_days'  => (int)($_POST['daily_fixed_income_days']    ?? 90),
             'dfi_pv_pct'               => (float)($_POST['dfi_pv_pct']               ?? 0),
+            'personal_pv_requirement'  => (float)($_POST['personal_pv_requirement']  ?? 0.00),
         ];
 
         for ($lvl = 1; $lvl <= 10; $lvl++) {
@@ -291,6 +292,10 @@ class AdminController
             flash('error', 'Max DFI days cannot be negative.');
             redirect($backUrl);
         }
+        if ($data['personal_pv_requirement'] < 0) {
+            flash('error', 'Personal PV requirement cannot be negative.');
+            redirect($backUrl);
+        }
 
         Package::save($data, $id ?: null);
         flash('success', $id ? 'Package updated with v2 settings.' : 'Package created with v2 settings.');
@@ -327,6 +332,7 @@ class AdminController
             'name'             => trim($_POST['name'] ?? ''),
             'price'            => (float)($_POST['price'] ?? 0),
             'pv_value'         => (float)($_POST['pv_value'] ?? 0),
+            'stock'            => max(0, (int)($_POST['stock'] ?? 0)),
             'short_description'=> trim($_POST['short_description'] ?? ''),
             'description'      => trim($_POST['description'] ?? ''),
             'status'           => $_POST['status'] ?? 'active',
@@ -589,7 +595,6 @@ class AdminController
             'ewallet_transfer_weekly_limit',
             'seat_limit',
             'pv_per_peso_rate',
-            'personal_pv_requirement',
         ];
         $pdo = db();
         $st  = $pdo->prepare("INSERT INTO settings (key_name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");

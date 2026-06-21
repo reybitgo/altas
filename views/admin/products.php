@@ -59,6 +59,7 @@
               <th>Product</th>
               <th class="text-end">Price</th>
               <th class="text-end">PV Value</th>
+              <th class="text-center">Stock</th>
               <th class="text-center">Status</th>
               <th class="text-end" style="padding-right:1.25rem;width:120px;">Actions</th>
             </tr>
@@ -66,7 +67,7 @@
           <tbody>
             <?php if (empty($products['data'])): ?>
               <tr>
-                <td colspan="6" class="text-center py-5 text-muted">
+                <td colspan="7" class="text-center py-5 text-muted">
                   <div style="font-size:2rem;opacity:.3;margin-bottom:.5rem;">🛍️</div>
                   <div>No products yet.</div>
                 </td>
@@ -89,6 +90,13 @@
                   </td>
                   <td class="text-end font-mono"><?= fmt_money($p['price']) ?></td>
                   <td class="text-end font-mono"><?= number_format((float)$p['pv_value'], 2) ?></td>
+                  <td class="text-center font-mono">
+                    <?php $avail = Product::availableStock((int)$p['id']); ?>
+                    <span class="badge bg-<?= $avail > 0 ? 'success' : ($avail === 0 && (int)$p['stock'] > 0 ? 'warning' : 'secondary') ?>-subtle text-<?= $avail > 0 ? 'success' : ($avail === 0 && (int)$p['stock'] > 0 ? 'warning' : 'secondary') ?>" style="font-size:.72rem;">
+                      <?= $avail ?> / <?= (int)$p['stock'] ?>
+                    </span>
+                    <div class="small text-muted" style="font-size:.65rem;">available / total</div>
+                  </td>
                   <td class="text-center">
                     <?php if ($p['status'] === 'active'): ?>
                       <span class="badge bg-success-subtle text-success" style="font-size:.72rem;">● Active</span>
@@ -157,6 +165,20 @@
             </div>
           </div>
 
+          <!-- Stock row -->
+          <div class="mb-3">
+            <label class="form-label">Stock <span class="text-danger">*</span></label>
+            <div class="input-group" style="max-width:200px;">
+              <button type="button" class="btn btn-outline-secondary" onclick="adjustStock(-1)">−</button>
+              <input type="number" name="stock" id="prodStock" class="form-control text-center" inputmode="numeric" min="0" step="1" value="<?= (int)($editProduct['stock'] ?? 0) ?>" required>
+              <button type="button" class="btn btn-outline-secondary" onclick="adjustStock(1)">+</button>
+            </div>
+            <div class="form-text">
+              Total physical inventory. Orders reserve from this count but never modify it.
+              Set to 0 to disallow purchases until restocked.
+            </div>
+          </div>
+
           <div class="mb-3">
             <label class="form-label">Status</label>
             <select name="status" id="prodStatus" class="form-select">
@@ -205,6 +227,7 @@
     document.getElementById('prodPrice').value = '';
     document.getElementById('prodPv').value = '';
     document.getElementById('prodStatus').value = 'active';
+    document.getElementById('prodStock').value = '0';
     document.getElementById('prodImage').value = '';
     document.getElementById('prodRemoveImage').checked = false;
 
@@ -215,6 +238,13 @@
     if (previewWrap) {
       previewWrap.classList.add('d-none');
     }
+  }
+
+  function adjustStock(delta) {
+    const input = document.getElementById('prodStock');
+    let val = parseInt(input.value || '0', 10);
+    val = Math.max(0, val + delta);
+    input.value = val;
   }
 
   const prodImageInput = document.getElementById('prodImage');

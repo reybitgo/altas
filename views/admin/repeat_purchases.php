@@ -180,6 +180,7 @@
             <th style="padding-left:1rem;">Order</th>
             <th>Product</th>
             <th class="text-end">Amount</th>
+            <th class="text-center">Payment</th>
             <th class="text-center hide-xs">Proof</th>
             <th class="text-center">Status</th>
             <th class="text-center hide-sm">Date</th>
@@ -189,7 +190,7 @@
         <tbody>
           <?php if (empty($result['data'])): ?>
             <tr>
-              <td colspan="<?= $status === 'approved' ? 6 : 7 ?>">
+              <td colspan="<?= $status === 'approved' ? 7 : 8 ?>">
                 <div class="empty-state">
                   <div class="empty-state-icon">🛒</div>
                   <div class="empty-state-text">No <?= e($status) ?> orders found.</div>
@@ -237,6 +238,11 @@
                 <td class="text-end" style="min-width:120px;">
                   <div class="order-amount"><?= fmt_money($rp['total_price']) ?></div>
                   <div class="pv"><?= number_format((float)$rp['total_pv'], 2) ?> PV</div>
+                </td>
+
+                <!-- Payment -->
+                <td class="text-center" style="min-width:80px;">
+                  <span style="font-size:.78rem;"><?= e($rp['payment_method'] ?? '—') ?></span>
                 </td>
 
                 <!-- Proof -->

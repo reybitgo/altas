@@ -165,18 +165,6 @@
                 </div>
                 <div class="form-text">Pesos paid per 1 PV when converting PV-based bonuses. Example: 1.0000 means 1 PV = ₱1.00</div>
               </div>
-              <div class="rounded p-3" style="background:#f5f3ff;border:1px solid #ddd6fe;">
-                <div class="d-flex align-items-center gap-2 mb-2" style="color:#7c3aed;">
-                  <span style="font-size:1rem;">🚪</span>
-                  <span style="font-size:.82rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;">Personal PV Gate</span>
-                </div>
-                <label class="form-label" style="color:#7c3aed;font-size:.8rem;font-weight:600;">Personal PV Requirement</label>
-                <div class="input-group">
-                  <input type="number" name="personal_pv_requirement" class="form-control font-mono" inputmode="decimal" min="0" step="0.01" value="<?= e(setting('personal_pv_requirement', '0.0000')) ?>">
-                  <span class="input-group-text">PV</span>
-                </div>
-                <div class="form-text">Minimum Personal PV an upline must have to earn repeat-purchase indirect/PV bonuses. 0 = no gate.</div>
-              </div>
             </div>
           </div>
 

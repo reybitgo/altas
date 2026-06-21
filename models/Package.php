@@ -81,6 +81,7 @@ class Package
             'daily_fixed_income'       => (float)($data['daily_fixed_income'] ?? 0),
             'daily_fixed_income_days'  => (int)($data['daily_fixed_income_days'] ?? 90),
             'dfi_pv_pct'               => (float)($data['dfi_pv_pct'] ?? 0),
+            'personal_pv_requirement'  => (float)($data['personal_pv_requirement'] ?? 0.00),
             'status'                   => $data['status'] ?? 'active',
         ];
 

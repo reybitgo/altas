@@ -215,6 +215,17 @@
               <input type="number" name="daily_pair_pv_cap" id="pkgPairCapPv" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['daily_pair_pv_cap'] ?? '') ?>" required>
               <div class="form-text">Max paired PV per member per day</div>
             </div>
+            <div class="col-md-6">
+              <label class="form-label">Personal PV Requirement (PV)</label>
+              <input type="number" name="personal_pv_requirement" id="pkgPersonalPvReq" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['personal_pv_requirement'] ?? 0) ?>">
+              <div class="form-text">Minimum Personal PV an upline must have to earn repeat-purchase indirect/PV bonuses. 0 = no gate.</div>
+            </div>
+          </div>
+          <?php else: ?>
+          <div class="mb-3">
+            <label class="form-label">Personal PV Requirement (PV)</label>
+            <input type="number" name="personal_pv_requirement" id="pkgPersonalPvReq" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['personal_pv_requirement'] ?? 0) ?>">
+            <div class="form-text">Minimum Personal PV an upline must have to earn repeat-purchase indirect/PV bonuses. 0 = no gate.</div>
           </div>
           <?php endif; ?>
 
