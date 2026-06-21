@@ -212,7 +212,7 @@ UPDATE packages SET personal_pv_requirement = 0.00 WHERE id = 1;
 **Pass / Fail:**
 
 - [✅] PASS — Badge colors match the stock state correctly
-- [ ] FAIL — Wrong colors, e.g., green when available is 0
+- [] FAIL — Wrong colors, e.g., green when available is 0
 
 ---
 
@@ -236,7 +236,7 @@ UPDATE packages SET personal_pv_requirement = 0.00 WHERE id = 1;
 **Pass / Fail:**
 
 - [✅] PASS — Stock input with ± buttons is visible in the modal
-- [ ] FAIL — Stock field missing, or not using stepper buttons
+- [] FAIL — Stock field missing, or not using stepper buttons
 
 ---
 
@@ -257,7 +257,7 @@ UPDATE packages SET personal_pv_requirement = 0.00 WHERE id = 1;
 **Pass / Fail:**
 
 - [✅] PASS — Buttons increment/decrement correctly, minimum is 0
-- [ ] FAIL — Buttons don't work, or value goes negative
+- [] FAIL — Buttons don't work, or value goes negative
 
 ---
 
@@ -285,7 +285,7 @@ UPDATE packages SET personal_pv_requirement = 0.00 WHERE id = 1;
 **Pass / Fail:**
 
 - [✅] PASS — Product created with correct stock value
-- [ ] FAIL — Stock shows 0 or wrong value, or product not created
+- [] FAIL — Stock shows 0 or wrong value, or product not created
 
 **Cleanup:** Delete the test product after this test.
 
@@ -314,7 +314,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 **Pass / Fail:**
 
 - [✅] PASS — Stock updated and persisted
-- [ ] FAIL — Stock reverts to old value, or error occurs
+- [] FAIL — Stock reverts to old value, or error occurs
 
 **Cleanup:** Restore the original stock value after testing.
 
@@ -339,7 +339,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 **Pass / Fail:**
 
 - [✅] PASS — Available stock decreased by the order quantity, total unchanged
-- [ ] FAIL — Available stock didn't change, or total stock changed
+- [] FAIL — Available stock didn't change, or total stock changed
 
 **Cleanup:** Reject the pending order to release the reservation:
 
@@ -371,7 +371,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 **Pass / Fail:**
 
 - [✅] PASS — Tabs are in the correct order: Pending, Paid, Approved, All
-- [ ] FAIL — Approved comes before Paid, or wrong order
+- [] FAIL — Approved comes before Paid, or wrong order
 
 ---
 
@@ -394,7 +394,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 **Pass / Fail:**
 
 - [✅] PASS — Actions column is completely hidden in the Approved tab
-- [ ] FAIL — Actions column still shows, or buttons are visible
+- [] FAIL — Actions column still shows, or buttons are visible
 
 ---
 
@@ -416,7 +416,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 **Pass / Fail:**
 
 - [✅] PASS — Payment column is visible in all tabs with correct values
-- [ ] FAIL — Payment column missing, or shows wrong data
+- [] FAIL — Payment column missing, or shows wrong data
 
 ---
 
@@ -449,7 +449,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 **Pass / Fail:**
 
 - [✅] PASS — Inline buttons visible, no dropdown menu
-- [ ] FAIL — Dropdown menu still used, or buttons missing
+- [] FAIL — Dropdown menu still used, or buttons missing
 
 ---
 
@@ -470,7 +470,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 **Pass / Fail:**
 
 - [✅] PASS — Mark Paid is disabled without proof, tooltip shown
-- [ ] FAIL — Mark Paid is clickable without proof, or no tooltip
+- [] FAIL — Mark Paid is clickable without proof, or no tooltip
 
 ---
 
@@ -504,7 +504,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 **Pass / Fail:**
 
 - [✅] PASS — Two-step workflow completes successfully with inline buttons
-- [ ] FAIL — Button clicks don't work, or modal doesn't appear, or workflow broken
+- [] FAIL — Button clicks don't work, or modal doesn't appear, or workflow broken
 
 ---
 
@@ -527,7 +527,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 **Pass / Fail:**
 
 - [✅] PASS — Reject works correctly from Pending tab
-- [ ] FAIL — Reject fails, or order shows wrong status
+- [] FAIL — Reject fails, or order shows wrong status
 
 ---
 
@@ -550,7 +550,7 @@ Click the "Del" button on the QA Test Product row, confirm deletion.
 **Pass / Fail:**
 
 - [✅] PASS — Settings save successfully without the old field
-- [ ] FAIL — Error flash about missing field, or settings not saved
+- [] FAIL — Error flash about missing field, or settings not saved
 
 ---
 
