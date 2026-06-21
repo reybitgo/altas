@@ -122,19 +122,19 @@
                 <?= csrf_field() ?><input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                 <button type="button" class="btn btn-sm btn-success"
                   onclick="showConfirm({title:'Complete CD',message:'Mark CD as fully completed for <strong>@<?= e($user['username']) ?></strong>?',confirmText:'Complete',confirmClass:'btn-success',onConfirm:()=>this.closest('form').submit()})">
-                  ✓ Mark Complete
+                  Mark Complete
                 </button>
               </form>
               <form method="POST" action="<?= APP_URL ?>/?page=admin_cancel_cd" class="m-0">
                 <?= csrf_field() ?><input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                 <button type="button" class="btn btn-sm btn-outline-danger"
                   onclick="showConfirm({title:'Cancel CD',message:'Cancel CD for <strong>@<?= e($user['username']) ?></strong>? Filled amount will be forfeited.',confirmText:'Cancel CD',confirmClass:'btn-danger',onConfirm:()=>this.closest('form').submit()})">
-                  ✕ Cancel
+                  Cancel
                 </button>
               </form>
             </div>
             <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editCdTargetModal">
-              ✏️ Edit Target
+              Edit Target
             </button>
           </div>
         <?php elseif (!empty($cdHistory)): ?>

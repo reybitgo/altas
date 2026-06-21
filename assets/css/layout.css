@@ -316,3 +316,67 @@
     font-size: 0.8rem;
   }
 }
+
+/* ============================================================
+   ACTION BUTTONS — Mobile stacking for admin table actions
+   ============================================================ */
+
+.action-cell {
+  vertical-align: middle;
+  padding-right: 1rem;
+  min-width: 80px;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+/* Mobile: stack vertically, centered, full-width buttons */
+@media (max-width: 576px) {
+  .action-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 0.5rem;
+    min-width: 64px;
+  }
+  .action-buttons {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+  }
+  .action-buttons > .btn,
+  .action-buttons > form .btn,
+  .action-buttons > a.btn {
+    width: 100%;
+    min-width: 72px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    text-align: center;
+    justify-content: center;
+  }
+  .action-buttons > form {
+    width: 100%;
+    margin: 0;
+  }
+  .action-buttons > *:not(:last-child) {
+    margin-bottom: 0.3rem;
+  }
+}
+
+/* ============================================================
+   ZEBRA STRIPING — all tables (mobile + desktop)
+   ============================================================ */
+
+.table tbody tr:nth-child(odd) {
+  background-color: #f4f5f7;
+}
+
+.table tbody tr:nth-child(odd):hover {
+  background-color: #e9ecef;
+}

@@ -22,7 +22,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <!-- App CSS -->
   <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/main.css">
-  <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/layout.css">
+  <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/layout.css?v=3">
 </head>
 
 <body>

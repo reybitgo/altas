@@ -153,7 +153,7 @@
                 </td>
                 <td>
                   <?php if ($row['status'] === 'pending'): ?>
-                    <div class="d-flex gap-1 flex-wrap">
+                    <div class="action-buttons">
                       <?php
                       $acct = match ($row['payment_method']) {
                           'gcash'      => e($adminPayment['gcash_number'] ?? ''),
@@ -165,11 +165,11 @@
                       ?>
                       <button class="btn btn-sm btn-success"
                         onclick="reactivationAction('confirm',<?= $row['id'] ?>,'<?= e($row['username']) ?>','<?= fmt_money($row['amount_paid']) ?>','<?= $methodLabel ?>','<?= $acct ?>')">
-                        ✓ Confirm
+                        Confirm
                       </button>
                       <button class="btn btn-sm btn-danger"
                         onclick="reactivationAction('reject',<?= $row['id'] ?>,'<?= e($row['username']) ?>','<?= fmt_money($row['amount_paid']) ?>','<?= $methodLabel ?>','<?= $acct ?>')">
-                        ✕ Reject
+                        Reject
                       </button>
                     </div>
                   <?php else: ?>
@@ -227,17 +227,17 @@
     const accountLine = account ? `<br><span style="color:#6b7a99;font-size:.82rem;">Admin account: <strong>${account}</strong></span>` : '';
     const configs = {
       confirm: {
-        title: '✓ Confirm Reactivation',
+        title: 'Confirm Reactivation',
         desc: `Confirm you've received <strong>${amount}</strong> from <strong>@${user}</strong> via <strong>${method}</strong>.${accountLine}<br>This will reset the member's cap state to active.`,
         btnClass: 'btn-success',
-        btnText: '✓ Confirm',
+        btnText: 'Confirm',
         noteLabel: 'Note (optional)',
       },
       reject: {
-        title: '✕ Reject Reactivation',
+        title: 'Reject Reactivation',
         desc: `Reject <strong>${amount}</strong> reactivation for <strong>@${user}</strong>?<br>The member will remain capped and must submit a new request.`,
         btnClass: 'btn-danger',
-        btnText: '✕ Reject',
+        btnText: 'Reject',
         noteLabel: 'Rejection reason (shown to member)',
       },
     };

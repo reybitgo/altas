@@ -161,14 +161,14 @@
                     $sendAmount = $hasUsdt ? number_format($pr[$amtCol], 4) . ' USDT' : fmt_money($netPhp);
                     ?>
                     <?php if ($pr['status'] === 'pending'): ?>
-                      <div class="d-flex gap-1 flex-wrap">
+                      <div class="action-buttons">
                         <button class="btn btn-sm btn-success"
                           onclick="payoutAction('approve',<?= $pr['id'] ?>,'<?= e($pr['username']) ?>','<?= fmt_money($pr['amount']) ?>','<?= e($account) ?>','<?= $methodLabel ?>')">
-                          ✓ Approve
+                          Approve
                         </button>
                         <button class="btn btn-sm btn-danger"
                           onclick="payoutAction('reject',<?= $pr['id'] ?>,'<?= e($pr['username']) ?>','<?= fmt_money($pr['amount']) ?>','<?= e($account) ?>','<?= $methodLabel ?>')">
-                          ✕ Reject
+                          Reject
                         </button>
                       </div>
                     <?php elseif ($pr['status'] === 'approved'): ?>
@@ -248,18 +248,18 @@
   function payoutAction(action, id, user, amount, account, method) {
     const configs = {
       approve: {
-        title: '✓ Approve Payout',
+        title: 'Approve Payout',
         desc: `Approve <strong>${amount}</strong> for <strong>@${user}</strong>?<br>
                   Send funds via <strong>${method}</strong> to <code>${account}</code> before marking complete.`,
         btnClass: 'btn-success',
-        btnText: '✓ Approve',
+        btnText: 'Approve',
         noteLabel: 'Note (optional)',
       },
       reject: {
-        title: '✕ Reject Payout',
+        title: 'Reject Payout',
         desc: `Reject <strong>${amount}</strong> for <strong>@${user}</strong>? Balance will NOT be deducted.`,
         btnClass: 'btn-danger',
-        btnText: '✕ Reject',
+        btnText: 'Reject',
         noteLabel: 'Rejection reason (shown to member)',
       },
       complete: {

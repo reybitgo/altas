@@ -88,11 +88,11 @@
                       <span class="badge bg-warning-subtle text-warning" style="font-size:.65rem;">⏳ CD</span>
                     <?php endif; ?>
                   </td>
-                  <td>
-                    <div class="d-flex gap-1">
+                  <td class="action-cell">
+                    <div class="action-buttons">
                       <a href="<?= APP_URL ?>/?page=admin_user_view&id=<?= $m['id'] ?>" class="btn btn-sm btn-outline-primary">View</a>
                       <?php if ($m['status'] !== 'pending'): ?>
-                      <form method="POST" action="<?= APP_URL ?>/?page=admin_toggle_user" class="m-0" id="toggleForm<?= $m['id'] ?>">
+                      <form method="POST" action="<?= APP_URL ?>/?page=admin_toggle_user" id="toggleForm<?= $m['id'] ?>">
                         <?= csrf_field() ?><input type="hidden" name="id" value="<?= $m['id'] ?>">
                         <?php $isSuspend = $m['status'] === 'active'; ?>
                         <button type="button" class="btn btn-sm <?= $isSuspend ? 'btn-outline-danger' : 'btn-outline-success' ?>"
@@ -103,7 +103,7 @@
             confirmClass: '<?= $isSuspend ? 'btn-danger' : 'btn-success' ?>',
             onConfirm: () => this.closest('form').submit()
         })">
-                          <?= $isSuspend ? '🔒 Suspend' : '🔓 Unsuspend' ?>
+                          <?= $isSuspend ? 'Suspend' : 'Unsuspend' ?>
                         </button>
                       </form>
                       <?php endif; ?>

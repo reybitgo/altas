@@ -301,9 +301,9 @@
 
                 <!-- Actions -->
                 <?php if ($status !== 'approved'): ?>
-                <td style="padding-right:1rem; min-width:140px;">
+                <td class="action-cell" style="min-width:140px;">
                   <?php if ($rp['status'] === 'pending' || $rp['status'] === 'paid'): ?>
-                    <div class="d-flex gap-1 flex-wrap justify-content-end">
+                    <div class="action-buttons">
                       <?php if ($rp['status'] === 'pending'): ?>
                         <form method="POST" action="<?= APP_URL ?>/?page=admin_mark_repeat_purchases" class="confirm-action-form"
                               data-confirm-title="Mark Order as Paid?"
@@ -315,7 +315,7 @@
                           <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
                           <button type="button" class="btn btn-sm btn-success confirm-action-btn"
                             <?= empty($rp['proof_image']) ? 'disabled title="No proof uploaded"' : '' ?>>
-                            ✓ Mark Paid
+                            Mark Paid
                           </button>
                         </form>
                         <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="confirm-action-form"
@@ -327,7 +327,7 @@
                           <?= csrf_field() ?>
                           <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
                           <button type="button" class="btn btn-sm btn-danger confirm-action-btn">
-                            ✕ Reject
+                            Reject
                           </button>
                         </form>
                       <?php elseif ($rp['status'] === 'paid'): ?>
@@ -340,7 +340,7 @@
                           <?= csrf_field() ?>
                           <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
                           <button type="button" class="btn btn-sm btn-success confirm-action-btn">
-                            ✓ Approve
+                            Approve
                           </button>
                         </form>
                         <form method="POST" action="<?= APP_URL ?>/?page=admin_reject_repeat_purchase" class="confirm-action-form"
@@ -352,7 +352,7 @@
                           <?= csrf_field() ?>
                           <input type="hidden" name="id" value="<?= (int)$rp['id'] ?>">
                           <button type="button" class="btn btn-sm btn-danger confirm-action-btn">
-                            ✕ Reject
+                            Reject
                           </button>
                         </form>
                       <?php endif; ?>

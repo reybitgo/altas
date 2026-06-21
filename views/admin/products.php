@@ -104,13 +104,15 @@
                       <span class="badge bg-secondary-subtle text-secondary" style="font-size:.72rem;">○ Inactive</span>
                     <?php endif; ?>
                   </td>
-                  <td class="text-end" style="padding-right:1.25rem;">
-                    <a href="<?= APP_URL ?>/?page=admin_products&edit=<?= (int)$p['id'] ?>" class="btn btn-sm btn-outline-primary me-1">Edit</a>
-                    <form method="POST" action="<?= APP_URL ?>/?page=admin_delete_product" class="d-inline" onsubmit="return confirm('Delete this product?');">
-                      <?= csrf_field() ?>
-                      <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
-                      <button type="submit" class="btn btn-sm btn-outline-danger">Del</button>
-                    </form>
+                  <td class="action-cell">
+                    <div class="action-buttons">
+                      <a href="<?= APP_URL ?>/?page=admin_products&edit=<?= (int)$p['id'] ?>" class="btn btn-sm btn-outline-primary">Edit</a>
+                      <form method="POST" action="<?= APP_URL ?>/?page=admin_delete_product" onsubmit="return confirm('Delete this product?');">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Del</button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               <?php endforeach; ?>
