@@ -129,8 +129,11 @@ class Auth
             redirect('/?page=dashboard');
         }
 
-        // Check account status
+        // Check account exists & status
         $u = self::user();
+        if (!$u) {
+            self::logout(); // user was deleted (e.g. after DB reset)
+        }
         if (($u['status'] ?? '') === 'suspended') {
             self::logout(); // clears session
         }
