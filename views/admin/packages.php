@@ -178,12 +178,12 @@
               <input type="number" name="entry_fee" id="pkgEntryFee" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['entry_fee'] ?? '') ?>" placeholder="10000.00" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Package PV Rate (%)</label>
+              <label class="form-label">Package PV</label>
               <div class="input-group">
-                <input type="number" name="package_pv_rate" id="pkgPvRate" class="form-control" inputmode="decimal" min="0" max="1000" step="0.01" value="<?= e($editPkg['package_pv_rate'] ?? 100.00) ?>">
-                <span class="input-group-text">%</span>
+                <input type="number" name="package_pv_rate" id="pkgPvRate" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['package_pv_rate'] ?? 10000.00) ?>">
+                <span class="input-group-text">PV</span>
               </div>
-              <div class="form-text">Package PV basis = <span id="pkgPvPreview" class="font-mono">₱0.00</span> (direct/indirect/DFI)</div>
+              <div class="form-text">Package PV = <span id="pkgPvPreview" class="font-mono">0.00 PV</span> (direct/indirect/DFI basis)</div>
             </div>
           </div>
 
@@ -195,7 +195,7 @@
                 <input type="number" name="binary_pv_pct" id="pkgBinaryPvPct" class="form-control" inputmode="decimal" min="0" max="1000" step="0.01" value="<?= e($editPkg['binary_pv_pct'] ?? 20.00) ?>">
                 <span class="input-group-text">%</span>
               </div>
-              <div class="form-text">Binary PV basis = <span id="binaryPvPreview" class="font-mono">₱0.00</span> (flows to binary tree)</div>
+              <div class="form-text">Binary PV = Package PV × <span id="binaryPvPctDisplay" class="font-mono"><?= e($editPkg['binary_pv_pct'] ?? 20) ?></span>% = <span id="binaryPvPreview" class="font-mono">₱0.00</span> in binary tree</div>
             </div>
             <?php endif; ?>
             <div class="col-md-6">
@@ -358,15 +358,13 @@
   const pvPreviewEl = document.getElementById('pkgPvPreview');
 
   function updatePackagePVPreview() {
-    const entry = parseFloat(entryInput?.value) || 0;
     const rate  = parseFloat(pvRateInput?.value) || 0;
-    pvPreviewEl.textContent = '₱' + (entry * (rate / 100)).toLocaleString('en-PH', {
+    pvPreviewEl.textContent = rate.toLocaleString('en-PH', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    });
+    }) + ' PV';
   }
 
-  if (entryInput)    entryInput.addEventListener('input', updatePackagePVPreview);
   if (pvRateInput)   pvRateInput.addEventListener('input', updatePackagePVPreview);
 
   // ── Binary PV basis preview live update ──
@@ -376,15 +374,16 @@
 
   function updateBinaryPvPreview() {
     if (!binaryPvPreviewEl) return;
-    const entry = parseFloat(entryInput?.value) || 0;
+    const pvRate = parseFloat(pvRateInput?.value) || 0;
     const pct = parseFloat(binaryPvPctInput?.value) || 0;
-    binaryPvPreviewEl.textContent = '₱' + (entry * (pct / 100)).toLocaleString('en-PH', {
+    const binaryPv = pvRate * (pct / 100) * pvPerPesoRate;
+    binaryPvPreviewEl.textContent = '₱' + binaryPv.toLocaleString('en-PH', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
   }
 
-  if (entryInput)       entryInput.addEventListener('input', updateBinaryPvPreview);
+  if (pvRateInput)      pvRateInput.addEventListener('input', updateBinaryPvPreview);
   if (binaryPvPctInput) binaryPvPctInput.addEventListener('input', updateBinaryPvPreview);
 
   // ── Direct referral preview live update ──
@@ -393,10 +392,9 @@
 
   function updateDirectRefPreview() {
     if (!directRefPreviewEl) return;
-    const entry = parseFloat(entryInput?.value) || 0;
     const pvRate = parseFloat(pvRateInput?.value) || 0;
     const pct = parseFloat(directRefInput?.value) || 0;
-    const packagePv = entry * (pvRate / 100);
+    const packagePv = pvRate;
     const bonus = packagePv * (pct / 100) * pvPerPesoRate;
     directRefPreviewEl.textContent = '₱' + bonus.toLocaleString('en-PH', {
       minimumFractionDigits: 2,
@@ -404,7 +402,6 @@
     });
   }
 
-  if (entryInput)     entryInput.addEventListener('input', updateDirectRefPreview);
   if (pvRateInput)    pvRateInput.addEventListener('input', updateDirectRefPreview);
   if (directRefInput) directRefInput.addEventListener('input', updateDirectRefPreview);
 
@@ -414,10 +411,9 @@
 
   function updateDfiPvPreview() {
     if (!dfiPvPreviewEl) return;
-    const entry = parseFloat(entryInput?.value) || 0;
     const pvRate = parseFloat(pvRateInput?.value) || 0;
     const pct = parseFloat(dfiPvPctInput?.value) || 0;
-    const packagePv = entry * (pvRate / 100);
+    const packagePv = pvRate;
     const dfi = packagePv * (pct / 100) * pvPerPesoRate;
     dfiPvPreviewEl.textContent = '₱' + dfi.toLocaleString('en-PH', {
       minimumFractionDigits: 2,
@@ -425,7 +421,6 @@
     });
   }
 
-  if (entryInput)    entryInput.addEventListener('input', updateDfiPvPreview);
   if (pvRateInput)   pvRateInput.addEventListener('input', updateDfiPvPreview);
   if (dfiPvPctInput) dfiPvPctInput.addEventListener('input', updateDfiPvPreview);
 
@@ -434,9 +429,8 @@
 
   function updateIndirectPreview() {
     if (!indirectPreviewEl) return;
-    const entry = parseFloat(entryInput?.value) || 0;
     const pvRate = parseFloat(pvRateInput?.value) || 0;
-    const packagePv = entry * (pvRate / 100);
+    const packagePv = pvRate;
     let total = 0;
     for (let i = 1; i <= 10; i++) {
       const el = document.getElementById('indirect_' + i);
@@ -449,7 +443,6 @@
     });
   }
 
-  if (entryInput)  entryInput.addEventListener('input', updateIndirectPreview);
   if (pvRateInput) pvRateInput.addEventListener('input', updateIndirectPreview);
   for (let i = 1; i <= 10; i++) {
     const el = document.getElementById('indirect_' + i);

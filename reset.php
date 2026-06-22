@@ -181,7 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
       // STRICT_TRANS_TABLES will reject an INSERT that omits them. Listing
       // every column defensively sidesteps that schema drift.
       $pdo->exec("INSERT INTO packages (
-                id, name, entry_fee, package_pv_rate, binary_pv_pct,
+                 id, name, entry_fee, package_pv_rate, binary_pv_pct,
                 pairing_bonus, daily_pair_cap,
                 pairing_pv_pct, daily_pair_pv_cap,
                 direct_ref_bonus, direct_ref_pv_pct,
@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
                 daily_fixed_income, daily_fixed_income_days, dfi_pv_pct,
                 personal_pv_requirement, status
             ) VALUES (
-                1, 'Starter', 10000.00, 100.00, 20.00,
+                1, 'Starter', 10000.00, 10000.00, 20.00,
                 0.00, 3,
                 20.00, 30000.00,
                 0.00, 5.00,

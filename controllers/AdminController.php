@@ -201,7 +201,7 @@ class AdminController
         $data = [
             'name'              => trim($_POST['name']              ?? ''),
             'entry_fee'         => (float)($_POST['entry_fee']      ?? 0),
-            'package_pv_rate'   => (float)($_POST['package_pv_rate'] ?? 100.00),
+            'package_pv_rate'   => (float)($_POST['package_pv_rate'] ?? 10000.00),
             'binary_pv_pct'     => (float)($_POST['binary_pv_pct']   ?? 20.00),
             'daily_pair_pv_cap' => (float)($_POST['daily_pair_pv_cap'] ?? 0),
             'direct_ref_pv_pct' => (float)($_POST['direct_ref_pv_pct'] ?? 0),
@@ -249,8 +249,8 @@ class AdminController
             flash('error', 'Package name and entry fee are required.');
             redirect($backUrl);
         }
-        if ($data['package_pv_rate'] < 0 || $data['package_pv_rate'] > 1000) {
-            flash('error', 'Package PV rate must be between 0 and 1000.');
+        if ($data['package_pv_rate'] < 0) {
+            flash('error', 'Package PV cannot be negative.');
             redirect($backUrl);
         }
         if ($data['binary_pv_pct'] < 0 || $data['binary_pv_pct'] > 1000) {

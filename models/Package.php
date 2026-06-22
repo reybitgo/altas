@@ -70,7 +70,7 @@ class Package
         $fields = [
             'name'                     => $data['name'],
             'entry_fee'                => (float)($data['entry_fee'] ?? 0),
-            'package_pv_rate'          => (float)($data['package_pv_rate'] ?? 100.00),
+            'package_pv_rate'          => (float)($data['package_pv_rate'] ?? 10000.00),
             'binary_pv_pct'            => (float)($data['binary_pv_pct'] ?? 20.00),
             'daily_pair_pv_cap'        => (float)($data['daily_pair_pv_cap'] ?? 0),
             'direct_ref_pv_pct'        => (float)($data['direct_ref_pv_pct'] ?? 0),
@@ -129,28 +129,26 @@ class Package
     // ── v2 Helpers ─────────────────────────────────────────────────────────
 
     /**
-     * Calculate the Package PV for a given package.
-     * Package PV = entry_fee × (package_pv_rate / 100)
-     * Used as the basis for direct/indirect/DFI PV calculations.
-     * It does NOT flow into Personal PV or Group PV.
+     * Return the Package PV for a given package.
+     * package_pv_rate now stores the absolute PV amount directly
+     * (not a percentage of entry fee). Used as the basis for
+     * direct/indirect/DFI and binary PV calculations.
      */
     public static function packagePv(int $packageId): float
     {
         $pkg = self::find($packageId);
         if (!$pkg) return 0.00;
-        return (float)$pkg['entry_fee'] * ((float)$pkg['package_pv_rate'] / 100);
+        return (float)$pkg['package_pv_rate'];
     }
 
     /**
      * Calculate the Binary PV allocated for a given package.
-     * Binary PV = entry_fee × (binary_pv_pct / 100)
+     * Binary PV = Package PV × (binary_pv_pct / 100)
      * This is the amount that flows into the binary tree on registration.
      */
     public static function binaryPackagePv(int $packageId): float
     {
-        $pkg = self::find($packageId);
-        if (!$pkg) return 0.00;
-        return (float)$pkg['entry_fee'] * ((float)$pkg['binary_pv_pct'] / 100);
+        return self::packagePv($packageId) * ((float)self::find($packageId)['binary_pv_pct'] / 100);
     }
 
     /**

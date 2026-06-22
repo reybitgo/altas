@@ -78,7 +78,7 @@ class DailyFixedIncome
             $daysUsed  = (int)$m['dfi_days_used'];
             $dayNumber = $daysUsed + 1;
 
-            $packagePv = (float)$m['entry_fee'] * ((float)$m['package_pv_rate'] / 100);
+            $packagePv = (float)$m['package_pv_rate'];
             $dfiPvPct  = (float)$m['dfi_pv_pct'];
             $dailyRate = $dfiPvPct > 0.00
                 ? $packagePv * ($dfiPvPct / 100) * (float)setting('pv_per_peso_rate', '1.0000')
@@ -213,7 +213,7 @@ class DailyFixedIncome
             ];
         }
 
-        $packagePv = (float)$row['entry_fee'] * ((float)$row['package_pv_rate'] / 100);
+        $packagePv = (float)$row['package_pv_rate'];
         $dfiPvPct  = (float)$row['dfi_pv_pct'];
         $dailyRate = $dfiPvPct > 0.00
             ? $packagePv * ($dfiPvPct / 100) * (float)setting('pv_per_peso_rate', '1.0000')

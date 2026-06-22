@@ -11,8 +11,8 @@ CREATE TABLE packages (
   id                        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name                      VARCHAR(80)      NOT NULL,
   entry_fee                 DECIMAL(12,2)    NOT NULL,
-  package_pv_rate           DECIMAL(5,2)     NOT NULL DEFAULT 100.00 COMMENT 'Percentage of entry fee that becomes package PV for direct/indirect/DFI basis',
-  binary_pv_pct             DECIMAL(5,2)     NOT NULL DEFAULT 20.00 COMMENT 'Percentage of entry fee that becomes binary PV',
+  package_pv_rate           DECIMAL(14,2)    NOT NULL DEFAULT 10000.00 COMMENT 'Absolute PV amount (not a percentage) — basis for direct/indirect/DFI/binary PV',
+  binary_pv_pct             DECIMAL(5,2)     NOT NULL DEFAULT 20.00 COMMENT 'Percentage of Package PV that becomes binary PV',
   -- Legacy count-based fields (kept for reference)
   pairing_bonus             DECIMAL(12,2)    NOT NULL DEFAULT 0.00,
   daily_pair_cap            TINYINT UNSIGNED NOT NULL DEFAULT 3,
@@ -431,7 +431,7 @@ INSERT INTO packages (
   lifetime_cap_multiplier, reactivation_fee, reactivation_window_days,
   daily_fixed_income, daily_fixed_income_days, dfi_pv_pct, status
 ) VALUES (
-  'Starter', 10000.00, 100.00, 20.00, 20.00, 30000.00,
+  'Starter', 10000.00, 10000.00, 20.00, 20.00, 30000.00,
   5.00,
   3.00, 10000.00, 15,
   100.00, 90, 0.00, 'active'
