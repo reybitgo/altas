@@ -201,7 +201,7 @@ class AdminController
         $data = [
             'name'              => trim($_POST['name']              ?? ''),
             'entry_fee'         => (float)($_POST['entry_fee']      ?? 0),
-            'package_pv_rate'   => (float)($_POST['package_pv_rate'] ?? 10000.00),
+            'package_pv_rate'   => (float)($_POST['package_pv_rate'] ?? 10.00),
             'binary_pv_pct'     => (float)($_POST['binary_pv_pct']   ?? 20.00),
             'daily_pair_pv_cap' => (float)($_POST['daily_pair_pv_cap'] ?? 0),
             'direct_ref_pv_pct' => (float)($_POST['direct_ref_pv_pct'] ?? 0),

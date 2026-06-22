@@ -180,7 +180,7 @@
             <div class="col-md-6">
               <label class="form-label">Package PV</label>
               <div class="input-group">
-                <input type="number" name="package_pv_rate" id="pkgPvRate" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['package_pv_rate'] ?? 10000.00) ?>">
+                <input type="number" name="package_pv_rate" id="pkgPvRate" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editPkg['package_pv_rate'] ?? 10.00) ?>">
                 <span class="input-group-text">PV</span>
               </div>
               <div class="form-text">Package PV = <span id="pkgPvPreview" class="font-mono">0.00 PV</span> (direct/indirect/DFI basis)</div>

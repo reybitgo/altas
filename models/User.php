@@ -423,7 +423,8 @@ class User
     public static function directReferrals(int $userId, int $page = 1, int $perPage = 10): array
     {
         return paginate(
-            "SELECT u.*, p.name AS package_name
+            "SELECT u.*, p.name AS package_name,
+                    p.package_pv_rate, p.entry_fee
              FROM   users u
              LEFT JOIN packages p ON p.id = u.package_id
              WHERE  u.sponsor_id = ? AND u.role = 'member'
@@ -450,7 +451,10 @@ class User
 
             $st = db()->prepare("
                 SELECT u.id, u.username, u.full_name, u.status,
-                       u.joined_at, p.name AS package_name
+                       u.joined_at, u.personal_pv, u.group_pv,
+                       u.left_pv, u.right_pv,
+                       p.name AS package_name,
+                       p.package_pv_rate, p.entry_fee
                 FROM   users u
                 LEFT JOIN packages p ON p.id = u.package_id
                 WHERE  u.sponsor_id = ? AND u.role = 'member'

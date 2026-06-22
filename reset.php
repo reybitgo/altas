@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
                 daily_fixed_income, daily_fixed_income_days, dfi_pv_pct,
                 personal_pv_requirement, status
             ) VALUES (
-                1, 'Starter', 10000.00, 10000.00, 20.00,
+                1, 'Starter', 10000.00, 10.00, 20.00,
                 0.00, 3,
                 20.00, 30000.00,
                 0.00, 5.00,

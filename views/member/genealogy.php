@@ -321,11 +321,35 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
         </div>
       </div>
 
-    <?php elseif (setting('indirect_referral_enabled', '1') === '1'): ?>
+    <?php elseif (setting('indirect_referral_enabled', '1') === '1'):
+      // Compute totals upfront for header badges
+      $grouped = [];
+      foreach ($indirect as $m) $grouped[$m['level']][] = $m;
+      $grandTotalPv  = 0.0;
+      $grandTotalPeso = 0.0;
+      $levelTotals = [];
+      foreach ($grouped as $lvl => $members):
+        $pct = (float)($indirectLevels[$lvl] ?? 0);
+        $pvSum = 0.0;
+        $pesoSum = 0.0;
+        foreach ($members as $m):
+          $pv = (float)($m['package_pv_rate'] ?? 0) * ($pct / 100);
+          $peso = $pv * (float)setting('pv_per_peso_rate', '1000.0000');
+          $pvSum += $pv;
+          $pesoSum += $peso;
+        endforeach;
+        $levelTotals[$lvl] = ['pv' => $pvSum, 'peso' => $pesoSum];
+        $grandTotalPv += $pvSum;
+        $grandTotalPeso += $pesoSum;
+      endforeach; ?>
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span class="card-title">👥 Referral Network (10 Levels)</span>
-          <span class="badge bg-secondary-subtle text-secondary"><?= count($indirect) ?> members</span>
+          <span class="d-flex gap-2">
+            <span class="badge bg-secondary-subtle text-secondary"><?= count($indirect) ?> members</span>
+            <span class="badge bg-success-subtle text-success font-mono" style="font-size:.72rem;">
+              <?= number_format($grandTotalPv, 2) ?>PV <?= fmt_money($grandTotalPeso) ?></span>
+          </span>
         </div>
         <div class="card-body p-0">
           <?php if (empty($indirect)): ?>
@@ -334,8 +358,6 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
               <p class="mt-2 mb-0">You haven't referred anyone yet.</p>
             </div>
             <?php else:
-            $grouped = [];
-            foreach ($indirect as $m) $grouped[$m['level']][] = $m;
             foreach ($grouped as $lvl => $members): ?>
               <div>
                 <div class="d-flex align-items-center gap-2 px-3 py-2 cursor-pointer border-bottom"
@@ -343,15 +365,28 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
                   onclick="toggleRef(<?= $lvl ?>)">
                   <span>Level <?= $lvl ?></span>
                   <span class="badge bg-primary-subtle text-primary"><?= count($members) ?></span>
+                  <span class="badge bg-success-subtle text-success font-mono" style="font-size:.72rem;">
+                    <?= number_format($levelTotals[$lvl]['pv'], 2) ?>PV <?= fmt_money($levelTotals[$lvl]['peso']) ?></span>
                   <span id="refArrow<?= $lvl ?>" class="ms-auto">▼</span>
                 </div>
                 <div id="refLevel<?= $lvl ?>">
-                  <?php foreach ($members as $m): ?>
+                  <?php foreach ($members as $m):
+                    $pct = (float)($indirectLevels[$lvl] ?? 0);
+                    $pvContribution = (float)($m['package_pv_rate'] ?? 0) * ($pct / 100);
+                    $pesoContribution = $pvContribution * (float)setting('pv_per_peso_rate', '1000.0000');
+                    ?>
                     <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
                       <div class="user-avatar"><?= strtoupper(substr($m['username'], 0, 1)) ?></div>
                       <div class="flex-grow-1">
                         <div class="fw-600" style="font-size:.825rem;">@<?= e($m['username']) ?><?= $m['full_name'] ? ' — ' . e($m['full_name']) : '' ?></div>
-                        <div class="text-muted" style="font-size:.72rem;"><?= e($m['package_name'] ?? 'Member') ?> · Joined <?= fmt_date($m['joined_at']) ?></div>
+                        <div class="text-muted" style="font-size:.72rem;">
+                          <?= e($m['package_name'] ?? 'Member') ?>
+                          <span class="mx-1">·</span>
+                          <?= number_format($pvContribution, 2) ?> PV
+                          <span class="mx-1">·</span>
+                          <?= fmt_money($pesoContribution) ?>
+                        </div>
+                        <div class="text-muted" style="font-size:.72rem;">Joined <?= fmt_date($m['joined_at']) ?></div>
                       </div>
                       <span class="badge <?= $m['status'] === 'active' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?>"><?= ucfirst($m['status']) ?></span>
                     </div>
@@ -379,6 +414,11 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
                 <th>#</th>
                 <th>Username</th>
                 <th>Package</th>
+                <th>Pkg PV</th>
+                <th>Personal PV</th>
+                <th>Group PV</th>
+                <th>L/R PV</th>
+                <th>Peso Value</th>
                 <th>Joined</th>
                 <th>Status</th>
               </tr>
@@ -386,16 +426,25 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
             <tbody>
               <?php if (empty($direct['data'])): ?>
                 <tr>
-                  <td colspan="5" class="text-center py-5 text-muted">
+                  <td colspan="10" class="text-center py-5 text-muted">
                     <div style="font-size:2.5rem;">👥</div>
                     <p class="mt-2 mb-0">You haven't referred anyone yet.</p>
                   </td>
                 </tr>
-                <?php else: foreach ($direct['data'] as $i => $m): ?>
+                <?php
+                  $pvPesoRate = (float)setting('pv_per_peso_rate', '1000.0000');
+                  foreach ($direct['data'] as $i => $m):
+                    $personalPeso = (float)($m['personal_pv'] ?? 0) * $pvPesoRate;
+                  ?>
                   <tr>
                     <td class="td-muted" style="font-size:.7rem;"><?= ($direct['page'] - 1) * 20 + $i + 1 ?></td>
                     <td class="fw-bold">@<?= e($m['username']) ?></td>
                     <td><span class="badge bg-primary-subtle text-primary"><?= e($m['package_name'] ?? '—') ?></span></td>
+                    <td class="font-mono td-muted" style="font-size:.75rem;"><?= number_format((float)($m['package_pv_rate'] ?? 0), 2) ?></td>
+                    <td class="font-mono td-muted" style="font-size:.75rem;"><?= number_format((float)($m['personal_pv'] ?? 0), 2) ?></td>
+                    <td class="font-mono td-muted" style="font-size:.75rem;"><?= number_format((float)($m['group_pv'] ?? 0), 2) ?></td>
+                    <td class="font-mono td-muted" style="font-size:.75rem;"><?= number_format((float)($m['left_pv'] ?? 0), 2) ?> / <?= number_format((float)($m['right_pv'] ?? 0), 2) ?></td>
+                    <td class="font-mono td-muted" style="font-size:.75rem;"><?= fmt_money($personalPeso) ?></td>
                     <td class="td-muted" style="font-size:.75rem;"><?= fmt_date($m['joined_at']) ?></td>
                     <td>
                       <?php $b = $m['status'] === 'active' ? 'bg-success-subtle text-success' : ($m['status'] === 'suspended' ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning'); ?>
@@ -629,7 +678,7 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
         .attr('dy', '1.8em')
         .style('fill', d => d.children ? 'rgba(255,255,255,0.8)' : '#64748b')
         .style('display', d => (d.children || d._children) ? null : 'none')
-        .text(d => `L:${(d.data.left_pv || 0).toLocaleString('en-PH', {minimumFractionDigits:0, maximumFractionDigits:0})} PV R:${(d.data.right_pv || 0).toLocaleString('en-PH', {minimumFractionDigits:0, maximumFractionDigits:0})} PV`);
+        .text(d => `L:${(d.data.left_pv || 0).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2})} PV R:${(d.data.right_pv || 0).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2})} PV`);
 
       // UPDATE
       const nodeUpdate = node.merge(nodeEnter).transition()

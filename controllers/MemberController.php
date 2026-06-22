@@ -408,9 +408,11 @@ class MemberController
 
         $indirect = [];
         $direct   = [];
+        $indirectLevels = [];
         if ($view === 'referral') {
             if (setting('indirect_referral_enabled', '1') === '1') {
                 $indirect = User::indirectReferralTree($user['id']);
+                $indirectLevels = Package::getIndirectLevels((int)$user['package_id']);
             } else {
                 $page    = max(1, (int)($_GET['pg'] ?? 1));
                 $perPage = per_page();

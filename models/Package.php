@@ -70,7 +70,7 @@ class Package
         $fields = [
             'name'                     => $data['name'],
             'entry_fee'                => (float)($data['entry_fee'] ?? 0),
-            'package_pv_rate'          => (float)($data['package_pv_rate'] ?? 10000.00),
+            'package_pv_rate'          => (float)($data['package_pv_rate'] ?? 10.00),
             'binary_pv_pct'            => (float)($data['binary_pv_pct'] ?? 20.00),
             'daily_pair_pv_cap'        => (float)($data['daily_pair_pv_cap'] ?? 0),
             'direct_ref_pv_pct'        => (float)($data['direct_ref_pv_pct'] ?? 0),
@@ -82,6 +82,7 @@ class Package
             'daily_fixed_income_days'  => (int)($data['daily_fixed_income_days'] ?? 90),
             'dfi_pv_pct'               => (float)($data['dfi_pv_pct'] ?? 0),
             'personal_pv_requirement'  => (float)($data['personal_pv_requirement'] ?? 0.00),
+            'pairing_bonus'            => 0.00, // legacy field
             'status'                   => $data['status'] ?? 'active',
         ];
 

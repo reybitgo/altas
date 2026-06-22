@@ -18,5 +18,5 @@ ALTER TABLE users
 
 -- ─── System settings ───────────────────────────────────────────────────────
 INSERT INTO settings (`key_name`, `value`) VALUES
-  ('pv_per_peso_rate', '1.0000')
+  ('pv_per_peso_rate', '1000.0000')
 ON DUPLICATE KEY UPDATE value = value;
