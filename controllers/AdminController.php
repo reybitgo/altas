@@ -314,7 +314,7 @@ class AdminController
         $products    = Product::allPaginated($page, $perPage);
         $editProduct = null;
         if (isset($_GET['edit'])) {
-            $editProduct = Product::find((int)$_GET['edit']);
+            $editProduct = Product::withUnilevelLevels((int)$_GET['edit']);
         }
         require 'views/admin/products.php';
     }
@@ -340,6 +340,19 @@ class AdminController
             'image_url'        => $existing['image_url'] ?? null,
         ];
 
+        $data['unilevel_levels'] = [];
+        for ($lvl = 1; $lvl <= 10; $lvl++) {
+            $data['unilevel_levels'][$lvl] = (float)($_POST["unilevel_{$lvl}"] ?? 0);
+        }
+
+        // Preserve existing levels when the section was not rendered (toggle disabled)
+        if ($id && !isset($_POST['unilevel_1'])) {
+            $existingLevels = Product::getUnilevelLevels($id);
+            if (!empty($existingLevels)) {
+                $data['unilevel_levels'] = $existingLevels;
+            }
+        }
+
         if (!$data['name'] || $data['price'] <= 0) {
             flash('error', 'Product name and price are required.');
             redirect($backUrl);
@@ -351,6 +364,12 @@ class AdminController
         if ($data['pv_value'] < 0 || $data['pv_value'] > 100) {
             flash('error', 'PV Value (%) must be between 0 and 100.');
             redirect($backUrl);
+        }
+        foreach ($data['unilevel_levels'] as $lvl => $pct) {
+            if ($pct < 0 || $pct > 100) {
+                flash('error', "Unilevel Level {$lvl} must be between 0 and 100.");
+                redirect($backUrl);
+            }
         }
 
         // Handle product image upload/removal
@@ -574,7 +593,7 @@ class AdminController
         $groupKeys = [
             'basics'       => ['site_name', 'site_tagline', 'contact_email', 'min_payout'],
             'maint'        => ['maintenance_mode', 'maintenance_bypass_token', 'seat_limit'],
-            'comp_plan'    => ['binary_enabled', 'binary_repeat_enabled', 'indirect_referral_enabled', 'default_cap_multiplier', 'pv_per_peso_rate', 'dfi_enabled'],
+            'comp_plan'    => ['binary_enabled', 'binary_repeat_enabled', 'indirect_referral_enabled', 'unilevel_product_enabled', 'default_cap_multiplier', 'pv_per_peso_rate', 'dfi_enabled'],
             'payments'     => ['reactivation_ewallet_enabled', 'reactivation_external_enabled', 'gcash_number', 'maya_number', 'usdt_trc20_address', 'usdt_bep20_address'],
             'ewallet'      => ['ewallet_transfer_fee', 'ewallet_min_transfer', 'ewallet_transfer_daily_limit', 'ewallet_transfer_weekly_limit'],
             'payouts'      => ['gcash_enabled', 'maya_enabled', 'service_fee_gcash', 'service_fee_maya', 'service_fee_usdt_trc20', 'service_fee_usdt_bep20', 'usdt_trc20_gas_fee', 'usdt_bep20_gas_fee'],
@@ -590,7 +609,7 @@ class AdminController
         $pdo = db();
         $st  = $pdo->prepare("INSERT INTO settings (key_name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
 
-        $checkboxKeys = ['gcash_enabled', 'maya_enabled', 'dfi_enabled', 'reactivation_ewallet_enabled', 'reactivation_external_enabled', 'indirect_referral_enabled', 'binary_enabled', 'binary_repeat_enabled'];
+        $checkboxKeys = ['gcash_enabled', 'maya_enabled', 'dfi_enabled', 'reactivation_ewallet_enabled', 'reactivation_external_enabled', 'indirect_referral_enabled', 'unilevel_product_enabled', 'binary_enabled', 'binary_repeat_enabled'];
 
         foreach ($allowed as $key) {
             if (in_array($key, $checkboxKeys, true)) {
@@ -614,6 +633,16 @@ class AdminController
                         if ($memberCount > 0) {
                             flash('error', 'Cannot change indirect referral: ' . $memberCount . ' member(s) already exist in the system. Run reset.php to clear all members first, then toggle indirect referral before anyone registers.');
                             redirect('/?page=admin_settings#tabPane-comp_plan');
+                        }
+                    }
+                }
+
+                if ($key === 'unilevel_product_enabled') {
+                    $currentValue = (string) db()->query("SELECT value FROM settings WHERE key_name = 'unilevel_product_enabled'")->fetchColumn();
+                    if ($value !== $currentValue) {
+                        $memberCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
+                        if ($memberCount > 0 && $value === '0') {
+                            flash('warning', 'Cannot disable Unilevel Product Bonus — ' . $memberCount . ' member(s) already exist. Existing bonuses already paid remain; no new bonuses will be processed.');
                         }
                     }
                 }

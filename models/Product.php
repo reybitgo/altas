@@ -54,6 +54,35 @@ class Product
         return max(0, (int)$product['stock'] - self::reservedStock($productId));
     }
 
+    public static function getUnilevelLevels(int $productId): array
+    {
+        $st = db()->prepare(
+            'SELECT level, pv_pct FROM product_unilevel_levels WHERE product_id = ? ORDER BY level'
+        );
+        $st->execute([$productId]);
+        $rows   = $st->fetchAll();
+        $result = [];
+        foreach ($rows as $r) {
+            $result[(int)$r['level']] = (float)$r['pv_pct'];
+        }
+        return $result;
+    }
+
+    public static function withUnilevelLevels(int $id): ?array
+    {
+        $product = self::find($id);
+        if (!$product) return null;
+        $product['unilevel_levels'] = self::getUnilevelLevels($id);
+        return $product;
+    }
+
+    public static function unilevelProductBonus(float $effPv, float $pvPct): float
+    {
+        if ($pvPct <= 0) return 0.00;
+        $rate = (float)setting('pv_per_peso_rate', '1.0000');
+        return $effPv * ($pvPct / 100) * $rate;
+    }
+
     /**
      * Save or update a product.
      *
@@ -95,6 +124,15 @@ class Product
             $pdo->prepare('INSERT INTO products (' . implode(', ', $cols) . ') VALUES (' . implode(', ', $placeholders) . ')')
                 ->execute(array_values($fields));
             $id = (int)$pdo->lastInsertId();
+        }
+
+        // Save unilevel levels
+        $pdo->prepare("DELETE FROM product_unilevel_levels WHERE product_id = ?")
+            ->execute([$id]);
+        $st = $pdo->prepare("INSERT INTO product_unilevel_levels (product_id, level, pv_pct) VALUES (?, ?, ?)");
+        for ($lvl = 1; $lvl <= 10; $lvl++) {
+            $pvPct = (float)($data['unilevel_levels'][$lvl] ?? 0);
+            $st->execute([$id, $lvl, $pvPct]);
         }
 
         return $id;

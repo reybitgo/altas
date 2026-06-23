@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
     $logs[] = ['ok', 'Reset admin to clean install state (counters, balances, tree placement, package all cleared)'];
 
     // 5. Reset auto-increment counters
-    foreach (['users', 'commissions', 'ewallet_ledger', 'payout_requests', 'reg_codes', 'reactivations', 'daily_fixed_income_log', 'ewallet_transfers', 'ewallet_admin_topups', 'cd_ledger', 'user_cd_status', 'pv_transactions', 'carts', 'cart_items', 'repeat_purchase_orders', 'repeat_purchase_order_items'] as $tbl) {
+    foreach (['users', 'commissions', 'ewallet_ledger', 'payout_requests', 'reg_codes', 'reactivations', 'daily_fixed_income_log', 'ewallet_transfers', 'ewallet_admin_topups', 'cd_ledger', 'user_cd_status', 'pv_transactions', 'carts', 'cart_items', 'repeat_purchase_orders', 'repeat_purchase_order_items', 'product_unilevel_levels'] as $tbl) {
       $pdo->exec("ALTER TABLE {$tbl} AUTO_INCREMENT = 1");
     }
     $logs[] = ['ok', 'Reset auto-increment counters'];

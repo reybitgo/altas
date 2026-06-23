@@ -475,6 +475,133 @@ class Commission
 
         // 3b. Product PV also flows up the binary tree (reads each user's fixed binary_position)
         self::processBinaryPV($memberId, $totalPv);
+
+        // ★ Step 4: Unilevel Product Bonus (10 levels via sponsor chain, PV-gated)
+        self::processProductUnilevel($orderId);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  UNILEVEL PRODUCT BONUS (10 Levels, per line item, PV-gated)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    public static function processProductUnilevel(int $orderId): void
+    {
+        if (setting('unilevel_product_enabled', '1') !== '1') {
+            return;
+        }
+
+        $order = RepeatPurchaseOrder::find($orderId);
+        if (!$order || $order['status'] !== 'approved') return;
+
+        $buyerId = (int)$order['member_id'];
+        $buyer   = User::find($buyerId);
+        if (!$buyer || $buyer['status'] !== 'active') return;
+
+        $pdo = db();
+
+        // Load order items to process per-product
+        $st = $pdo->prepare(
+            'SELECT product_id, total_pv FROM repeat_purchase_order_items WHERE order_id = ?'
+        );
+        $st->execute([$orderId]);
+        $items = $st->fetchAll();
+        if (empty($items)) return;
+
+        $rate = (float)setting('pv_per_peso_rate', '1.0000');
+
+        foreach ($items as $item) {
+            $productId = (int)$item['product_id'];
+            $effPv     = (float)$item['total_pv'];
+            if ($effPv <= 0) continue;
+
+            $levels = Product::getUnilevelLevels($productId);
+            if (empty($levels)) continue;
+
+            $cur = (int)$buyer['sponsor_id'];
+            $visited = [$buyerId => true];
+
+            for ($lvl = 1; $lvl <= 10; $lvl++) {
+                if ($cur <= 0 || isset($visited[$cur])) break;
+                $visited[$cur] = true;
+
+                $upline = User::find($cur);
+                if (!$upline) break;
+
+                if ($upline['status'] !== 'active') {
+                    $cur = (int)$upline['sponsor_id'];
+                    continue;
+                }
+
+                if (!self::meetsPersonalPvRequirement($cur)) {
+                    $cur = (int)$upline['sponsor_id'];
+                    continue;
+                }
+
+                $pvPct = (float)($levels[$lvl] ?? 0);
+                if ($pvPct <= 0) {
+                    $cur = (int)$upline['sponsor_id'];
+                    continue;
+                }
+
+                $bonus = $effPv * ($pvPct / 100) * $rate;
+
+                // 1. CD split BEFORE lifetime cap
+                $cdSplit = CdStatus::fillBucket($cur, $bonus);
+                $cdPortion = $cdSplit['cd'];
+                $walletPortion = $cdSplit['wallet'];
+                $cdStatusId = $cdSplit['cd_status_id'] ?? null;
+
+                // 2. Lifetime cap on wallet overflow
+                $capBlocked = 0.00;
+                $actualWallet = 0.00;
+                if ($walletPortion > 0) {
+                    $capCheck = CapEngine::canEarn($cur, $walletPortion);
+                    $actualWallet = $capCheck['allowed'];
+                    $capBlocked = $capCheck['blocked'];
+                }
+
+                // 3. Build description
+                $desc = "Unilevel Product L{$lvl} Bonus";
+                if ($cdPortion > 0) {
+                    $desc .= sprintf(' — %s to CD', fmt_money($cdPortion));
+                    if ($actualWallet > 0) {
+                        $desc .= sprintf(', %s to wallet', fmt_money($actualWallet));
+                    }
+                }
+
+                // 4. INSERT commission (GROSS)
+                $pdo->prepare("
+                    INSERT INTO commissions
+                      (user_id, type, amount, cap_deduction, source_user_id, level, description, status)
+                    VALUES (?, 'unilevel_product', ?, ?, ?, ?, ?, 'credited')
+                ")->execute([$cur, $bonus, $capBlocked, $buyerId, $lvl, $desc]);
+
+                $commId = (int)$pdo->lastInsertId();
+
+                // 5. Credit e-wallet + cap blocked
+                if ($actualWallet > 0) {
+                    Ewallet::credit($cur, $actualWallet, $commId, 'commission', "Unilevel Product L{$lvl} Bonus");
+                }
+                if ($capBlocked > 0) {
+                    self::recordCapBlocked($cur, $capBlocked, 'unilevel_product', $buyerId, $lvl);
+                }
+
+                // 6. CD ledger
+                if ($cdPortion > 0 && $cdStatusId) {
+                    CdStatus::recordLedger(
+                        $cur, $cdStatusId, $commId, 'unilevel_product',
+                        $bonus, $cdPortion, $actualWallet, $buyerId
+                    );
+                }
+
+                // 7. Record cap earning
+                if ($actualWallet > 0) {
+                    CapEngine::recordEarning($cur, $actualWallet, 'unilevel_product');
+                }
+
+                $cur = (int)$upline['sponsor_id'];
+            }
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -611,6 +738,7 @@ class Commission
             'pairing' => ($pairs ?? 0) . " pair(s) blocked — lifetime cap reached",
             'direct_referral' => "Direct referral blocked — lifetime cap reached",
             'indirect_referral' => "Unilevel L{$level} blocked — lifetime cap reached",
+            'unilevel_product' => "Unilevel Product L{$level} blocked — lifetime cap reached",
             default => "Commission blocked — lifetime cap reached",
         };
 
@@ -637,10 +765,11 @@ class Commission
     {
         $st = db()->prepare("
             SELECT
-              COALESCE(SUM(CASE WHEN type='pairing'           AND status='credited' THEN amount END), 0) AS total_pairing,
-              COALESCE(SUM(CASE WHEN type='direct_referral'   AND status='credited' THEN amount END), 0) AS total_direct,
-              COALESCE(SUM(CASE WHEN type='indirect_referral' AND status='credited' THEN amount END), 0) AS total_indirect,
+              COALESCE(SUM(CASE WHEN type='pairing'            AND status='credited' THEN amount END), 0) AS total_pairing,
+              COALESCE(SUM(CASE WHEN type='direct_referral'    AND status='credited' THEN amount END), 0) AS total_direct,
+              COALESCE(SUM(CASE WHEN type='indirect_referral'  AND status='credited' THEN amount END), 0) AS total_indirect,
               COALESCE(SUM(CASE WHEN type='daily_fixed_income' AND status='credited' THEN amount END), 0) AS total_dfi,
+              COALESCE(SUM(CASE WHEN type='unilevel_product'   AND status='credited' THEN amount END), 0) AS total_unilevel_product,
               COALESCE(SUM(CASE WHEN status='credited'                              THEN amount END), 0) AS total_earned,
               COALESCE(SUM(CASE WHEN type='pairing' AND status='flushed' THEN pairs_count END), 0)       AS total_flushed_pairs,
               COALESCE(SUM(cap_deduction), 0) AS total_cap_blocked
@@ -671,7 +800,7 @@ class Commission
         $where  = 'c.user_id = ?';
         $params = [$userId];
 
-        if ($type && in_array($type, ['pairing', 'direct_referral', 'indirect_referral', 'daily_fixed_income'])) {
+        if ($type && in_array($type, ['pairing', 'direct_referral', 'indirect_referral', 'daily_fixed_income', 'unilevel_product'])) {
             $where  .= ' AND c.type = ?';
             $params[] = $type;
         }

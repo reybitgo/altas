@@ -200,6 +200,33 @@
             </select>
           </div>
 
+          <?php if (setting('unilevel_product_enabled', '1') === '1'): ?>
+          <hr class="my-3">
+          <div class="mb-0">
+            <label class="form-label fw-bold">📊 Unilevel Bonuses (10 Levels)</label>
+            <div class="row g-2">
+              <?php $ulvls = $editProduct['unilevel_levels'] ?? [];
+              for ($lvl = 1; $lvl <= 10; $lvl++): ?>
+                <div class="col-6 col-md-4">
+                  <label class="form-label" style="font-size:.72rem;">Level <?= $lvl ?></label>
+                  <div class="input-group input-group-sm">
+                    <input type="number" name="unilevel_<?= $lvl ?>" id="unilevel_<?= $lvl ?>"
+                           class="form-control" inputmode="decimal" min="0" max="100" step="0.01"
+                           value="<?= e($ulvls[$lvl] ?? 0) ?>" placeholder="0.00">
+                    <span class="input-group-text">%</span>
+                  </div>
+                </div>
+              <?php endfor; ?>
+            </div>
+            <div class="form-text mt-1">
+              Set 0 to disable a level. Percentages are applied to the product's effective PV.
+              Each upline must also meet their package's Personal PV Requirement (PV Gate).
+              Total unilevel ≈ <span id="unilevelPreview" class="font-mono">₱0.00</span>
+            </div>
+          </div>
+          <hr class="my-3">
+          <?php endif; ?>
+
           <div class="mb-3">
             <label class="form-label">Product Image</label>
             <input type="file" name="image" id="prodImage" class="form-control" accept="image/jpeg,image/png,image/gif,image/webp">
@@ -244,6 +271,11 @@
     document.getElementById('prodStock').value = '0';
     document.getElementById('prodImage').value = '';
     document.getElementById('prodRemoveImage').checked = false;
+
+    for (let lvl = 1; lvl <= 10; lvl++) {
+      const el = document.getElementById('unilevel_' + lvl);
+      if (el) el.value = '0';
+    }
 
     document.getElementById('productModalTitle').textContent = '➕ New Product';
     document.getElementById('productId').value = '';
@@ -310,6 +342,34 @@
   if (prodPvInput)  prodPvInput.addEventListener('input', updateProductPvPreview);
   if (prodPctInput) prodPctInput.addEventListener('input', updateProductPvPreview);
   updateProductPvPreview();
+
+  // ── Unilevel Bonus preview live update ──
+  function updateUnilevelPreview() {
+    const pv = parseFloat(prodPvInput?.value) || 0;
+    const pct = parseFloat(prodPctInput?.value) || 0;
+    const effPv = pv * (pct / 100);
+    let totalPeso = 0;
+    for (let lvl = 1; lvl <= 10; lvl++) {
+      const input = document.getElementById('unilevel_' + lvl);
+      const lvlPct = parseFloat(input?.value) || 0;
+      totalPeso += effPv * (lvlPct / 100) * pvPerPesoRate;
+    }
+    const el = document.getElementById('unilevelPreview');
+    if (el) {
+      el.textContent = '₱' + totalPeso.toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+  }
+
+  for (let lvl = 1; lvl <= 10; lvl++) {
+    const el = document.getElementById('unilevel_' + lvl);
+    if (el) el.addEventListener('input', updateUnilevelPreview);
+  }
+  if (prodPvInput)  prodPvInput.addEventListener('input', updateUnilevelPreview);
+  if (prodPctInput) prodPctInput.addEventListener('input', updateUnilevelPreview);
+  updateUnilevelPreview();
 
   document.getElementById('productForm').addEventListener('submit', function() {
     const btn = document.getElementById('prodSubmitBtn');

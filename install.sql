@@ -48,6 +48,17 @@ CREATE TABLE package_indirect_levels (
   UNIQUE KEY uq_pkg_level (package_id, level)
 ) ENGINE=InnoDB;
 
+-- ─── PRODUCT UNILEVEL LEVELS (Phase 5) ─────────────────────────
+CREATE TABLE product_unilevel_levels (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  product_id INT UNSIGNED     NOT NULL,
+  level      TINYINT UNSIGNED NOT NULL,
+  pv_pct     DECIMAL(5,2)     NOT NULL DEFAULT 0.00
+             COMMENT 'Unilevel product bonus = product_eff_pv * (pv_pct/100) * pv_per_peso_rate',
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_product_level (product_id, level)
+) ENGINE=InnoDB;
+
 -- ─── PRODUCTS (Phase 5) ───────────────────────────────────────
 CREATE TABLE products (
   id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -213,7 +224,7 @@ ALTER TABLE users ADD FOREIGN KEY (reg_code_id) REFERENCES reg_codes(id) ON DELE
 CREATE TABLE commissions (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id        INT UNSIGNED NOT NULL,
-  type           ENUM('pairing','direct_referral','indirect_referral','daily_fixed_income') NOT NULL,
+  type           ENUM('pairing','direct_referral','indirect_referral','daily_fixed_income','unilevel_product') NOT NULL,
   amount         DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   cap_deduction  DECIMAL(12,2) NOT NULL DEFAULT 0.00,  -- v2: amount blocked by lifetime cap
   source_user_id INT UNSIGNED  NULL,
@@ -375,7 +386,7 @@ CREATE TABLE cd_ledger (
   user_id              INT UNSIGNED  NOT NULL,
   cd_status_id         INT UNSIGNED  NOT NULL,
   commission_id        INT UNSIGNED  NULL,
-  type                 ENUM('pairing','direct_referral','indirect_referral') NOT NULL,
+  type                 ENUM('pairing','direct_referral','indirect_referral','unilevel_product') NOT NULL,
   gross_amount         DECIMAL(12,2) NOT NULL,
   cd_amount            DECIMAL(12,2) NOT NULL,
   withdrawable_amount  DECIMAL(12,2) NOT NULL DEFAULT 0.00,
@@ -480,6 +491,7 @@ INSERT INTO settings (key_name, value) VALUES
   ('ewallet_transfer_daily_limit',  '5000.00'),
   ('ewallet_transfer_weekly_limit', '20000.00'),
   ('indirect_referral_enabled',   '1'),
+  ('unilevel_product_enabled',    '1'),
   ('binary_enabled',              '1'),
   ('binary_repeat_enabled',       '1'),
   ('seat_limit',                  '0'),

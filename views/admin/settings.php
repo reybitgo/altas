@@ -172,6 +172,16 @@
                     <?php endif; ?>
                   </div>
                 </div>
+                <!-- Unilevel Product Bonus -->
+                <div class="rounded p-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" name="unilevel_product_enabled" id="unilevelProductEnabled" value="1" <?= setting('unilevel_product_enabled', '1') === '1' ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="unilevelProductEnabled" style="font-weight:700;font-size:.85rem;">Enable Unilevel Product Bonus</label>
+                  </div>
+                  <div style="font-size:.78rem;color:var(--muted);line-height:1.6;padding-left:2.4rem;">
+                    When enabled, upline sponsors earn a 10-level unilevel cash bonus on each product purchase (gated by each upline's Personal PV Requirement). When disabled, the Unilevel Bonus section is hidden from the product edit form and no unilevel commissions are processed for product purchases.
+                  </div>
+                </div>
                 <!-- Daily Fixed Income -->
                 <div class="rounded p-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
                   <div class="form-check form-switch mb-0">
