@@ -147,6 +147,16 @@
                     <?php endif; ?>
                   </div>
                 </div>
+                <!-- Binary Repeat Purchase -->
+                <div class="rounded p-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" name="binary_repeat_enabled" id="binaryRepeatEnabled" value="1" <?= setting('binary_repeat_enabled', '1') === '1' ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="binaryRepeatEnabled" style="font-weight:700;font-size:.85rem;">Enable Binary Repeat Purchase</label>
+                  </div>
+                  <div style="font-size:.78rem;color:var(--muted);line-height:1.6;padding-left:2.4rem;">
+                    When enabled, members can choose Left or Right leg during checkout and product PV earns binary pairing bonuses. When disabled, the Binary Position selector is hidden and product PV does not trigger binary pairing. Toggleable anytime.
+                  </div>
+                </div>
                 <!-- Indirect Referral -->
                 <div class="rounded p-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
                   <div class="form-check form-switch mb-2">

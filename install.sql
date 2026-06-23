@@ -481,6 +481,7 @@ INSERT INTO settings (key_name, value) VALUES
   ('ewallet_transfer_weekly_limit', '20000.00'),
   ('indirect_referral_enabled',   '1'),
   ('binary_enabled',              '1'),
+  ('binary_repeat_enabled',       '1'),
   ('seat_limit',                  '0'),
   ('pv_per_peso_rate',            '1000.0000');
 

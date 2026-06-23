@@ -79,6 +79,7 @@
             </div>
           </div>
 
+          <?php if (!empty($showBinaryPosition)): ?>
           <!-- Binary Position -->
           <div class="card mb-3">
             <div class="card-header fw-bold">🌳 Binary Position</div>
@@ -106,6 +107,7 @@
               </div>
             </div>
           </div>
+          <?php endif; ?>
 
           <!-- Payment Method -->
           <div class="card mb-3">
@@ -270,15 +272,19 @@
     });
   });
 
-  binaryRadios.forEach(function(r) {
-    r.addEventListener('change', function() {
-      updateSelected('binary_position', 'binary-option');
+  if (binaryRadios.length) {
+    binaryRadios.forEach(function(r) {
+      r.addEventListener('change', function() {
+        updateSelected('binary_position', 'binary-option');
+      });
     });
-  });
+  }
 
   // Initialize selected states
   updateSelected('payment_method', 'payment-option');
-  updateSelected('binary_position', 'binary-option');
+  if (binaryRadios.length) {
+    updateSelected('binary_position', 'binary-option');
+  }
 
   function toggleProof() {
     var checked = document.querySelector('[name=payment_method]:checked');

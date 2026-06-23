@@ -464,11 +464,16 @@ class Commission
             $cur = (int)$upline['sponsor_id'];
         }
 
-        // 3. Pay yourself first: buyer receives binary PV on their chosen leg
+        // 3. Binary PV — only if binary repeat purchase is enabled
+        if (setting('binary_repeat_enabled', '1') !== '1') {
+            return;
+        }
+
+        // 3a. Pay yourself first: buyer receives binary PV on their chosen leg
         $buyerSide = $order['binary_position'];
         self::applyBinaryPv($memberId, $buyerSide, $totalPv, $memberId, 'repeat_purchase');
 
-        // 4. Product PV also flows up the binary tree (reads each user's fixed binary_position)
+        // 3b. Product PV also flows up the binary tree (reads each user's fixed binary_position)
         self::processBinaryPV($memberId, $totalPv);
     }
 

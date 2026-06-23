@@ -276,6 +276,7 @@ class MemberController
         if (trim(setting('usdt_bep20_address', ''))) $methods['usdt_bep20'] = 'USDT BEP20';
 
         $stockErrors = Cart::validateStock((int)$cart['id']);
+        $showBinaryPosition = setting('binary_repeat_enabled', '1') === '1';
 
         $pageTitle = 'Checkout';
         include 'views/partials/head.php';
@@ -304,7 +305,10 @@ class MemberController
             redirect('/?page=checkout');
         }
 
-        $binaryPosition = ($_POST['binary_position'] ?? 'left') === 'right' ? 'right' : 'left';
+        $binaryPosition = 'left';
+        if (setting('binary_repeat_enabled', '1') === '1') {
+            $binaryPosition = ($_POST['binary_position'] ?? 'left') === 'right' ? 'right' : 'left';
+        }
         $paymentMethod = $_POST['payment_method'] ?? '';
         $validMethods = ['ewallet', 'gcash', 'maya', 'usdt_trc20', 'usdt_bep20'];
         if (!in_array($paymentMethod, $validMethods, true)) {
