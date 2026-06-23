@@ -137,7 +137,7 @@ class RepeatPurchase
             throw new InvalidArgumentException('Quantity must be at least 1.');
         }
 
-        $unitPv   = (float)$product['pv_value'];
+        $unitPv   = (float)$product['product_pv'] * ((float)$product['pv_value'] / 100);
         $unitPrice = (float)$product['price'];
         $totalPv   = $unitPv * $quantity;
         $totalPrice = $unitPrice * $quantity;

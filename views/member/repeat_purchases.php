@@ -64,7 +64,8 @@
         <?php foreach ($products as $p):
           $imgFull = !empty($p['image_url']) ? APP_URL . '/uploads/' . e($p['image_url']) : '';
           $priceFmt = fmt_money((float)$p['price']);
-          $pvFmt = number_format((float)$p['pv_value'], 2);
+          $effPv = (float)$p['product_pv'] * ((float)$p['pv_value'] / 100);
+          $pvFmt = number_format($effPv, 2);
           $available = Product::availableStock((int)$p['id']);
         ?>
           <div class="col-12 col-md-6 col-lg-4">
@@ -98,7 +99,7 @@
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                   <span class="text-muted" style="font-size:.8rem;">PV Value</span>
-                  <strong class="font-mono text-success"><?= number_format((float)$p['pv_value'], 2) ?> PV</strong>
+                  <strong class="font-mono text-success"><?= number_format($effPv, 2) ?> PV</strong>
                 </div>
                 <div class="small text-muted mb-2">
                   <?php if ($available > 0): ?>

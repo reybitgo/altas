@@ -54,7 +54,7 @@ class Cart
         }
 
         $pdo = db();
-        $unitPv   = (float)$product['pv_value'];
+        $unitPv   = (float)$product['product_pv'] * ((float)$product['pv_value'] / 100);
         $unitPrice = (float)$product['price'];
 
         if ($existing) {
@@ -103,7 +103,7 @@ class Cart
         return $st->execute([
             $quantity,
             (float)$product['price'],
-            (float)$product['pv_value'],
+            (float)$product['product_pv'] * ((float)$product['pv_value'] / 100),
             $cartId,
             $productId,
         ]);

@@ -331,7 +331,8 @@ class AdminController
         $data = [
             'name'             => trim($_POST['name'] ?? ''),
             'price'            => (float)($_POST['price'] ?? 0),
-            'pv_value'         => (float)($_POST['pv_value'] ?? 0),
+            'product_pv'       => (float)($_POST['product_pv'] ?? 0),
+            'pv_value'         => (float)($_POST['pv_value'] ?? 100.00),
             'stock'            => max(0, (int)($_POST['stock'] ?? 0)),
             'short_description'=> trim($_POST['short_description'] ?? ''),
             'description'      => trim($_POST['description'] ?? ''),
@@ -343,8 +344,12 @@ class AdminController
             flash('error', 'Product name and price are required.');
             redirect($backUrl);
         }
-        if ($data['pv_value'] < 0) {
-            flash('error', 'PV value cannot be negative.');
+        if ($data['product_pv'] < 0) {
+            flash('error', 'Product PV cannot be negative.');
+            redirect($backUrl);
+        }
+        if ($data['pv_value'] < 0 || $data['pv_value'] > 100) {
+            flash('error', 'PV Value (%) must be between 0 and 100.');
             redirect($backUrl);
         }
 

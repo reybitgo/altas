@@ -58,7 +58,9 @@
               <th style="padding-left:1.25rem;width:70px;">Image</th>
               <th>Product</th>
               <th class="text-end">Price</th>
-              <th class="text-end">PV Value</th>
+              <th class="text-end">Product PV</th>
+              <th class="text-end">PV %</th>
+              <th class="text-end">Eff. PV</th>
               <th class="text-center">Stock</th>
               <th class="text-center">Status</th>
               <th class="text-end" style="padding-right:1.25rem;width:120px;">Actions</th>
@@ -67,7 +69,7 @@
           <tbody>
             <?php if (empty($products['data'])): ?>
               <tr>
-                <td colspan="7" class="text-center py-5 text-muted">
+                <td colspan="9" class="text-center py-5 text-muted">
                   <div style="font-size:2rem;opacity:.3;margin-bottom:.5rem;">🛍️</div>
                   <div>No products yet.</div>
                 </td>
@@ -89,7 +91,9 @@
                     <div class="text-muted" style="font-size:.7rem;">ID: <?= (int)$p['id'] ?></div>
                   </td>
                   <td class="text-end font-mono"><?= fmt_money($p['price']) ?></td>
-                  <td class="text-end font-mono"><?= number_format((float)$p['pv_value'], 2) ?></td>
+                  <td class="text-end font-mono"><?= number_format((float)$p['product_pv'], 2) ?></td>
+                  <td class="text-end font-mono"><?= number_format((float)$p['pv_value'], 2) ?>%</td>
+                  <td class="text-end font-mono"><?= number_format((float)$p['product_pv'] * (float)$p['pv_value'] / 100, 2) ?></td>
                   <td class="text-center font-mono">
                     <?php $avail = Product::availableStock((int)$p['id']); ?>
                     <span class="badge bg-<?= $avail > 0 ? 'success' : ($avail === 0 && (int)$p['stock'] > 0 ? 'warning' : 'secondary') ?>-subtle text-<?= $avail > 0 ? 'success' : ($avail === 0 && (int)$p['stock'] > 0 ? 'warning' : 'secondary') ?>" style="font-size:.72rem;">
@@ -157,14 +161,21 @@
           </div>
 
           <div class="row g-3 mb-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
               <label class="form-label">Price (₱) <span class="text-danger">*</span></label>
               <input type="number" name="price" id="prodPrice" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editProduct['price'] ?? '') ?>" required>
             </div>
-            <div class="col-md-6">
-              <label class="form-label">PV Value <span class="text-danger">*</span></label>
-              <input type="number" name="pv_value" id="prodPv" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editProduct['pv_value'] ?? '') ?>" required>
+            <div class="col-md-4">
+              <label class="form-label">Product PV <span class="text-danger">*</span></label>
+              <input type="number" name="product_pv" id="prodProductPv" class="form-control" inputmode="decimal" min="0" step="0.01" value="<?= e($editProduct['product_pv'] ?? '') ?>">
             </div>
+            <div class="col-md-4">
+              <label class="form-label">PV Value (%) <span class="text-danger">*</span></label>
+              <input type="number" name="pv_value" id="prodPv" class="form-control" inputmode="decimal" min="0" max="100" step="0.01" value="<?= e($editProduct['pv_value'] ?? '100.00') ?>">
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="form-text">PV = Product PV × PV Value = <span id="prodPvPreview" class="font-mono">0.00PV ≈ ₱0.00</span></div>
           </div>
 
           <!-- Stock row -->
@@ -227,7 +238,8 @@
     document.getElementById('prodShortDesc').value = '';
     document.getElementById('prodDesc').value = '';
     document.getElementById('prodPrice').value = '';
-    document.getElementById('prodPv').value = '';
+    document.getElementById('prodProductPv').value = '';
+    document.getElementById('prodPv').value = '100.00';
     document.getElementById('prodStatus').value = 'active';
     document.getElementById('prodStock').value = '0';
     document.getElementById('prodImage').value = '';
@@ -271,8 +283,33 @@
     document.getElementById('productModalTitle').textContent = '✏️ Edit Product';
     document.getElementById('prodSubmitBtn').textContent = '💾 Update Product';
     modal.show();
+    setTimeout(updateProductPvPreview, 50);
   });
   <?php endif; ?>
+
+  // ── Product PV preview live update ──
+  const prodPvInput = document.getElementById('prodProductPv');
+  const prodPctInput = document.getElementById('prodPv');
+  const prodPvPreviewEl = document.getElementById('prodPvPreview');
+  const pvPerPesoRate = <?= (float)setting('pv_per_peso_rate', '1000.0000') ?>;
+
+  function updateProductPvPreview() {
+    const pv = parseFloat(prodPvInput?.value) || 0;
+    const pct = parseFloat(prodPctInput?.value) || 0;
+    const effPv = pv * (pct / 100);
+    const peso = effPv * pvPerPesoRate;
+    prodPvPreviewEl.textContent = effPv.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) + 'PV ≈ ' + '₱' + peso.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  if (prodPvInput)  prodPvInput.addEventListener('input', updateProductPvPreview);
+  if (prodPctInput) prodPctInput.addEventListener('input', updateProductPvPreview);
+  updateProductPvPreview();
 
   document.getElementById('productForm').addEventListener('submit', function() {
     const btn = document.getElementById('prodSubmitBtn');

@@ -57,7 +57,7 @@ class Product
     /**
      * Save or update a product.
      *
-     * @param array $data name, price, pv_value, stock, status, image_url, short_description, description
+     * @param array $data name, price, product_pv, pv_value, stock, status, image_url, short_description, description
      */
     public static function save(array $data, ?int $id = null): int
     {
@@ -66,7 +66,8 @@ class Product
         $fields = [
             'name'             => trim($data['name'] ?? ''),
             'price'            => (float)($data['price'] ?? 0),
-            'pv_value'         => (float)($data['pv_value'] ?? 0),
+            'product_pv'       => (float)($data['product_pv'] ?? 0),
+            'pv_value'         => (float)($data['pv_value'] ?? 100.00),
             'stock'            => (int)($data['stock'] ?? 0),
             'image_url'        => $data['image_url'] ?? null,
             'short_description'=> trim($data['short_description'] ?? ''),
