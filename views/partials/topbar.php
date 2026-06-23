@@ -50,11 +50,29 @@ $isMember      = ($user['role'] ?? '') === 'member';
 
     <?php endif; ?>
 
-    <a href="<?= APP_URL ?>/?page=<?= Auth::isAdmin() ? 'admin' : 'profile' ?>"
-      class="topbar-balance" title="<?= e($user['username'] ?? '') ?>" style="text-decoration:none;">
-      <span class="bal-label"><?= Auth::isAdmin() ? 'Admin' : 'User' ?></span>
-      <span class="bal-amount">@<?= e($user['username'] ?? '') ?></span>
-    </a>
+    <div class="dropdown">
+      <button class="topbar-balance border-0 dropdown-toggle" type="button"
+        data-bs-toggle="dropdown" aria-expanded="false"
+        title="<?= e($user['username'] ?? '') ?>" style="cursor:pointer;">
+        <span class="bal-label"><?= Auth::isAdmin() ? 'Admin' : 'User' ?></span>
+        <span class="bal-amount">@<?= e($user['username'] ?? '') ?></span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded-3 py-1 mt-1" style="min-width:160px;font-size:.82rem;">
+        <li>
+          <a class="dropdown-item d-flex align-items-center gap-2 py-1.5" href="<?= APP_URL ?>/?page=<?= Auth::isAdmin() ? 'admin_settings' : 'profile' ?>">
+            <span style="font-size:.95rem;"><?= Auth::isAdmin() ? '⚙️' : '👤' ?></span>
+            <span><?= Auth::isAdmin() ? 'Settings' : 'Profile' ?></span>
+          </a>
+        </li>
+        <li><hr class="dropdown-divider my-1"></li>
+        <li>
+          <a class="dropdown-item d-flex align-items-center gap-2 py-1.5" href="<?= APP_URL ?>/?page=logout">
+            <span style="font-size:.95rem;">🚪</span>
+            <span>Logout</span>
+          </a>
+        </li>
+      </ul>
+    </div>
 
     <?php
     // Cart badge — shown for any logged-in user (member or admin), so admins
@@ -76,5 +94,13 @@ $isMember      = ($user['role'] ?? '') === 'member';
       </span>
       <?php endif; ?>
     </button>
+
+    <?php if (Auth::isAdmin() && ($_GET['page'] ?? '') === 'admin_settings'): ?>
+    <button class="btn btn-sm btn-outline-light" type="button"
+      data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas"
+      title="Settings navigation" style="font-size:1.1rem;line-height:1;">
+      ⚙️
+    </button>
+    <?php endif; ?>
   </div>
 </div>

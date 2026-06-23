@@ -569,67 +569,52 @@ class AdminController
         Auth::guard('admin');
         csrf_verify();
 
-        $allowed = [
-            'site_name',
-            'site_tagline',
-            'min_payout',
-            'contact_email',
-            'maintenance_mode',
-            'maintenance_bypass_token',
-            'service_fee_gcash',
-            'service_fee_maya',
-            'service_fee_usdt_trc20',
-            'service_fee_usdt_bep20',
-            'usdt_trc20_gas_fee',
-            'usdt_bep20_gas_fee',
-            'gcash_enabled',
-            'maya_enabled',
-            'dfi_enabled',
-            'gcash_number',
-            'maya_number',
-            'usdt_trc20_address',
-            'usdt_bep20_address',
-            'default_cap_multiplier',
-            'reactivation_ewallet_enabled',
-            'reactivation_external_enabled',
-            'indirect_referral_enabled',
-            'binary_enabled',
-            'ewallet_transfer_fee',
-            'ewallet_min_transfer',
-            'ewallet_transfer_daily_limit',
-            'ewallet_transfer_weekly_limit',
-            'seat_limit',
-            'pv_per_peso_rate',
+        $group = $_POST['group'] ?? '';
+
+        $groupKeys = [
+            'basics'       => ['site_name', 'site_tagline', 'contact_email', 'min_payout'],
+            'maint'        => ['maintenance_mode', 'maintenance_bypass_token', 'seat_limit'],
+            'comp_plan'    => ['binary_enabled', 'indirect_referral_enabled', 'default_cap_multiplier', 'pv_per_peso_rate'],
+            'reactivation' => ['reactivation_ewallet_enabled', 'reactivation_external_enabled', 'gcash_number', 'maya_number', 'usdt_trc20_address', 'usdt_bep20_address'],
+            'ewallet'      => ['ewallet_transfer_fee', 'ewallet_min_transfer', 'ewallet_transfer_daily_limit', 'ewallet_transfer_weekly_limit'],
+            'payouts'      => ['gcash_enabled', 'maya_enabled', 'service_fee_gcash', 'service_fee_maya', 'service_fee_usdt_trc20', 'service_fee_usdt_bep20', 'usdt_trc20_gas_fee', 'usdt_bep20_gas_fee'],
+            'dfi'          => ['dfi_enabled'],
         ];
+
+        if (!isset($groupKeys[$group])) {
+            flash('error', 'Invalid settings group.');
+            redirect('/?page=admin_settings');
+            return;
+        }
+
+        $allowed = $groupKeys[$group];
         $pdo = db();
         $st  = $pdo->prepare("INSERT INTO settings (key_name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
 
+        $checkboxKeys = ['gcash_enabled', 'maya_enabled', 'dfi_enabled', 'reactivation_ewallet_enabled', 'reactivation_external_enabled', 'indirect_referral_enabled', 'binary_enabled'];
+
         foreach ($allowed as $key) {
-            // Checkbox toggles: when unchecked the field is absent from POST,
-            // so we explicitly save '0' for these keys when not present.
-            if (in_array($key, ['gcash_enabled', 'maya_enabled', 'dfi_enabled', 'reactivation_ewallet_enabled', 'reactivation_external_enabled', 'indirect_referral_enabled', 'binary_enabled'], true)) {
+            if (in_array($key, $checkboxKeys, true)) {
                 $value = isset($_POST[$key]) && $_POST[$key] === '1' ? '1' : '0';
 
-                // Guard: binary toggle is locked once members exist (can only change on clean system)
                 if ($key === 'binary_enabled') {
                     $currentValue = (string) db()->query("SELECT value FROM settings WHERE key_name = 'binary_enabled'")->fetchColumn();
                     if ($value !== $currentValue) {
                         $memberCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
                         if ($memberCount > 0) {
                             flash('error', 'Cannot change binary pairing: ' . $memberCount . ' member(s) already exist in the system. Run reset.php to clear all members first, then toggle binary before anyone registers.');
-                            redirect('/?page=admin_settings');
+                            redirect('/?page=admin_settings#tabPane-comp_plan');
                         }
                     }
                 }
 
-                // Guard: indirect referral toggle is locked once members exist (can only change on clean system)
                 if ($key === 'indirect_referral_enabled') {
                     $currentValue = (string) db()->query("SELECT value FROM settings WHERE key_name = 'indirect_referral_enabled'")->fetchColumn();
                     if ($value !== $currentValue) {
                         $memberCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
                         if ($memberCount > 0) {
                             flash('error', 'Cannot change indirect referral: ' . $memberCount . ' member(s) already exist in the system. Run reset.php to clear all members first, then toggle indirect referral before anyone registers.');
-                            redirect('/?page=admin_settings');
+                            redirect('/?page=admin_settings#tabPane-comp_plan');
                         }
                     }
                 }
@@ -641,7 +626,7 @@ class AdminController
         }
 
         flash('success', 'Settings saved.');
-        redirect('/?page=admin_settings');
+        redirect('/?page=admin_settings#tabPane-' . $group);
     }
 
     public function manualReset(): void
