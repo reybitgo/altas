@@ -13,6 +13,7 @@ class MemberController
         $summary = Commission::summary($user['id']);
         $status  = User::todayPairingStatus($user['id']);
         $recent  = Commission::recent($user['id'], 8);
+        $unilevel_product_today = (float)db()->query("SELECT COALESCE(SUM(amount),0) FROM commissions WHERE user_id = {$user['id']} AND type = 'unilevel_product' AND DATE(created_at) = CURDATE()")->fetchColumn();
         require 'views/member/dashboard.php';
     }
 
@@ -117,6 +118,8 @@ class MemberController
         $perPage = per_page();
         $summary = Commission::summary($userId);
         $history = Commission::history($userId, $page, $perPage, $type);
+        $unilevel_product_today = (float)db()->query("SELECT COALESCE(SUM(amount),0) FROM commissions WHERE user_id = {$userId} AND type = 'unilevel_product' AND DATE(created_at) = CURDATE()")->fetchColumn();
+        $unilevelProductTree = setting('unilevel_product_enabled', '0') === '1' ? User::productUnilevelTree($userId) : [];
         $cdStatus = CdStatus::getActive($userId);
         $cdHistory = CdStatus::history($userId);
         $cdLedger = [];
@@ -405,7 +408,7 @@ class MemberController
     {
         Auth::guard('member');
         $user     = Auth::user();
-        $view     = $_GET['view'] ?? 'binary'; // 'binary' | 'referral'
+        $view     = $_GET['view'] ?? 'binary'; // 'binary' | 'referral' | 'product_unilevel'
 
         if ($view === 'binary' && setting('binary_enabled', '1') !== '1') {
             redirect('/?page=genealogy&view=referral');
@@ -414,6 +417,7 @@ class MemberController
         $indirect = [];
         $direct   = [];
         $indirectLevels = [];
+        $productUnilevel = [];
         if ($view === 'referral') {
             if (setting('indirect_referral_enabled', '1') === '1') {
                 $indirect = User::indirectReferralTree($user['id']);
@@ -423,6 +427,8 @@ class MemberController
                 $perPage = per_page();
                 $direct  = User::directReferrals($user['id'], $page, $perPage);
             }
+        } elseif ($view === 'product_unilevel') {
+            $productUnilevel = User::productUnilevelTree($user['id']);
         }
         require 'views/member/genealogy.php';
     }
@@ -627,6 +633,7 @@ class MemberController
             'total_pairing'    => (float)$summary['total_pairing'],
             'total_direct'     => (float)$summary['total_direct'],
             'total_indirect'   => (float)$summary['total_indirect'],
+            'total_unilevel_product' => (float)($summary['total_unilevel_product'] ?? 0),
             'total_cap_blocked'=> (float)$summary['total_cap_blocked'],
         ]);
     }

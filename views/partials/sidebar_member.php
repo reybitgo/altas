@@ -37,6 +37,9 @@ $nav = [
     ['page' => 'genealogy&view=binary',  'icon' => '🌳', 'label' => 'Binary Tree',      'pages' => ['genealogy'], 'view' => 'binary'],
   ] : []),
   ['page' => 'genealogy&view=referral', 'icon' => '👥', 'label' => 'Referral Network', 'pages' => ['genealogy'], 'view' => 'referral'],
+  ...(setting('unilevel_product_enabled', '0') === '1' ? [
+    ['page' => 'genealogy&view=product_unilevel', 'icon' => '📦', 'label' => 'Unilevel Network', 'pages' => ['genealogy'], 'view' => 'product_unilevel'],
+  ] : []),
   'SEPARATOR:Account',
   ['page' => 'register&sponsor=' . $user['username'], 'icon' => '➕', 'label' => 'Register Member', 'pages' => ['register']],
   ['page' => 'ewallet_transfer', 'icon' => '💱', 'label' => 'Send Money', 'pages' => ['ewallet_transfer']],

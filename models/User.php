@@ -473,4 +473,45 @@ class User
 
         return $result;
     }
+
+    /**
+     * Get product unilevel genealogy (up to 10 levels) for display.
+     * Same sponsor-chain walk as indirectReferralTree, but includes
+     * total product PV per member (from users.personal_pv).
+     */
+    public static function productUnilevelTree(int $userId, int $maxLevel = 10): array
+    {
+        $result = [];
+        $queue  = [['id' => $userId, 'level' => 0]];
+        $visited = [$userId => true];
+
+        while (!empty($queue)) {
+            $item = array_shift($queue);
+            if ($item['level'] >= $maxLevel) continue;
+
+            $st = db()->prepare("
+                SELECT u.id, u.username, u.full_name, u.status,
+                       u.joined_at, u.personal_pv, u.group_pv,
+                       u.left_pv, u.right_pv,
+                       p.name AS package_name,
+                       p.package_pv_rate, p.entry_fee
+                FROM   users u
+                LEFT JOIN packages p ON p.id = u.package_id
+                WHERE  u.sponsor_id = ? AND u.role = 'member'
+            ");
+            $st->execute([$item['id']]);
+            $children = $st->fetchAll();
+
+            foreach ($children as $child) {
+                if (isset($visited[$child['id']])) continue;
+                $visited[$child['id']] = true;
+                $child['level'] = $item['level'] + 1;
+                $child['total_product_pv'] = (float)$child['personal_pv'];
+                $result[] = $child;
+                $queue[]  = ['id' => $child['id'], 'level' => $child['level']];
+            }
+        }
+
+        return $result;
+    }
 }

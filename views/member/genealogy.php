@@ -7,7 +7,7 @@
 ?>
 <?php
 $binaryEnabled = setting('binary_enabled', '1') === '1';
-$pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Binary Tree' : 'Referral Network');
+$pageTitle = $view === 'referral' ? 'Referral Network' : ($view === 'product_unilevel' ? 'Product Unilevel' : ($binaryEnabled ? 'Binary Tree' : 'Referral Network'));
 ?>
 <?php require 'views/partials/head.php'; ?>
 <?php require 'views/partials/sidebar_member.php'; ?>
@@ -249,9 +249,12 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
       <ul class="nav nav-pills mb-0">
         <?php if ($binaryEnabled): ?>
-        <li class="nav-item"><a class="nav-link <?= $view !== 'referral' ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=genealogy&view=binary">🌳 Binary Tree</a></li>
+        <li class="nav-item"><a class="nav-link <?= $view !== 'referral' && $view !== 'product_unilevel' ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=genealogy&view=binary">🌳 Binary Tree</a></li>
         <?php endif; ?>
         <li class="nav-item"><a class="nav-link <?= $view === 'referral' ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=genealogy&view=referral">👥 Referral Network</a></li>
+        <?php if (setting('unilevel_product_enabled', '0') === '1'): ?>
+        <li class="nav-item"><a class="nav-link <?= $view === 'product_unilevel' ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=genealogy&view=product_unilevel">📦 Product Unilevel</a></li>
+        <?php endif; ?>
       </ul>
       <div class="ms-auto" style="min-width:220px;max-width:360px;width:100%;">
         <div class="input-group input-group-sm">
@@ -279,7 +282,7 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
     }
     </script>
 
-    <?php if ($view !== 'referral'): ?>
+    <?php if ($view !== 'referral' && $view !== 'product_unilevel'): ?>
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
           <span class="card-title">🌳 Binary Tree</span>
@@ -318,6 +321,81 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
             </div>
             <span class="ms-auto text-muted">Click nodes to expand/collapse • Drag to pan</span>
           </div>
+        </div>
+      </div>
+
+    <?php elseif ($view === 'product_unilevel'): ?>
+      <?php
+      $upGrouped = [];
+      foreach ($productUnilevel as $m) $upGrouped[$m['level']][] = $m;
+      $grandTotalPv  = 0.0;
+      $grandTotalPeso = 0.0;
+      $upLevelTotals = [];
+      foreach ($upGrouped as $lvl => $members):
+        $pvSum = 0.0;
+        $pesoSum = 0.0;
+        foreach ($members as $m):
+          $pv = (float)($m['total_product_pv'] ?? 0);
+          $peso = $pv * (float)setting('pv_per_peso_rate', '1000.0000');
+          $pvSum += $pv;
+          $pesoSum += $peso;
+        endforeach;
+        $upLevelTotals[$lvl] = ['pv' => $pvSum, 'peso' => $pesoSum];
+        $grandTotalPv += $pvSum;
+        $grandTotalPeso += $pesoSum;
+      endforeach; ?>
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="card-title">📦 Product Unilevel Tree (10 Levels)</span>
+          <span class="d-flex gap-2">
+            <span class="badge bg-secondary-subtle text-secondary"><?= count($productUnilevel) ?> members</span>
+            <span class="badge bg-success-subtle text-success font-mono" style="font-size:.72rem;">
+              <?= number_format($grandTotalPv, 2) ?>PV <?= fmt_money($grandTotalPeso) ?></span>
+          </span>
+        </div>
+        <div class="card-body p-0">
+          <?php if (empty($productUnilevel)): ?>
+            <div class="text-center py-5 text-muted">
+              <div style="font-size:2.5rem;">📦</div>
+              <p class="mt-2 mb-0">No members in your product unilevel tree yet.</p>
+            </div>
+          <?php else:
+          foreach ($upGrouped as $lvl => $members): ?>
+            <div>
+              <div class="d-flex align-items-center gap-2 px-3 py-2 cursor-pointer border-bottom"
+                style="background:#f8fafd;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);"
+                onclick="toggleUpLevel(<?= $lvl ?>)">
+                <span>Level <?= $lvl ?></span>
+                <span class="badge bg-primary-subtle text-primary"><?= count($members) ?></span>
+                <span class="badge bg-success-subtle text-success font-mono" style="font-size:.72rem;">
+                  <?= number_format($upLevelTotals[$lvl]['pv'], 2) ?>PV <?= fmt_money($upLevelTotals[$lvl]['peso']) ?></span>
+                <span id="genUpArrow<?= $lvl ?>" class="ms-auto">▼</span>
+              </div>
+              <div id="genUpLevel<?= $lvl ?>">
+                <?php foreach ($members as $m):
+                  $upPv = (float)($m['total_product_pv'] ?? 0);
+                  $upPeso = $upPv * (float)setting('pv_per_peso_rate', '1000.0000');
+                  ?>
+                  <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+                    <div class="user-avatar"><?= strtoupper(substr($m['username'], 0, 1)) ?></div>
+                    <div class="flex-grow-1">
+                      <div class="fw-600" style="font-size:.825rem;">@<?= e($m['username']) ?><?= $m['full_name'] ? ' — ' . e($m['full_name']) : '' ?></div>
+                      <div class="text-muted" style="font-size:.72rem;">
+                        <?= e($m['package_name'] ?? 'Member') ?>
+                        <span class="mx-1">·</span>
+                        <?= number_format($upPv, 2) ?> Prod PV
+                        <span class="mx-1">·</span>
+                        <?= fmt_money($upPeso) ?>
+                      </div>
+                      <div class="text-muted" style="font-size:.72rem;">Joined <?= fmt_date($m['joined_at']) ?></div>
+                    </div>
+                    <span class="badge <?= $m['status'] === 'active' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?>"><?= ucfirst($m['status']) ?></span>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          <?php endforeach;
+          endif; ?>
         </div>
       </div>
 
@@ -397,6 +475,80 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
           endif; ?>
         </div>
       </div>
+    <?php elseif ($view === 'product_unilevel'): ?>
+      <?php
+      $upGrouped = [];
+      foreach ($productUnilevel as $m) $upGrouped[$m['level']][] = $m;
+      $grandTotalPv  = 0.0;
+      $grandTotalPeso = 0.0;
+      $upLevelTotals = [];
+      foreach ($upGrouped as $lvl => $members):
+        $pvSum = 0.0;
+        $pesoSum = 0.0;
+        foreach ($members as $m):
+          $pv = (float)($m['total_product_pv'] ?? 0);
+          $peso = $pv * (float)setting('pv_per_peso_rate', '1000.0000');
+          $pvSum += $pv;
+          $pesoSum += $peso;
+        endforeach;
+        $upLevelTotals[$lvl] = ['pv' => $pvSum, 'peso' => $pesoSum];
+        $grandTotalPv += $pvSum;
+        $grandTotalPeso += $pesoSum;
+      endforeach; ?>
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="card-title">📦 Product Unilevel Tree (10 Levels)</span>
+          <span class="d-flex gap-2">
+            <span class="badge bg-secondary-subtle text-secondary"><?= count($productUnilevel) ?> members</span>
+            <span class="badge bg-success-subtle text-success font-mono" style="font-size:.72rem;">
+              <?= number_format($grandTotalPv, 2) ?>PV <?= fmt_money($grandTotalPeso) ?></span>
+          </span>
+        </div>
+        <div class="card-body p-0">
+          <?php if (empty($productUnilevel)): ?>
+            <div class="text-center py-5 text-muted">
+              <div style="font-size:2.5rem;">📦</div>
+              <p class="mt-2 mb-0">No members in your product unilevel tree yet.</p>
+            </div>
+          <?php else:
+          foreach ($upGrouped as $lvl => $members): ?>
+            <div>
+              <div class="d-flex align-items-center gap-2 px-3 py-2 cursor-pointer border-bottom"
+                style="background:#f8fafd;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);"
+                onclick="toggleUpLevel(<?= $lvl ?>)">
+                <span>Level <?= $lvl ?></span>
+                <span class="badge bg-primary-subtle text-primary"><?= count($members) ?></span>
+                <span class="badge bg-success-subtle text-success font-mono" style="font-size:.72rem;">
+                  <?= number_format($upLevelTotals[$lvl]['pv'], 2) ?>PV <?= fmt_money($upLevelTotals[$lvl]['peso']) ?></span>
+                <span id="genUpArrow<?= $lvl ?>" class="ms-auto">▼</span>
+              </div>
+              <div id="genUpLevel<?= $lvl ?>">
+                <?php foreach ($members as $m):
+                  $upPv = (float)($m['total_product_pv'] ?? 0);
+                  $upPeso = $upPv * (float)setting('pv_per_peso_rate', '1000.0000');
+                  ?>
+                  <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+                    <div class="user-avatar"><?= strtoupper(substr($m['username'], 0, 1)) ?></div>
+                    <div class="flex-grow-1">
+                      <div class="fw-600" style="font-size:.825rem;">@<?= e($m['username']) ?><?= $m['full_name'] ? ' — ' . e($m['full_name']) : '' ?></div>
+                      <div class="text-muted" style="font-size:.72rem;">
+                        <?= e($m['package_name'] ?? 'Member') ?>
+                        <span class="mx-1">·</span>
+                        <?= number_format($upPv, 2) ?> Prod PV
+                        <span class="mx-1">·</span>
+                        <?= fmt_money($upPeso) ?>
+                      </div>
+                      <div class="text-muted" style="font-size:.72rem;">Joined <?= fmt_date($m['joined_at']) ?></div>
+                    </div>
+                    <span class="badge <?= $m['status'] === 'active' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?>"><?= ucfirst($m['status']) ?></span>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          <?php endforeach;
+          endif; ?>
+        </div>
+      </div>
     <?php else: ?>
       <!-- Indirect disabled — show direct referrals table instead -->
       <div class="card">
@@ -464,7 +616,7 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
   </div>
 </div>
 
-<?php if ($view !== 'referral'): ?>
+<?php if ($view !== 'referral' && $view !== 'product_unilevel'): ?>
   <script>
     // D3.js Binary Tree Visualization
     const API_URL = '<?= APP_URL ?>/?page=api_binary_tree&root=<?= Auth::id() ?>';
@@ -959,6 +1111,14 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($binaryEnabled ? 'Bina
   function toggleRef(lvl) {
     const el = document.getElementById('refLevel' + lvl);
     const arrow = document.getElementById('refArrow' + lvl);
+    if (!el) return;
+    const hidden = el.style.display === 'none';
+    el.style.display = hidden ? 'block' : 'none';
+    arrow.textContent = hidden ? '▼' : '▶';
+  }
+  function toggleUpLevel(lvl) {
+    const el = document.getElementById('genUpLevel' + lvl);
+    const arrow = document.getElementById('genUpArrow' + lvl);
     if (!el) return;
     const hidden = el.style.display === 'none';
     el.style.display = hidden ? 'block' : 'none';

@@ -104,6 +104,15 @@
             </div>
           </div>
           <?php endif; ?>
+          <?php if (setting('unilevel_product_enabled', '0') === '1' && (float)($summary['total_unilevel_product'] ?? 0) > 0): ?>
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:#059669;"></div>
+            <div class="timeline-content">
+              <div class="fw-bold" style="font-size:.85rem;">📦 Product Unilevel</div>
+              <div class="text-muted" style="font-size:.75rem;"><?= fmt_money((float)$summary['total_unilevel_product']) ?> earned</div>
+            </div>
+          </div>
+          <?php endif; ?>
           <?php if (setting('dfi_enabled', '1') === '1' && (float)($summary['total_dfi'] ?? 0) > 0): ?>
           <div class="timeline-item">
             <div class="timeline-dot" style="background:#06b6d4;"></div>
@@ -239,6 +248,7 @@
                   ...(setting('binary_enabled', '1') === '1' ? [['Pairing', (float)$summary['total_pairing']]] : []),
                   ['Direct Referral', (float)$summary['total_direct']],
                   ...(setting('indirect_referral_enabled', '1') === '1' ? [['Indirect Referral', (float)$summary['total_indirect']]] : []),
+                  ...(setting('unilevel_product_enabled', '0') === '1' ? [['Product Unilevel', (float)($summary['total_unilevel_product'] ?? 0)]] : []),
                   ...(setting('dfi_enabled', '1') === '1' ? [['Daily Fixed Income', (float)($summary['total_dfi'] ?? 0)]] : []),
               ];
               $hasRows = false;

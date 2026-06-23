@@ -20,6 +20,7 @@
         ...($binaryEnabled ? [['Pairing Bonuses',   $summary['total_pairing'],  'success', 'success']] : []),
         ['Direct Referral',   $summary['total_direct'],   'orange', 'warning'],
         ...(setting('indirect_referral_enabled', '1') === '1' ? [['Indirect Referral', $summary['total_indirect'], 'purple', 'primary']] : []),
+        ...(setting('unilevel_product_enabled', '0') === '1' ? [['Product Unilevel', $summary['total_unilevel_product'] ?? 0, 'teal', 'info']] : []),
         ...(setting('dfi_enabled', '1') === '1' ? [['DFI', $summary['total_dfi'] ?? 0, 'teal', 'info']] : []),
       ];
       foreach ($statCards as [$label, $val, $accent, $color]):
@@ -74,6 +75,7 @@
                     'pairing' => '🤝 Pairing',
                     'direct_referral' => '👥 Direct',
                     'indirect_referral' => '🔗 Indirect',
+                    'unilevel_product' => '📦 Product Unilevel',
                     default => $l['type']
                   }; echo $tl; ?>
                 </td>
@@ -89,11 +91,12 @@
     </div>
     <?php endif; ?>
 
+
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <ul class="nav nav-pills card-header-pills gap-1">
           <?php
-          $filterTabs = ['' => 'All', ...($binaryEnabled ? ['pairing' => '🤝 Pairing'] : []), 'direct_referral' => '👥 Direct', ...(setting('indirect_referral_enabled', '1') === '1' ? ['indirect_referral' => '🔗 Indirect'] : []), ...(setting('dfi_enabled', '1') === '1' ? ['daily_fixed_income' => '📅 DFI'] : [])];
+          $filterTabs = ['' => 'All', ...($binaryEnabled ? ['pairing' => '🤝 Pairing'] : []), 'direct_referral' => '👥 Direct', ...(setting('indirect_referral_enabled', '1') === '1' ? ['indirect_referral' => '🔗 Indirect'] : []), ...(setting('unilevel_product_enabled', '0') === '1' ? ['unilevel_product' => '📦 Prod Unilevel'] : []), ...(setting('dfi_enabled', '1') === '1' ? ['daily_fixed_income' => '📅 DFI'] : [])];
           foreach ($filterTabs as $val => $label):
           ?>
             <li class="nav-item">
@@ -127,6 +130,7 @@
                   'direct_referral' => '👥 Direct Referral',
                   'indirect_referral' => setting('indirect_referral_enabled', '1') === '1' ? '🔗 Indirect Lvl ' . $row['level'] : $row['type'],
                   'daily_fixed_income' => '📅 Daily Fixed Income',
+                  'unilevel_product' => setting('unilevel_product_enabled', '0') === '1' ? '📦 Prod Unilevel Lvl ' . $row['level'] : $row['type'],
                   default => $row['type']
                 };
               ?>
@@ -156,4 +160,15 @@
     </div>
   </div>
 </div>
+
+<script>
+function toggleUpLevel(lvl) {
+  var el = document.getElementById('upLevel' + lvl);
+  var arrow = document.getElementById('upArrow' + lvl);
+  if (!el) return;
+  var hidden = el.style.display === 'none';
+  el.style.display = hidden ? 'block' : 'none';
+  arrow.textContent = hidden ? '▼' : '▶';
+}
+</script>
 <?php require 'views/partials/footer.php'; ?>

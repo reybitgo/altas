@@ -357,6 +357,7 @@
                     'pairing' => '🤝 Pairing',
                     'direct_referral' => '👥 Direct',
                     'indirect_referral' => setting('indirect_referral_enabled', '1') === '1' ? '🔗 Indirect Lvl ' . $c['level'] : '🔗 Indirect (disabled)',
+                    'unilevel_product' => setting('unilevel_product_enabled', '0') === '1' ? '📦 Prod Unilevel Lvl ' . $c['level'] : '📦 Prod Unilevel (disabled)',
                     default => $c['type']
                   };
                 ?>
@@ -526,6 +527,7 @@
                       'direct_referral' => '👥 Direct',
                       'indirect_referral' => setting('indirect_referral_enabled', '1') === '1' ? '🔗 Indirect Lvl ' . $c['level'] : '🔗 Indirect (disabled)',
                       'daily_fixed_income' => '📅 DFI',
+                      'unilevel_product' => setting('unilevel_product_enabled', '0') === '1' ? '📦 Prod Unilevel Lvl ' . $c['level'] : '📦 Prod Unilevel (disabled)',
                       default => $c['type']
                     };
                   ?>

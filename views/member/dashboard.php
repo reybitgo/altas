@@ -175,6 +175,9 @@
         ...(setting('indirect_referral_enabled', '1') === '1' ? [
           [$summary['total_indirect'], 'Indirect Referral', '🔗', 'purple',  'purple',  'Up to 10 levels', null],
         ] : []),
+      ...(setting('unilevel_product_enabled', '0') === '1' ? [
+          [$summary['total_unilevel_product'] ?? 0, 'Product Unilevel', '📦', 'teal', 'info', 'Product purchases', null],
+        ] : []),
       ];
       foreach ($cards as [$val, $label, $icon, $accent, $color, $sub, $link]): ?>
         <div class="col-6 col-xl-3">
@@ -403,12 +406,16 @@
             if (setting('indirect_referral_enabled', '1') === '1') {
                 $typeMap['indirect_referral'] = ['🔗', '#f5f3ff', 'var(--purple)'];
             }
+            if (setting('unilevel_product_enabled', '0') === '1') {
+                $typeMap['unilevel_product'] = ['📦', '#f0fdf4', 'var(--teal)'];
+            }
             [$icon, $bg, $col] = $typeMap[$item['type']] ?? ['💬', '#f4f6fb', 'var(--muted)'];
             $typeName = match ($item['type']) {
               'pairing' => 'Pairing Bonus',
               'direct_referral' => 'Direct Referral',
               'indirect_referral' => setting('indirect_referral_enabled', '1') === '1' ? 'Indirect — Lvl ' . $item['level'] : $item['type'],
               'daily_fixed_income' => 'Daily Fixed Income',
+              'unilevel_product' => setting('unilevel_product_enabled', '0') === '1' ? 'Product Unilevel — Lvl ' . $item['level'] : $item['type'],
               default => $item['type']
             };
           ?>
