@@ -259,6 +259,7 @@
         </div>
       </div>
 
+      <?php if (setting('dfi_enabled', '1') === '1'): ?>
       <!-- DFI Widget -->
       <div class="col-12 col-md-6">
         <div class="card h-100">
@@ -304,6 +305,7 @@
           </div>
         </div>
       </div>
+      <?php endif; ?>
     </div>
 
     <div class="row g-3 mb-3">

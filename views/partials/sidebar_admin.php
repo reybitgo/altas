@@ -74,9 +74,11 @@ function renderAdminNav($cp, $user, $initial, $pendingPayouts, $pendingMembers)
     <a href="<?= APP_URL ?>/?page=admin_cap_monitor" class="nav-item-link <?= $cp === 'admin_cap_monitor' ? 'active' : '' ?>">
       <span class="nav-icon">🛡️</span> Cap Monitor
     </a>
+    <?php if (setting('dfi_enabled', '1') === '1'): ?>
     <a href="<?= APP_URL ?>/?page=admin_dfi" class="nav-item-link <?= $cp === 'admin_dfi' ? 'active' : '' ?>">
       <span class="nav-icon">📅</span> DFI Admin
     </a>
+    <?php endif; ?>
     <a href="<?= APP_URL ?>/?page=admin_reactivations" class="nav-item-link <?= $cp === 'admin_reactivations' ? 'active' : '' ?>">
       <span class="nav-icon">🔄</span> Reactivation Log
     </a>

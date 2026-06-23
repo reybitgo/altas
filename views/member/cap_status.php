@@ -104,7 +104,7 @@
             </div>
           </div>
           <?php endif; ?>
-          <?php if ((float)($summary['total_dfi'] ?? 0) > 0): ?>
+          <?php if (setting('dfi_enabled', '1') === '1' && (float)($summary['total_dfi'] ?? 0) > 0): ?>
           <div class="timeline-item">
             <div class="timeline-dot" style="background:#06b6d4;"></div>
             <div class="timeline-content">
@@ -239,7 +239,7 @@
                   ...(setting('binary_enabled', '1') === '1' ? [['Pairing', (float)$summary['total_pairing']]] : []),
                   ['Direct Referral', (float)$summary['total_direct']],
                   ...(setting('indirect_referral_enabled', '1') === '1' ? [['Indirect Referral', (float)$summary['total_indirect']]] : []),
-                  ['Daily Fixed Income', (float)($summary['total_dfi'] ?? 0)],
+                  ...(setting('dfi_enabled', '1') === '1' ? [['Daily Fixed Income', (float)($summary['total_dfi'] ?? 0)]] : []),
               ];
               $hasRows = false;
               foreach ($breakdown as [$label, $amount]):

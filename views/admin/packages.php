@@ -72,7 +72,7 @@
               <?php if ($binaryEnabled): ?><th class="text-end">Pairing Payout</th><?php endif; ?>
               <th class="text-end">Direct Ref</th>
               <th class="text-end">Lifetime Cap</th>
-              <th class="text-center">DFI</th>
+              <?php if (setting('dfi_enabled', '1') === '1'): ?><th class="text-center">DFI</th><?php endif; ?>
               <th class="text-center">Status</th>
               <th class="text-end" style="padding-right:1.25rem;width:100px;">Actions</th>
             </tr>
@@ -116,6 +116,7 @@
                     <div class="font-mono"><?= fmt_money($lifetimeCap) ?></div>
                     <div class="text-muted" style="font-size:.65rem;"><?= $pkg['lifetime_cap_multiplier'] ?>×</div>
                   </td>
+                  <?php if (setting('dfi_enabled', '1') === '1'): ?>
                   <td class="text-center">
                     <?php if ($hasDfi): ?>
                       <div class="font-mono" style="font-size:.8rem;color:#db2777;"><?= fmt_money($dfiAmount) ?>/d</div>
@@ -128,6 +129,7 @@
                       <span class="text-muted" style="font-size:.8rem;">—</span>
                     <?php endif; ?>
                   </td>
+                  <?php endif; ?>
                   <td class="text-center">
                     <?php if ($pkg['status'] === 'active'): ?>
                       <span class="badge bg-success-subtle text-success" style="font-size:.72rem;">● Active</span>

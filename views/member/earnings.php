@@ -20,7 +20,7 @@
         ...($binaryEnabled ? [['Pairing Bonuses',   $summary['total_pairing'],  'success', 'success']] : []),
         ['Direct Referral',   $summary['total_direct'],   'orange', 'warning'],
         ...(setting('indirect_referral_enabled', '1') === '1' ? [['Indirect Referral', $summary['total_indirect'], 'purple', 'primary']] : []),
-        ['DFI',               $summary['total_dfi'] ?? 0,  'teal', 'info'],
+        ...(setting('dfi_enabled', '1') === '1' ? [['DFI', $summary['total_dfi'] ?? 0, 'teal', 'info']] : []),
       ];
       foreach ($statCards as [$label, $val, $accent, $color]):
       ?>
@@ -93,7 +93,7 @@
       <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <ul class="nav nav-pills card-header-pills gap-1">
           <?php
-          $filterTabs = ['' => 'All', ...($binaryEnabled ? ['pairing' => '🤝 Pairing'] : []), 'direct_referral' => '👥 Direct', ...(setting('indirect_referral_enabled', '1') === '1' ? ['indirect_referral' => '🔗 Indirect'] : []), 'daily_fixed_income' => '📅 DFI'];
+          $filterTabs = ['' => 'All', ...($binaryEnabled ? ['pairing' => '🤝 Pairing'] : []), 'direct_referral' => '👥 Direct', ...(setting('indirect_referral_enabled', '1') === '1' ? ['indirect_referral' => '🔗 Indirect'] : []), ...(setting('dfi_enabled', '1') === '1' ? ['daily_fixed_income' => '📅 DFI'] : [])];
           foreach ($filterTabs as $val => $label):
           ?>
             <li class="nav-item">

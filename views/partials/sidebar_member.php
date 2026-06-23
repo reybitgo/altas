@@ -29,7 +29,9 @@ $nav = [
   ['page' => 'repeat_purchases', 'icon' => '🛒', 'label' => 'Repeat Purchases', 'pages' => ['repeat_purchases']],
   ['page' => 'cart', 'icon' => '🛍️', 'label' => 'Cart', 'pages' => ['cart'], 'badge' => $cartBadge],
   ['page' => 'cap_status', 'icon' => '🛡️', 'label' => 'Lifetime Cap',     'pages' => ['cap_status']],
-  ['page' => 'dfi_history', 'icon' => '📅', 'label' => 'DFI History',      'pages' => ['dfi_history']],
+  ...(setting('dfi_enabled', '1') === '1' ? [
+    ['page' => 'dfi_history', 'icon' => '📅', 'label' => 'DFI History', 'pages' => ['dfi_history']],
+  ] : []),
   'SEPARATOR:Network',
   ...(setting('binary_enabled', '1') === '1' ? [
     ['page' => 'genealogy&view=binary',  'icon' => '🌳', 'label' => 'Binary Tree',      'pages' => ['genealogy'], 'view' => 'binary'],

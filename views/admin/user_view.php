@@ -319,7 +319,16 @@
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <ul class="nav nav-pills card-header-pills gap-1">
-          <?php foreach (['commissions' => '💰 Commissions', 'ledger' => '📒 E-Wallet Ledger', 'payouts' => '💳 Payouts', 'cap_dfi' => '🛡️ Cap & DFI', 'ewallet' => '💱 Transfers'] as $t => $label): ?>
+          <?php
+          $userTabs = [
+            'commissions' => '💰 Commissions',
+            'ledger'      => '📒 E-Wallet Ledger',
+            'payouts'     => '💳 Payouts',
+            'cap_dfi'     => setting('dfi_enabled', '1') === '1' ? '🛡️ Cap & DFI' : '🛡️ Cap',
+            'ewallet'     => '💱 Transfers',
+          ];
+          ?>
+          <?php foreach ($userTabs as $t => $label): ?>
             <li class="nav-item"><a class="nav-link <?= $tab === $t ? 'active' : '' ?>" href="<?= APP_URL ?>/?page=admin_user_view&id=<?= $user['id'] ?>&tab=<?= $t ?>"><?= $label ?></a></li>
           <?php endforeach; ?>
         </ul>
@@ -441,6 +450,7 @@
                 </div>
               </div>
             </div>
+            <?php if (setting('dfi_enabled', '1') === '1'): ?>
             <div class="col-12 col-md-6">
               <div class="card h-100">
                 <div class="card-header"><span class="card-title">📅 DFI Status</span></div>
@@ -466,6 +476,7 @@
                 </div>
               </div>
             </div>
+            <?php endif; ?>
           </div>
 
           <!-- Reactivation History -->

@@ -454,10 +454,12 @@
               <div class="rounded p-3 mb-3 font-mono" style="background:#f4f6fb;font-size:.75rem;color:var(--muted);">
                 Crontab:<br><strong style="color:#111;">0 0 * * * php /path/to/site/cron/midnight_reset.php</strong>
               </div>
+              <?php if (setting('dfi_enabled', '1') === '1'): ?>
               <div class="form-check mb-3">
                 <input class="form-check-input" type="checkbox" name="trigger_dfi" id="triggerDfi" value="1" form="manualResetForm">
                 <label class="form-check-label" for="triggerDfi" style="font-size:.8rem;">Also trigger DFI payout now</label>
               </div>
+              <?php endif; ?>
               <button type="button" class="btn btn-outline-warning w-100"
                 onclick="showConfirm({title:'Run Daily Reset',message:'Reset paired_pv_today = 0 for ALL active members now?',confirmText:'⟳ Run Reset',confirmClass:'btn-warning',formId:'manualResetForm'})">
                 ⟳ Run Daily Reset Now

@@ -641,7 +641,7 @@ class AdminController
         $msg = "Daily paired-PV counter reset for {$affected} member(s).";
 
         // v3: Optional DFI trigger
-        if (isset($_POST['trigger_dfi']) && $_POST['trigger_dfi'] === '1') {
+        if (setting('dfi_enabled', '1') === '1' && isset($_POST['trigger_dfi']) && $_POST['trigger_dfi'] === '1') {
             $dfiResult = DailyFixedIncome::processDailyPayout();
             if (($dfiResult['reason'] ?? '') === 'disabled') {
                 $msg .= ' DFI is currently disabled.';
@@ -696,6 +696,10 @@ class AdminController
     public function dfiAdmin(): void
     {
         Auth::guard('admin');
+        if (setting('dfi_enabled', '1') !== '1') {
+            flash('info', 'Daily Fixed Income is disabled. Enable it in Compensation Plan settings.');
+            redirect('/?page=admin_settings#tabPane-comp_plan');
+        }
         $pdo = db();
 
         $todayDfi = (float)$pdo->query("

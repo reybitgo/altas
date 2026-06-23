@@ -536,6 +536,18 @@ class MemberController
     public function apiDfiStatus(): void
     {
         Auth::guard('member');
+        if (setting('dfi_enabled', '1') !== '1') {
+            json_response([
+                'status'           => 'disabled',
+                'daily_rate'       => 0,
+                'daily_rate_pv'    => 0,
+                'dfi_pv_pct'       => 0,
+                'days_used'        => 0,
+                'days_remaining'   => 0,
+                'total_dfi_earned' => 0,
+            ]);
+            return;
+        }
         json_response(DailyFixedIncome::getMemberDFIStatus(Auth::id()));
     }
 
@@ -545,6 +557,10 @@ class MemberController
     public function dfiHistory(): void
     {
         Auth::guard('member');
+        if (setting('dfi_enabled', '1') !== '1') {
+            flash('info', 'Daily Fixed Income is currently disabled.');
+            redirect('/?page=dashboard');
+        }
         $userId  = Auth::id();
         $page    = max(1, (int)($_GET['pg'] ?? 1));
         $perPage = per_page();

@@ -36,7 +36,7 @@ $lastReset        = setting('last_reset');
           ['Capped Members',     number_format($v2Stats['capped']),             'warning', '⚠️', '<a href="' . APP_URL . '/?page=admin_cap_monitor&status=capped" class="text-decoration-none fw-semibold" style="font-size:.72rem;">View →</a>'],
           ['Permanently Inactive', number_format($v2Stats['perminact']),        'danger', '⛔', '<a href="' . APP_URL . '/?page=admin_cap_monitor&status=perminact" class="text-decoration-none fw-semibold" style="font-size:.72rem;">View →</a>'],
           ['Reactivation Revenue', fmt_money($v2Stats['react_revenue']),        'success', '🔄', 'Completed reactivations'],
-          ['DFI Paid Today',     fmt_money($v2Stats['dfi_today']),              'primary', '📅', '<a href="' . APP_URL . '/?page=admin_dfi" class="text-decoration-none fw-semibold" style="font-size:.72rem;">View →</a>'],
+          ...(setting('dfi_enabled', '1') === '1' ? [['DFI Paid Today', fmt_money($v2Stats['dfi_today']), 'primary', '📅', '<a href="' . APP_URL . '/?page=admin_dfi" class="text-decoration-none fw-semibold" style="font-size:.72rem;">View →</a>']] : []),
         ] as [$label, $val, $accent, $icon, $sub]
       ): ?>
         <div class="col-6 col-xl-3">
