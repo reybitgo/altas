@@ -574,11 +574,10 @@ class AdminController
         $groupKeys = [
             'basics'       => ['site_name', 'site_tagline', 'contact_email', 'min_payout'],
             'maint'        => ['maintenance_mode', 'maintenance_bypass_token', 'seat_limit'],
-            'comp_plan'    => ['binary_enabled', 'indirect_referral_enabled', 'default_cap_multiplier', 'pv_per_peso_rate'],
-            'reactivation' => ['reactivation_ewallet_enabled', 'reactivation_external_enabled', 'gcash_number', 'maya_number', 'usdt_trc20_address', 'usdt_bep20_address'],
+            'comp_plan'    => ['binary_enabled', 'indirect_referral_enabled', 'default_cap_multiplier', 'pv_per_peso_rate', 'dfi_enabled'],
+            'payments'     => ['reactivation_ewallet_enabled', 'reactivation_external_enabled', 'gcash_number', 'maya_number', 'usdt_trc20_address', 'usdt_bep20_address'],
             'ewallet'      => ['ewallet_transfer_fee', 'ewallet_min_transfer', 'ewallet_transfer_daily_limit', 'ewallet_transfer_weekly_limit'],
             'payouts'      => ['gcash_enabled', 'maya_enabled', 'service_fee_gcash', 'service_fee_maya', 'service_fee_usdt_trc20', 'service_fee_usdt_bep20', 'usdt_trc20_gas_fee', 'usdt_bep20_gas_fee'],
-            'dfi'          => ['dfi_enabled'],
         ];
 
         if (!isset($groupKeys[$group])) {

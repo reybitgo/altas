@@ -162,6 +162,16 @@
                     <?php endif; ?>
                   </div>
                 </div>
+                <!-- Daily Fixed Income -->
+                <div class="rounded p-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" name="dfi_enabled" id="dfiEnabled" value="1" <?= setting('dfi_enabled', '1') === '1' ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="dfiEnabled" style="font-weight:700;font-size:.85rem;">Enable Daily Fixed Income</label>
+                  </div>
+                  <div style="font-size:.78rem;color:var(--muted);line-height:1.6;padding-left:2.4rem;margin-top:.25rem;">
+                    When disabled, no daily fixed income payouts are processed for any member.
+                  </div>
+                </div>
                 <!-- Cap Multiplier -->
                 <div class="mb-3">
                   <label class="form-label">Default Lifetime Cap Multiplier</label>
@@ -193,14 +203,14 @@
         <!-- ════════════════════════════════════════════
              TAB 4 — REACTIVATION
              ════════════════════════════════════════════ -->
-        <div class="tab-pane fade" id="tabPane-reactivation" role="tabpanel">
+        <div class="tab-pane fade" id="tabPane-payments" role="tabpanel">
           <form method="POST" action="<?= APP_URL ?>/?page=admin_save_settings">
             <?= csrf_field() ?>
-            <input type="hidden" name="group" value="reactivation">
+            <input type="hidden" name="group" value="payments">
             <div class="card">
               <div class="card-header d-flex align-items-center gap-2">
                 <span style="width:28px;height:28px;background:#fef3c7;border-radius:.45rem;display:flex;align-items:center;justify-content:center;font-size:.85rem;">🔄</span>
-                <span class="card-title">Reactivation</span>
+                <span class="card-title">Payments</span>
               </div>
               <div class="card-body">
                 <div class="mb-3">
@@ -380,32 +390,7 @@
         </div>
 
         <!-- ════════════════════════════════════════════
-             TAB 7 — DAILY FIXED INCOME
-             ════════════════════════════════════════════ -->
-        <div class="tab-pane fade" id="tabPane-dfi" role="tabpanel">
-          <form method="POST" action="<?= APP_URL ?>/?page=admin_save_settings">
-            <?= csrf_field() ?>
-            <input type="hidden" name="group" value="dfi">
-            <div class="card">
-              <div class="card-header d-flex align-items-center gap-2">
-                <span style="width:28px;height:28px;background:#f0fdf4;border-radius:.45rem;display:flex;align-items:center;justify-content:center;font-size:.85rem;">📅</span>
-                <span class="card-title">Daily Fixed Income (DFI)</span>
-              </div>
-              <div class="card-body">
-                <div class="form-check form-switch mb-0">
-                  <input class="form-check-input" type="checkbox" name="dfi_enabled" id="dfiEnabled" value="1" <?= setting('dfi_enabled', '1') === '1' ? 'checked' : '' ?>>
-                  <label class="form-check-label" for="dfiEnabled" style="font-weight:600;font-size:.85rem;">Enable DFI payouts</label>
-                </div>
-              </div>
-              <div class="card-footer border-top-0 pt-0">
-                <button type="submit" class="btn btn-primary w-100">💾 Save Settings</button>
-              </div>
-            </div>
-          </form>
-        </div>
-
-        <!-- ════════════════════════════════════════════
-             TAB 8 — CHANGE PASSWORD (external form)
+             TAB 7 — CHANGE PASSWORD (external form)
              ════════════════════════════════════════════ -->
         <div class="tab-pane fade" id="tabPane-password" role="tabpanel">
           <div class="card">
