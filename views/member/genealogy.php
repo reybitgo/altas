@@ -387,6 +387,7 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($view === 'product_uni
                         <span class="mx-1">·</span>
                         <?= fmt_money($upPeso) ?>
                       </div>
+                      <div class="text-muted" style="font-size:.72rem;">Sponsored by @<?= e($m['sponsor_username'] ?? '') ?></div>
                       <div class="text-muted" style="font-size:.72rem;">Joined <?= fmt_date($m['joined_at']) ?></div>
                     </div>
                     <span class="badge <?= $m['status'] === 'active' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?>"><?= ucfirst($m['status']) ?></span>
@@ -464,6 +465,7 @@ $pageTitle = $view === 'referral' ? 'Referral Network' : ($view === 'product_uni
                           <span class="mx-1">·</span>
                           <?= fmt_money($pesoContribution) ?>
                         </div>
+                        <div class="text-muted" style="font-size:.72rem;">Sponsored by @<?= e($m['sponsor_username'] ?? '') ?></div>
                         <div class="text-muted" style="font-size:.72rem;">Joined <?= fmt_date($m['joined_at']) ?></div>
                       </div>
                       <span class="badge <?= $m['status'] === 'active' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?>"><?= ucfirst($m['status']) ?></span>

@@ -453,9 +453,12 @@ class User
                 SELECT u.id, u.username, u.full_name, u.status,
                        u.joined_at, u.personal_pv, u.group_pv,
                        u.left_pv, u.right_pv,
+                       u.sponsor_id,
+                       sp.username AS sponsor_username,
                        p.name AS package_name,
                        p.package_pv_rate, p.entry_fee
                 FROM   users u
+                LEFT JOIN users sp ON sp.id = u.sponsor_id
                 LEFT JOIN packages p ON p.id = u.package_id
                 WHERE  u.sponsor_id = ? AND u.role = 'member'
             ");
@@ -493,9 +496,12 @@ class User
                 SELECT u.id, u.username, u.full_name, u.status,
                        u.joined_at, u.personal_pv, u.group_pv,
                        u.left_pv, u.right_pv,
+                       u.sponsor_id,
+                       sp.username AS sponsor_username,
                        p.name AS package_name,
                        p.package_pv_rate, p.entry_fee
                 FROM   users u
+                LEFT JOIN users sp ON sp.id = u.sponsor_id
                 LEFT JOIN packages p ON p.id = u.package_id
                 WHERE  u.sponsor_id = ? AND u.role = 'member'
             ");
