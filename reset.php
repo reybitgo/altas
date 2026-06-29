@@ -155,7 +155,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
             paired_pv_today       = 0.00,
             flushed_pv            = 0.00,
             personal_pv           = 0.00,
-            group_pv              = 0.00
+            group_pv              = 0.00,
+            rank_royalty          = NULL
             WHERE role = 'admin'
         ");
     $logs[] = ['ok', 'Reset admin to clean install state (counters, balances, tree placement, package all cleared)'];

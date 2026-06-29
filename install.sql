@@ -163,6 +163,7 @@ CREATE TABLE users (
   flushed_pv        DECIMAL(14,2) NOT NULL DEFAULT 0.00 COMMENT 'PV flushed in binary pairing',
   personal_pv       DECIMAL(14,2) NOT NULL DEFAULT 0.00 COMMENT 'Personal sales PV from downline product purchases',
   group_pv          DECIMAL(14,2) NOT NULL DEFAULT 0.00 COMMENT 'Group sales PV from downline',
+  rank_royalty      ENUM('qa','supervisor','manager','director','chairman') NULL DEFAULT NULL COMMENT 'Royalty Bonus leadership rank',
 
   -- v2: Lifetime capping & DFI
   lifetime_earned       DECIMAL(14,2) NOT NULL DEFAULT 0.00,
@@ -224,7 +225,7 @@ ALTER TABLE users ADD FOREIGN KEY (reg_code_id) REFERENCES reg_codes(id) ON DELE
 CREATE TABLE commissions (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id        INT UNSIGNED NOT NULL,
-  type           ENUM('pairing','direct_referral','indirect_referral','daily_fixed_income','unilevel_product') NOT NULL,
+  type           ENUM('pairing','direct_referral','indirect_referral','daily_fixed_income','unilevel_product','royalty') NOT NULL,
   amount         DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   cap_deduction  DECIMAL(12,2) NOT NULL DEFAULT 0.00,  -- v2: amount blocked by lifetime cap
   source_user_id INT UNSIGNED  NULL,
@@ -495,7 +496,19 @@ INSERT INTO settings (key_name, value) VALUES
   ('binary_enabled',              '1'),
   ('binary_repeat_enabled',       '1'),
   ('seat_limit',                  '0'),
-  ('pv_per_peso_rate',            '1000.0000');
+  ('pv_per_peso_rate',            '1000.0000'),
+  ('royalty_enabled',            '0'),
+  ('royalty_qa_directs',         '3'),
+  ('royalty_qa_personal_pv',     '200'),
+  ('royalty_qa_group_pv',       '1000'),
+  ('royalty_supervisor_group_pct', '3'),
+  ('royalty_supervisor_repeat_pct', '5'),
+  ('royalty_manager_group_pct',    '5'),
+  ('royalty_manager_repeat_pct',   '10'),
+  ('royalty_director_group_pct',   '10'),
+  ('royalty_director_repeat_pct',  '15'),
+  ('royalty_chairman_group_pct',   '12'),
+  ('royalty_chairman_repeat_pct',  '20');
 
 -- Demo registration code (package 1, price 10500)
 INSERT INTO reg_codes (code, package_id, price, created_by)
