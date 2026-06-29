@@ -24,6 +24,7 @@ require_once 'core/Commission.php';
 require_once 'core/CapEngine.php';
 require_once 'core/DailyFixedIncome.php';
 require_once 'core/Reactivation.php';
+require_once 'core/Royalty.php';
 
 // Auto-load models and controllers
 spl_autoload_register(function (string $class): void {
@@ -366,6 +367,9 @@ $routes = [
     'admin_cancel_cd'       => ['AdminController',  'cancelCd',      'admin'],
     'admin_edit_cd_target'  => ['AdminController',  'editCdTarget',  'admin'],
     'api_cd_status'      => ['MemberController', 'apiCdStatus', 'member'],
+
+    // Royalty Bonus
+    'member_royalty'     => ['MemberController', 'royalty',        'member'],
 
     // E-Wallet Transfer & Top-Up
     'ewallet_transfer'       => ['MemberController', 'ewalletTransfer',     'any'],

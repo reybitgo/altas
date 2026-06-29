@@ -144,7 +144,13 @@
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
       <div>
         <h4 class="fw-800 mb-1">Welcome back, <?= e($user['full_name'] ? explode(' ', $user['full_name'])[0] : '@' . $user['username']) ?>! 👋</h4>
-        <p class="text-muted mb-0" style="font-size:.8rem;"><?= e($user['package_name'] ?? 'Member') ?> · Joined <?= fmt_date($user['joined_at']) ?></p>
+        <p class="text-muted mb-0" style="font-size:.8rem;">
+          <?= e($user['package_name'] ?? 'Member') ?> · Joined <?= fmt_date($user['joined_at']) ?>
+          <?php if (setting('royalty_enabled', '0') === '1' && !empty($user['rank_royalty'])): ?>
+            <?php $_rs = Royalty::rankStyle($user['rank_royalty']); ?>
+            <span class="badge <?= $_rs['badge'] ?> ms-2" style="font-size:.7rem;"><?= $_rs['icon'] ?> <?= e(Royalty::rankLabel($user['rank_royalty'])) ?></span>
+          <?php endif; ?>
+        </p>
       </div>
       <a href="<?= APP_URL ?>/?page=payout" class="btn btn-primary btn-sm">💳 Request Payout</a>
       <?php if (!isSeatLimitReached()): ?>
@@ -177,6 +183,9 @@
         ] : []),
       ...(setting('unilevel_product_enabled', '0') === '1' ? [
           [$summary['total_unilevel_product'] ?? 0, 'Product Unilevel', '📦', 'teal', 'info', 'Product purchases', null],
+        ] : []),
+      ...(setting('royalty_enabled', '0') === '1' ? [
+          [$summary['total_royalty'] ?? 0, 'Royalty Bonus', '⭐', 'warning', 'orange', 'Leadership ranks', '/?page=member_royalty'],
         ] : []),
       ];
       foreach ($cards as [$val, $label, $icon, $accent, $color, $sub, $link]): ?>
@@ -409,6 +418,9 @@
             if (setting('unilevel_product_enabled', '0') === '1') {
                 $typeMap['unilevel_product'] = ['📦', '#f0fdf4', 'var(--teal)'];
             }
+            if (setting('royalty_enabled', '0') === '1') {
+                $typeMap['royalty'] = ['⭐', '#fef3c7', 'var(--royalty, #fbbf24)'];
+            }
             [$icon, $bg, $col] = $typeMap[$item['type']] ?? ['💬', '#f4f6fb', 'var(--muted)'];
             $typeName = match ($item['type']) {
               'pairing' => 'Pairing Bonus',
@@ -416,6 +428,7 @@
               'indirect_referral' => setting('indirect_referral_enabled', '1') === '1' ? 'Indirect — Lvl ' . $item['level'] : $item['type'],
               'daily_fixed_income' => 'Daily Fixed Income',
               'unilevel_product' => setting('unilevel_product_enabled', '0') === '1' ? 'Product Unilevel — Lvl ' . $item['level'] : $item['type'],
+              'royalty' => 'Royalty Bonus',
               default => $item['type']
             };
           ?>

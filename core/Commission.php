@@ -465,19 +465,21 @@ class Commission
         }
 
         // 3. Binary PV — only if binary repeat purchase is enabled
-        if (setting('binary_repeat_enabled', '1') !== '1') {
-            return;
+        if (setting('binary_repeat_enabled', '1') === '1') {
+            // 3a. Pay yourself first: buyer receives binary PV on their chosen leg
+            $buyerSide = $order['binary_position'];
+            self::applyBinaryPv($memberId, $buyerSide, $totalPv, $memberId, 'repeat_purchase');
+
+            // 3b. Product PV also flows up the binary tree (reads each user's fixed binary_position)
+            self::processBinaryPV($memberId, $totalPv);
         }
-
-        // 3a. Pay yourself first: buyer receives binary PV on their chosen leg
-        $buyerSide = $order['binary_position'];
-        self::applyBinaryPv($memberId, $buyerSide, $totalPv, $memberId, 'repeat_purchase');
-
-        // 3b. Product PV also flows up the binary tree (reads each user's fixed binary_position)
-        self::processBinaryPV($memberId, $totalPv);
 
         // ★ Step 4: Unilevel Product Bonus (10 levels via sponsor chain, PV-gated)
         self::processProductUnilevel($orderId);
+
+        // ★ Step 5: Royalty Bonus — Leadership Ranks (real-time on each purchase)
+        $orderTotal = (float)$order['total_price'];
+        Royalty::processRepeatPurchase($memberId, $totalPv, $orderTotal);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -770,6 +772,7 @@ class Commission
               COALESCE(SUM(CASE WHEN type='indirect_referral'  AND status='credited' THEN amount END), 0) AS total_indirect,
               COALESCE(SUM(CASE WHEN type='daily_fixed_income' AND status='credited' THEN amount END), 0) AS total_dfi,
               COALESCE(SUM(CASE WHEN type='unilevel_product'   AND status='credited' THEN amount END), 0) AS total_unilevel_product,
+              COALESCE(SUM(CASE WHEN type='royalty'            AND status='credited' THEN amount END), 0) AS total_royalty,
               COALESCE(SUM(CASE WHEN status='credited'                              THEN amount END), 0) AS total_earned,
               COALESCE(SUM(CASE WHEN type='pairing' AND status='flushed' THEN pairs_count END), 0)       AS total_flushed_pairs,
               COALESCE(SUM(cap_deduction), 0) AS total_cap_blocked
@@ -800,7 +803,7 @@ class Commission
         $where  = 'c.user_id = ?';
         $params = [$userId];
 
-        if ($type && in_array($type, ['pairing', 'direct_referral', 'indirect_referral', 'daily_fixed_income', 'unilevel_product'])) {
+        if ($type && in_array($type, ['pairing', 'direct_referral', 'indirect_referral', 'daily_fixed_income', 'unilevel_product', 'royalty'])) {
             $where  .= ' AND c.type = ?';
             $params[] = $type;
         }

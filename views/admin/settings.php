@@ -221,7 +221,101 @@
         </div>
 
         <!-- ════════════════════════════════════════════
-             TAB 4 — REACTIVATION
+             TAB 4 — ROYALTY BONUS
+             ════════════════════════════════════════════ -->
+        <div class="tab-pane fade" id="tabPane-royalty" role="tabpanel">
+          <form method="POST" action="<?= APP_URL ?>/?page=admin_save_settings">
+            <?= csrf_field() ?>
+            <input type="hidden" name="group" value="royalty">
+            <div class="card">
+              <div class="card-header d-flex align-items-center gap-2">
+                <span style="width:28px;height:28px;background:var(--royalty-dim,#fef3c7);border-radius:.45rem;display:flex;align-items:center;justify-content:center;font-size:.85rem;">⭐</span>
+                <span class="card-title">Royalty Bonus — Leadership Ranks</span>
+              </div>
+              <div class="card-body">
+                <div class="rounded p-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" name="royalty_enabled" id="royaltyEnabled" value="1" <?= setting('royalty_enabled', '0') === '1' ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="royaltyEnabled" style="font-weight:700;font-size:.85rem;">Enable Royalty Bonus</label>
+                  </div>
+                  <div style="font-size:.78rem;color:var(--muted);line-height:1.6;padding-left:2.4rem;">
+                    When enabled, qualifying members earn rank-based bonuses on repeat purchases.
+                  </div>
+                </div>
+
+                <!-- QA Requirements -->
+                <div class="rounded p-3 mb-3" style="background:#fffbeb;border:1px solid #fde68a;">
+                  <h6 class="fw-700 mb-3" style="color:#92400e;">🟡 Qualified Associate (QA) Requirements</h6>
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <label class="form-label" style="font-size:.8rem;">Min Directs</label>
+                      <input type="number" name="royalty_qa_directs" class="form-control" min="1" max="20" value="<?= e(setting('royalty_qa_directs', '3')) ?>">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label" style="font-size:.8rem;">Personal Sales PV (OR)</label>
+                      <input type="number" name="royalty_qa_personal_pv" class="form-control" min="0" step="10" value="<?= e(setting('royalty_qa_personal_pv', '200')) ?>">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label" style="font-size:.8rem;">Group Sales PV (OR)</label>
+                      <input type="number" name="royalty_qa_group_pv" class="form-control" min="0" step="100" value="<?= e(setting('royalty_qa_group_pv', '1000')) ?>">
+                    </div>
+                  </div>
+                  <div class="form-text mt-2">OR gate: member qualifies if they meet personal PV OR group PV threshold.</div>
+                </div>
+
+                <!-- Rank Percentages -->
+                <div class="rounded p-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                  <h6 class="fw-700 mb-3">Rank Bonus Percentages</h6>
+                  <div class="table-responsive">
+                    <table class="table table-bordered mb-0" style="font-size:.82rem;">
+                      <thead>
+                        <tr>
+                          <th>Rank</th>
+                          <th style="width:40%;">Group PV %</th>
+                          <th style="width:40%;">Repeat Net %</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <?php $ranks = [
+                          ['supervisor', '🥉 Supervisor', 'royalty_supervisor_group_pct', 'royalty_supervisor_repeat_pct', 3, 5],
+                          ['manager',    '🥈 Manager',    'royalty_manager_group_pct',    'royalty_manager_repeat_pct',    5, 10],
+                          ['director',   '🥇 Director',   'royalty_director_group_pct',   'royalty_director_repeat_pct',   10, 15],
+                          ['chairman',   '👑 Chairman',   'royalty_chairman_group_pct',   'royalty_chairman_repeat_pct',   12, 20],
+                        ]; ?>
+                        <?php foreach ($ranks as [$rk, $label, $gk, $rk_pct, $gDef, $rDef]): ?>
+                        <tr>
+                          <td class="fw-600"><?= $label ?></td>
+                          <td>
+                            <div class="input-group input-group-sm">
+                              <input type="number" name="<?= $gk ?>" class="form-control" min="0" max="30" step="1" value="<?= e(setting($gk, (string)$gDef)) ?>">
+                              <span class="input-group-text">%</span>
+                            </div>
+                          </td>
+                          <td>
+                            <div class="input-group input-group-sm">
+                              <input type="number" name="<?= $rk_pct ?>" class="form-control" min="0" max="30" step="1" value="<?= e(setting($rk_pct, (string)$rDef)) ?>">
+                              <span class="input-group-text">%</span>
+                            </div>
+                          </td>
+                        </tr>
+                        <?php endforeach; ?>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="form-text mt-2">
+                    Group bonus = % × member's group PV × PV-Peso Rate. Repeat bonus = % × purchase amount.
+                  </div>
+                </div>
+              </div>
+              <div class="card-footer border-top-0 pt-0">
+                <button type="submit" class="btn btn-primary w-100">💾 Save Settings</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- ════════════════════════════════════════════
+             TAB 5 — REACTIVATION
              ════════════════════════════════════════════ -->
         <div class="tab-pane fade" id="tabPane-payments" role="tabpanel">
           <form method="POST" action="<?= APP_URL ?>/?page=admin_save_settings">

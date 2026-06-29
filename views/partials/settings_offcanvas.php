@@ -17,6 +17,7 @@ $offcanvasTabs = [
   'basics'       => ['icon' => '🌐', 'label' => 'Site Basics'],
   'maint'        => ['icon' => '🛡️', 'label' => 'Maintenance & Security'],
   'comp_plan'    => ['icon' => '📋', 'label' => 'Compensation Plan'],
+  'royalty'      => ['icon' => '⭐', 'label' => 'Royalty Bonus'],
   'payments'     => ['icon' => '🔄', 'label' => 'Payments'],
   'ewallet'      => ['icon' => '💱', 'label' => 'E-Wallet Transfers'],
   'payouts'      => ['icon' => '💸', 'label' => 'Payout Methods'],

@@ -908,6 +908,49 @@ class MemberController
         redirect('/?page=ewallet_transfer');
     }
 
+    public function royalty(): void
+    {
+        Auth::guard('member');
+        $user = Auth::user();
+        $rank = $user['rank_royalty'] ?? null;
+        $rankLabel = Royalty::rankLabel($rank);
+        $rankStyle = Royalty::rankStyle($rank);
+
+        // Get direct count
+        $directCount = (int)db()->query("SELECT COUNT(*) FROM users WHERE sponsor_id = {$user['id']} AND role = 'member'")->fetchColumn();
+        $qaPersonal = (float)setting('royalty_qa_personal_pv', '200');
+        $qaGroup    = (float)setting('royalty_qa_group_pv', '1000');
+
+        // Count QA legs
+        $qaLegs = (int)db()->prepare("
+            SELECT COUNT(*) FROM users
+            WHERE sponsor_id = ? AND role = 'member' AND status = 'active'
+            AND (personal_pv >= ? OR group_pv >= ?)
+        ")->execute([$user['id'], $qaPersonal, $qaGroup]) ? 0 : 0;
+        $st = db()->prepare("
+            SELECT COUNT(*) FROM users
+            WHERE sponsor_id = ? AND role = 'member' AND status = 'active'
+            AND (personal_pv >= ? OR group_pv >= ?)
+        ");
+        $st->execute([$user['id'], $qaPersonal, $qaGroup]);
+        $qaLegs = (int)$st->fetchColumn();
+
+        // Get royalty commission history
+        $history = Commission::recent($user['id'], 20);
+        $royaltyHistory = array_filter($history, fn($h) => $h['type'] === 'royalty');
+
+        $totalRoyalty = (float)db()->prepare("
+            SELECT COALESCE(SUM(amount), 0) FROM commissions WHERE user_id = ? AND type = 'royalty' AND status = 'credited'
+        ")->execute([$user['id']]) ? 0 : 0;
+        $st = db()->prepare("
+            SELECT COALESCE(SUM(amount), 0) FROM commissions WHERE user_id = ? AND type = 'royalty' AND status = 'credited'
+        ");
+        $st->execute([$user['id']]);
+        $totalRoyalty = (float)$st->fetchColumn();
+
+        require 'views/member/royalty.php';
+    }
+
     public function apiCdStatus(): void
     {
         Auth::guard('member');

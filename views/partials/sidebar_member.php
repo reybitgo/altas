@@ -40,6 +40,9 @@ $nav = [
   ...(setting('unilevel_product_enabled', '0') === '1' ? [
     ['page' => 'genealogy&view=product_unilevel', 'icon' => '📦', 'label' => 'Unilevel Network', 'pages' => ['genealogy'], 'view' => 'product_unilevel'],
   ] : []),
+  ...(setting('royalty_enabled', '0') === '1' ? [
+    ['page' => 'member_royalty', 'icon' => '⭐', 'label' => 'Royalty Bonus', 'pages' => ['member_royalty']],
+  ] : []),
   'SEPARATOR:Account',
   ['page' => 'register&sponsor=' . $user['username'], 'icon' => '➕', 'label' => 'Register Member', 'pages' => ['register']],
   ['page' => 'ewallet_transfer', 'icon' => '💱', 'label' => 'Send Money', 'pages' => ['ewallet_transfer']],
