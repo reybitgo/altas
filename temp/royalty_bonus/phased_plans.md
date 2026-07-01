@@ -57,50 +57,37 @@ ON DUPLICATE KEY UPDATE id = id;
 
 > Existing `rank_royalty` column on `users` + `commissions.type = 'royalty'` already exist from migration 031.
 
-### 1c. Rank-Rate Auto-Normalization Logic
+### 1c. Rank-Rate Validation (No Auto-Normalization)
 
-A helper that ensures the 4 rank rates always sum to exactly 100, regardless of which one the admin edits.
+The 4 rank rates must sum to exactly 100. There is **no automatic adjustment** — the admin must manually correct the values.
 
-**Algorithm (core/helpers.php or core/Royalty.php):**
+**Backend validation** (in `AdminController` settings save):
 
 ```php
-function normalize_royalty_rates(float $changed_rate, string $changed_rank): array
-{
-    $rates = [
-        'supervisor' => (float) setting('royalty_supervisor_rate', '25'),
-        'manager'    => (float) setting('royalty_manager_rate', '25'),
-        'director'   => (float) setting('royalty_director_rate', '25'),
-        'chairman'   => (float) setting('royalty_chairman_rate', '25'),
-    ];
-
-    $old = $rates[$changed_rank];
-    $rates[$changed_rank] = $changed_rate;
-    $diff = $changed_rate - $old; // positive = increase, negative = decrease
-
-    // Distribute/absorb the difference equally among the other 3 ranks
-    $others = array_keys(array_diff_key($rates, [$changed_rank => true]));
-    $adjust = -$diff / count($others); // negative of diff, split evenly
-
-    foreach ($others as $key) {
-        $rates[$key] = round($rates[$key] + $adjust, 2);
-    }
-
-    // Fix rounding error on the last sibling
-    $sum = array_sum($rates);
-    if (abs($sum - 100) > 0.01) {
-        $last = end($others);
-        $rates[$last] = round($rates[$last] - ($sum - 100), 2);
-    }
-
-    return $rates;
+$rates = [
+    (float) ($_POST['royalty_supervisor_rate'] ?? 25),
+    (float) ($_POST['royalty_manager_rate'] ?? 25),
+    (float) ($_POST['royalty_director_rate'] ?? 25),
+    (float) ($_POST['royalty_chairman_rate'] ?? 25),
+];
+$sum = array_sum($rates);
+if (abs($sum - 100) > 0.01) {
+    flash('error', "Rank rates must sum to 100 (current: {$sum}). No settings saved.");
+    // Keep existing values, do not persist
 }
 ```
 
-**Edge cases handled:**
-- If admin raises Supervisor from 25 → 40 (+15), the other 3 each decrease by 5 (15/3): Manager=20, Director=20, Chairman=20
-- If admin lowers Supervisor from 25 → 10 (-15), the other 3 each increase by 5: Manager=30, Director=30, Chairman=30
-- Rounding errors are absorbed by the last sibling
-- Validation: any rate < 0 is rejected (can't have negative shares)
+**Frontend validation** (in admin settings JS, before form submit):
+
+```js
+const rates = document.querySelectorAll('.royalty-rank-rate');
+let sum = 0;
+rates.forEach(el => sum += parseFloat(el.value) || 0);
+if (Math.abs(sum - 100) > 0.01) {
+    alert('Rank rates must sum to 100. Current sum: ' + sum.toFixed(2));
+    event.preventDefault();
+}
+```
 
 ### 1d. Open Pool Row on Cron Bootstrap
 
@@ -117,7 +104,7 @@ $pdo->exec("
 
 - [ ] Migration 032 creates `royalty_pool` table + inserts current month open row
 - [ ] Migration inserts/updates all settings keys in `install.sql` and `reset.php`
-- [ ] `normalize_royalty_rates()` helper exists in `core/Royalty.php`
+- [ ] Backend validation (sum must = 100) in settings save handler
 - [ ] `install.sql` updated with new table + settings
 - [ ] `reset.php` clears `royalty_pool` table
 - [ ] After Phase 1: system runs as before (no behavioral change)
@@ -503,7 +490,7 @@ public static function saveSettings(array $input): array
         'royalty_chm_dir_legs'     => ['type' => 'int', 'min' => 0],
     ];
 
-    // Handle rank rates with normalization
+    // Validate rank rates sum to 100 (no auto-normalization)
     $rankRates = [];
     foreach (['supervisor', 'manager', 'director', 'chairman'] as $rank) {
         $key = "royalty_{$rank}_rate";
@@ -511,17 +498,10 @@ public static function saveSettings(array $input): array
             $rankRates[$rank] = (float) $input[$key];
         }
     }
-
-    if (count($rankRates) === 1) {
-        $changedRank = array_key_first($rankRates);
-        $normalized = self::normalizeRates($rankRates[$changedRank], $changedRank);
-        foreach ($normalized as $r => $v) {
-            $input["royalty_{$r}_rate"] = $v;
-        }
-    } elseif (count($rankRates) > 1) {
+    if (count($rankRates) === 4) {
         $sum = array_sum($rankRates);
         if (abs($sum - 100) > 0.01) {
-            $errors[] = 'Rank rates must sum to 100.';
+            $errors[] = "Rank rates must sum to 100 (current: {$sum}). No settings saved.";
         }
     }
 
@@ -548,22 +528,20 @@ Add a "Royalty Bonus" tab to `views/admin/settings.php` containing:
 
 **Rank Rate Allocation Section:**
 - 4 inputs (Supervisor, Manager, Director, Chairman)
-- Displayed as percentages that must sum to 100
-- JavaScript auto-normalization on blur:
+- Displayed as percentages, with a live running total
+- **Validation on form submit** (no auto-normalization):
   ```js
-  // When any rank rate changes, distribute the difference
-  // evenly among the other 3, keeping sum = 100
-  function normalizeRates(changedId) {
-      const inputs = document.querySelectorAll('.royalty-rank-rate');
+  document.getElementById('settingsForm').addEventListener('submit', function(e) {
+      const rates = document.querySelectorAll('.royalty-rank-rate');
       let sum = 0;
-      let values = {};
-      inputs.forEach(inp => { sum += parseFloat(inp.value) || 0; values[inp.dataset.rank] = parseFloat(inp.value) || 0; });
-
-      if (Math.abs(sum - 100) < 0.01) return; // already balanced
-
-      // Find the changed input, distribute delta to others
-  }
+      rates.forEach(el => sum += parseFloat(el.value) || 0);
+      if (Math.abs(sum - 100) > 0.01) {
+          alert('Rank rates must sum to 100%. Current sum: ' + sum.toFixed(2));
+          e.preventDefault();
+      }
+  });
   ```
+- Live sum display that turns red when ≠ 100
 - Visual indicator (color-coded bar or pie showing allocation)
 
 **Qualification Gates Section:**
@@ -585,8 +563,10 @@ Add a "Royalty Bonus" nav item linking to the new tab pane.
 ### Deliverables Checklist
 
 - [ ] Admin settings tab for royalty exists
-- [ ] Pool rate, min threshold, rank rates (with normalization), qualification gates all adjustable
-- [ ] JS auto-normalization for rank rates
+- [ ] Pool rate, min threshold, rank rates, qualification gates all adjustable
+- [ ] Backend validation rejects rank rates not summing to 100
+- [ ] Frontend JS validation alerts on submit if sum ≠ 100
+- [ ] Live sum display turns red when ≠ 100
 - [ ] Settings save correctly to DB
 - [ ] Validation errors displayed
 - [ ] After Phase 4: admin fully controls royalty configuration
@@ -659,7 +639,7 @@ Create `temp/royalty_bonus/royalty_bonus_qa_test.md` with test scenarios:
 
 1. **Pool accumulation**: Complete a repeat purchase → verify `royalty_pool.total_sales` increased
 2. **Monthly distribution**: Manually run cron → verify qualifying members received correct payout
-3. **Rank rate normalization**: Change one rate in admin → verify others adjusted to sum 100
+3. **Rank rate validation**: Set rates to 30/30/30/30 → verify save rejected with error; set to 25/25/25/25 → verify save succeeds
 4. **Minimum pool threshold**: Set min pool above current pool → verify pool forfeited
 5. **Lifetime cap**: Member at cap → verify royalty bypassed by cap engine
 6. **CD deduction**: Active CD member → verify CD deducted from royalty payout
