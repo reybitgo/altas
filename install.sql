@@ -401,6 +401,19 @@ CREATE TABLE cd_ledger (
   INDEX idx_created (created_at)
 ) ENGINE=InnoDB;
 
+-- ─── ROYALTY POOL ─────────────────────────────────────────────
+CREATE TABLE royalty_pool (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  period_date DATE NOT NULL COMMENT 'First of month (YYYY-MM-01)',
+  total_sales DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+  pool_amount DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+  pool_rate   DECIMAL(5,2) NOT NULL DEFAULT 10.00,
+  status      ENUM('open','closed','distributed') NOT NULL DEFAULT 'open',
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY idx_period (period_date)
+) ENGINE=InnoDB;
+
 -- ─── SYSTEM SETTINGS ──────────────────────────────────────────
 CREATE TABLE settings (
   key_name   VARCHAR(80) NOT NULL PRIMARY KEY,
@@ -508,7 +521,19 @@ INSERT INTO settings (key_name, value) VALUES
   ('royalty_director_group_pct',   '10'),
   ('royalty_director_repeat_pct',  '15'),
   ('royalty_chairman_group_pct',   '12'),
-  ('royalty_chairman_repeat_pct',  '20');
+  ('royalty_chairman_repeat_pct',  '20'),
+  -- Pool-model settings
+  ('royalty_pool_rate',            '10.00'),
+  ('royalty_min_pool',             '500.00'),
+  ('royalty_supervisor_rate',      '25'),
+  ('royalty_manager_rate',         '25'),
+  ('royalty_director_rate',        '25'),
+  ('royalty_chairman_rate',        '25'),
+  ('royalty_spv_directs',          '10'),
+  ('royalty_spv_qa_legs',          '5'),
+  ('royalty_mgr_sup_legs',         '3'),
+  ('royalty_dir_mgr_legs',         '3'),
+  ('royalty_chm_dir_legs',         '3');
 
 -- Demo registration code (package 1, price 10500)
 INSERT INTO reg_codes (code, package_id, price, created_by)

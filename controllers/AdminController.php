@@ -594,7 +594,7 @@ class AdminController
             'basics'       => ['site_name', 'site_tagline', 'contact_email', 'min_payout'],
             'maint'        => ['maintenance_mode', 'maintenance_bypass_token', 'seat_limit'],
             'comp_plan'    => ['binary_enabled', 'binary_repeat_enabled', 'indirect_referral_enabled', 'unilevel_product_enabled', 'default_cap_multiplier', 'pv_per_peso_rate', 'dfi_enabled'],
-            'royalty'      => ['royalty_enabled', 'royalty_qa_directs', 'royalty_qa_personal_pv', 'royalty_qa_group_pv', 'royalty_supervisor_group_pct', 'royalty_supervisor_repeat_pct', 'royalty_manager_group_pct', 'royalty_manager_repeat_pct', 'royalty_director_group_pct', 'royalty_director_repeat_pct', 'royalty_chairman_group_pct', 'royalty_chairman_repeat_pct'],
+            'royalty'      => ['royalty_enabled', 'royalty_pool_rate', 'royalty_min_pool', 'royalty_supervisor_rate', 'royalty_manager_rate', 'royalty_director_rate', 'royalty_chairman_rate', 'royalty_qa_directs', 'royalty_qa_personal_pv', 'royalty_qa_group_pv', 'royalty_spv_directs', 'royalty_spv_qa_legs', 'royalty_mgr_sup_legs', 'royalty_dir_mgr_legs', 'royalty_chm_dir_legs'],
             'payments'     => ['reactivation_ewallet_enabled', 'reactivation_external_enabled', 'gcash_number', 'maya_number', 'usdt_trc20_address', 'usdt_bep20_address'],
             'ewallet'      => ['ewallet_transfer_fee', 'ewallet_min_transfer', 'ewallet_transfer_daily_limit', 'ewallet_transfer_weekly_limit'],
             'payouts'      => ['gcash_enabled', 'maya_enabled', 'service_fee_gcash', 'service_fee_maya', 'service_fee_usdt_trc20', 'service_fee_usdt_bep20', 'usdt_trc20_gas_fee', 'usdt_bep20_gas_fee'],
@@ -607,6 +607,21 @@ class AdminController
         }
 
         $allowed = $groupKeys[$group];
+
+        // Validate rank rates sum to 100 (royalty group only)
+        if ($group === 'royalty') {
+            $rankRateKeys = ['royalty_supervisor_rate', 'royalty_manager_rate', 'royalty_director_rate', 'royalty_chairman_rate'];
+            $sum = 0;
+            foreach ($rankRateKeys as $key) {
+                $sum += (float) ($_POST[$key] ?? 0);
+            }
+            if (abs($sum - 100) > 0.01) {
+                flash('error', "Rank rates must sum to 100 (current: {$sum}). No settings saved.");
+                redirect('/?page=admin_settings#tabPane-royalty');
+                return;
+            }
+        }
+
         $pdo = db();
         $st  = $pdo->prepare("INSERT INTO settings (key_name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
 

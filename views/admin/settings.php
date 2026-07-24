@@ -230,7 +230,7 @@
             <div class="card">
               <div class="card-header d-flex align-items-center gap-2">
                 <span style="width:28px;height:28px;background:var(--royalty-dim,#fef3c7);border-radius:.45rem;display:flex;align-items:center;justify-content:center;font-size:.85rem;">⭐</span>
-                <span class="card-title">Royalty Bonus — Leadership Ranks</span>
+                <span class="card-title">Royalty Bonus — Pool/Share Model</span>
               </div>
               <div class="card-body">
                 <div class="rounded p-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
@@ -239,80 +239,158 @@
                     <label class="form-check-label" for="royaltyEnabled" style="font-weight:700;font-size:.85rem;">Enable Royalty Bonus</label>
                   </div>
                   <div style="font-size:.78rem;color:var(--muted);line-height:1.6;padding-left:2.4rem;">
-                    When enabled, qualifying members earn rank-based bonuses on repeat purchases.
+                    When enabled, a % of monthly repeat purchase sales funds the royalty pool, distributed monthly to qualifying ranks.
                   </div>
                 </div>
 
-                <!-- QA Requirements -->
-                <div class="rounded p-3 mb-3" style="background:#fffbeb;border:1px solid #fde68a;">
-                  <h6 class="fw-700 mb-3" style="color:#92400e;">🟡 Qualified Associate (QA) Requirements</h6>
+                <!-- Pool Configuration -->
+                <div class="rounded p-3 mb-3" style="background:#eff6ff;border:1px solid #bfdbfe;">
+                  <h6 class="fw-700 mb-3" style="color:#1e40af;">🏦 Pool Configuration</h6>
                   <div class="row g-3">
-                    <div class="col-md-4">
-                      <label class="form-label" style="font-size:.8rem;">Min Directs</label>
-                      <input type="number" name="royalty_qa_directs" class="form-control" min="1" max="20" value="<?= e(setting('royalty_qa_directs', '3')) ?>">
+                    <div class="col-md-6">
+                      <label class="form-label" style="font-size:.8rem;">Pool Rate (% of monthly repeat sales)</label>
+                      <div class="input-group">
+                        <input type="number" name="royalty_pool_rate" class="form-control" min="0" max="100" step="0.01" value="<?= e(setting('royalty_pool_rate', '10.00')) ?>">
+                        <span class="input-group-text">%</span>
+                      </div>
                     </div>
-                    <div class="col-md-4">
-                      <label class="form-label" style="font-size:.8rem;">Personal Sales PV (OR)</label>
-                      <input type="number" name="royalty_qa_personal_pv" class="form-control" min="0" step="10" value="<?= e(setting('royalty_qa_personal_pv', '200')) ?>">
-                    </div>
-                    <div class="col-md-4">
-                      <label class="form-label" style="font-size:.8rem;">Group Sales PV (OR)</label>
-                      <input type="number" name="royalty_qa_group_pv" class="form-control" min="0" step="100" value="<?= e(setting('royalty_qa_group_pv', '1000')) ?>">
+                    <div class="col-md-6">
+                      <label class="form-label" style="font-size:.8rem;">Minimum Pool Threshold (₱)</label>
+                      <div class="input-group">
+                        <span class="input-group-text">₱</span>
+                        <input type="number" name="royalty_min_pool" class="form-control" min="0" step="0.01" value="<?= e(setting('royalty_min_pool', '500.00')) ?>">
+                      </div>
+                      <div class="form-text">Pool is forfeited if below this amount.</div>
                     </div>
                   </div>
-                  <div class="form-text mt-2">OR gate: member qualifies if they meet personal PV OR group PV threshold.</div>
                 </div>
 
-                <!-- Rank Percentages -->
-                <div class="rounded p-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
-                  <h6 class="fw-700 mb-3">Rank Bonus Percentages</h6>
+                <!-- Rank Rate Allocation -->
+                <div class="rounded p-3 mb-3" style="background:#f0fdf4;border:1px solid #bbf7d0;">
+                  <h6 class="fw-700 mb-3" style="color:#166534;">📊 Rank Rate Allocation (must sum to 100%)</h6>
+                  <div class="row g-3">
+                    <?php $rr = [
+                      'supervisor' => ['🥉 Supervisor', setting('royalty_supervisor_rate', '25')],
+                      'manager'    => ['🥈 Manager',    setting('royalty_manager_rate', '25')],
+                      'director'   => ['🥇 Director',   setting('royalty_director_rate', '25')],
+                      'chairman'   => ['👑 Chairman',   setting('royalty_chairman_rate', '25')],
+                    ]; ?>
+                    <?php foreach ($rr as $rk => [$label, $val]): ?>
+                    <div class="col-md-3">
+                      <label class="form-label" style="font-size:.8rem;"><?= $label ?></label>
+                      <div class="input-group">
+                        <input type="number" name="royalty_<?= $rk ?>_rate" class="form-control royalty-rank-rate" min="0" max="100" step="0.01" value="<?= e($val) ?>" data-rank="<?= $rk ?>">
+                        <span class="input-group-text">%</span>
+                      </div>
+                    </div>
+                    <?php endforeach; ?>
+                  </div>
+                  <div class="mt-2">
+                    <span class="form-text">Sum: </span>
+                    <span id="royaltyRateSum" style="font-weight:700;"></span>
+                  </div>
+                </div>
+
+                <!-- Qualification Gates -->
+                <div class="rounded p-3 mb-3" style="background:#fffbeb;border:1px solid #fde68a;">
+                  <h6 class="fw-700 mb-3" style="color:#92400e;">🟡 Rank Qualification Gates</h6>
                   <div class="table-responsive">
                     <table class="table table-bordered mb-0" style="font-size:.82rem;">
                       <thead>
                         <tr>
                           <th>Rank</th>
-                          <th style="width:40%;">Group PV %</th>
-                          <th style="width:40%;">Repeat Net %</th>
+                          <th>Setting</th>
+                          <th style="width:120px;">Value</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <?php $ranks = [
-                          ['supervisor', '🥉 Supervisor', 'royalty_supervisor_group_pct', 'royalty_supervisor_repeat_pct', 3, 5],
-                          ['manager',    '🥈 Manager',    'royalty_manager_group_pct',    'royalty_manager_repeat_pct',    5, 10],
-                          ['director',   '🥇 Director',   'royalty_director_group_pct',   'royalty_director_repeat_pct',   10, 15],
-                          ['chairman',   '👑 Chairman',   'royalty_chairman_group_pct',   'royalty_chairman_repeat_pct',   12, 20],
-                        ]; ?>
-                        <?php foreach ($ranks as [$rk, $label, $gk, $rk_pct, $gDef, $rDef]): ?>
                         <tr>
-                          <td class="fw-600"><?= $label ?></td>
-                          <td>
-                            <div class="input-group input-group-sm">
-                              <input type="number" name="<?= $gk ?>" class="form-control" min="0" max="30" step="1" value="<?= e(setting($gk, (string)$gDef)) ?>">
-                              <span class="input-group-text">%</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div class="input-group input-group-sm">
-                              <input type="number" name="<?= $rk_pct ?>" class="form-control" min="0" max="30" step="1" value="<?= e(setting($rk_pct, (string)$rDef)) ?>">
-                              <span class="input-group-text">%</span>
-                            </div>
-                          </td>
+                          <td>QA</td>
+                          <td>Minimum Directs</td>
+                          <td><input type="number" name="royalty_qa_directs" class="form-control form-control-sm" min="0" max="99" value="<?= e(setting('royalty_qa_directs', '3')) ?>"></td>
                         </tr>
-                        <?php endforeach; ?>
+                        <tr>
+                          <td>QA</td>
+                          <td>Personal PV Gate (OR)</td>
+                          <td><input type="number" name="royalty_qa_personal_pv" class="form-control form-control-sm" min="0" step="10" value="<?= e(setting('royalty_qa_personal_pv', '200')) ?>"></td>
+                        </tr>
+                        <tr>
+                          <td>QA</td>
+                          <td>Group PV Gate (OR)</td>
+                          <td><input type="number" name="royalty_qa_group_pv" class="form-control form-control-sm" min="0" step="100" value="<?= e(setting('royalty_qa_group_pv', '1000')) ?>"></td>
+                        </tr>
+                        <tr>
+                          <td>Supervisor</td>
+                          <td>Minimum Directs</td>
+                          <td><input type="number" name="royalty_spv_directs" class="form-control form-control-sm" min="0" max="99" value="<?= e(setting('royalty_spv_directs', '10')) ?>"></td>
+                        </tr>
+                        <tr>
+                          <td>Supervisor</td>
+                          <td>Minimum QA Legs</td>
+                          <td><input type="number" name="royalty_spv_qa_legs" class="form-control form-control-sm" min="0" max="99" value="<?= e(setting('royalty_spv_qa_legs', '5')) ?>"></td>
+                        </tr>
+                        <tr>
+                          <td>Manager</td>
+                          <td>Minimum Supervisor Legs</td>
+                          <td><input type="number" name="royalty_mgr_sup_legs" class="form-control form-control-sm" min="0" max="99" value="<?= e(setting('royalty_mgr_sup_legs', '3')) ?>"></td>
+                        </tr>
+                        <tr>
+                          <td>Director</td>
+                          <td>Minimum Manager Legs</td>
+                          <td><input type="number" name="royalty_dir_mgr_legs" class="form-control form-control-sm" min="0" max="99" value="<?= e(setting('royalty_dir_mgr_legs', '3')) ?>"></td>
+                        </tr>
+                        <tr>
+                          <td>Chairman</td>
+                          <td>Minimum Director Legs</td>
+                          <td><input type="number" name="royalty_chm_dir_legs" class="form-control form-control-sm" min="0" max="99" value="<?= e(setting('royalty_chm_dir_legs', '3')) ?>"></td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
-                  <div class="form-text mt-2">
-                    Group bonus = % × member's group PV × PV-Peso Rate. Repeat bonus = % × purchase amount.
-                  </div>
+                  <div class="form-text mt-2">OR gate for QA: member qualifies if they meet personal PV OR group PV threshold.</div>
                 </div>
               </div>
               <div class="card-footer border-top-0 pt-0">
-                <button type="submit" class="btn btn-primary w-100">💾 Save Settings</button>
+                <button type="submit" class="btn btn-primary w-100" id="royaltySaveBtn">💾 Save Settings</button>
               </div>
             </div>
           </form>
         </div>
+
+        <script>
+        // ── Rank rate sum validation ───────────────────────────────────────────
+        (function() {
+            const inputs = document.querySelectorAll('.royalty-rank-rate');
+            const sumEl  = document.getElementById('royaltyRateSum');
+            const saveBtn = document.getElementById('royaltySaveBtn');
+
+            function updateSum() {
+                let sum = 0;
+                inputs.forEach(el => sum += parseFloat(el.value) || 0);
+                sumEl.textContent = sum.toFixed(2) + '%';
+                sumEl.style.color = Math.abs(sum - 100) <= 0.01 ? '#166534' : '#dc2626';
+                if (saveBtn) {
+                    saveBtn.textContent = Math.abs(sum - 100) <= 0.01 ? '💾 Save Settings' : '⚠️ Rates must sum to 100%';
+                }
+            }
+
+            inputs.forEach(el => el.addEventListener('input', updateSum));
+            updateSum();
+
+            // Block form submit if sum != 100
+            const form = inputs[0]?.closest('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    let sum = 0;
+                    inputs.forEach(el => sum += parseFloat(el.value) || 0);
+                    if (Math.abs(sum - 100) > 0.01) {
+                        e.preventDefault();
+                        alert('Rank rates must sum to 100%. Current sum: ' + sum.toFixed(2));
+                    }
+                });
+            }
+        })();
+        </script>
 
         <!-- ════════════════════════════════════════════
              TAB 5 — REACTIVATION

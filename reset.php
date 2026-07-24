@@ -69,6 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
     $pdo->exec("DELETE FROM cd_ledger");
     $logs[] = ['ok', 'Cleared CD ledger'];
 
+    $pdo->exec("DELETE FROM royalty_pool");
+    $logs[] = ['ok', 'Cleared royalty pool'];
+
     $pdo->exec("DELETE FROM user_cd_status");
     $logs[] = ['ok', 'Cleared CD status records'];
 
@@ -161,8 +164,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
         ");
     $logs[] = ['ok', 'Reset admin to clean install state (counters, balances, tree placement, package all cleared)'];
 
+    // 4b. Insert open royalty pool row for current month
+    $currentRate = setting('royalty_pool_rate', '10.00');
+    $pdo->prepare("
+        INSERT INTO royalty_pool (period_date, total_sales, pool_amount, pool_rate, status)
+        VALUES (DATE_FORMAT(NOW(), '%Y-%m-01'), 0, 0, ?, 'open')
+        ON DUPLICATE KEY UPDATE id = id
+    ")->execute([$currentRate]);
+    $logs[] = ['ok', 'Inserted open royalty pool row for current month'];
+
     // 5. Reset auto-increment counters
-    foreach (['users', 'commissions', 'ewallet_ledger', 'payout_requests', 'reg_codes', 'reactivations', 'daily_fixed_income_log', 'ewallet_transfers', 'ewallet_admin_topups', 'cd_ledger', 'user_cd_status', 'pv_transactions', 'carts', 'cart_items', 'repeat_purchase_orders', 'repeat_purchase_order_items', 'product_unilevel_levels'] as $tbl) {
+    foreach (['users', 'commissions', 'ewallet_ledger', 'payout_requests', 'reg_codes', 'reactivations', 'daily_fixed_income_log', 'ewallet_transfers', 'ewallet_admin_topups', 'cd_ledger', 'user_cd_status', 'pv_transactions', 'carts', 'cart_items', 'repeat_purchase_orders', 'repeat_purchase_order_items', 'product_unilevel_levels', 'royalty_pool'] as $tbl) {
       $pdo->exec("ALTER TABLE {$tbl} AUTO_INCREMENT = 1");
     }
     $logs[] = ['ok', 'Reset auto-increment counters'];
