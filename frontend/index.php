@@ -14,6 +14,7 @@ $dfiEnabled      = setting('dfi_enabled', '1') === '1';
 $gcashEnabled    = setting('gcash_enabled', '1') === '1';
 $mayaEnabled     = setting('maya_enabled', '1') === '1';
 $minPayout       = (float) setting('min_payout', '500');
+$usdtFee         = (float) setting('service_fee_usdt_trc20', '5');
 $gcashFee        = (float) setting('service_fee_gcash', '0');
 $mayaFee         = (float) setting('service_fee_maya', '0');
 
@@ -21,44 +22,13 @@ $mayaFee         = (float) setting('service_fee_maya', '0');
 $packages   = Package::all(true);
 $pkgCount   = count($packages);
 $featuredPkg = $packages[0] ?? null;
-$featuredBinaryPv = $featuredPkg
-    ? Package::binaryPackagePv((int)$featuredPkg['id'])
-    : 0.00;
-$featuredPairPeso = $featuredPkg
-    ? Package::pairingBonus($featuredBinaryPv, (int)$featuredPkg['id'])
-    : 0.00;
-$featuredPairCap  = $featuredPkg ? (float)$featuredPkg['daily_pair_pv_cap'] : 0.00;
-$featuredDirectPeso = $featuredPkg
-    ? Package::directReferralBonus(Package::packagePv((int)$featuredPkg['id']), (int)$featuredPkg['id'])
-    : 0.00;
-$featuredDfiAmount = $featuredPkg
-    ? Package::dailyFixedIncome((int)$featuredPkg['id'])
-    : 0.00;
 
-// Helper: format indirect level percentages with peso equivalents.
-function frontend_indirect_text(array $levels, float $packagePv): string
-{
-    $rate = (float)setting('pv_per_peso_rate', '1.0000');
-    $parts = [];
-    foreach ($levels as $lvl => $pct) {
-        if ((float)$pct > 0) {
-            $peso = $packagePv * ((float)$pct / 100) * $rate;
-            $parts[] = "Level {$lvl}: " . number_format((float)$pct, 2) . '% (≈ ' . fmt_money($peso) . ')';
-        }
-    }
-    return $parts ? implode(' · ', $parts) : 'No configured levels';
-}
-
-// Seat limit
-$seatLimit  = (int) setting('seat_limit', '1000');
-$membersNow = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
-$seatsLeft  = max(0, $seatLimit - $membersNow);
-$isFull     = $seatsLeft <= 0;
-
-$binaryEnabled = setting('binary_enabled', '1') === '1';
+// Registration gate (system-enforced seat limit, not a marketing claim)
+$isFull = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn()
+  >= (int) setting('seat_limit', '1000');
 
 // Commission stream count for copywriting
-$streamCount = ($binaryEnabled ? 1 : 0) + 1 + ($indirectEnabled ? 1 : 0) + ($dfiEnabled ? 1 : 0);
+$streamCount = 2 + ($indirectEnabled ? 1 : 0) + ($dfiEnabled ? 1 : 0);
 
 // Build payout methods list
 $payoutMethods = ['USDT TRC20', 'USDT BEP20'];
@@ -71,8 +41,7 @@ $payoutMethodsText = implode(', ', $payoutMethods);
 $telegramUrl = '';  // e.g. 'https://t.me/yourchannel' or ''
 
 // SEO description helper
-$streamWords = ['direct referral'];
-if ($binaryEnabled) array_unshift($streamWords, 'binary pairing');
+$streamWords = ['binary pairing', 'direct referral'];
 if ($indirectEnabled) $streamWords[] = 'unilevel';
 if ($dfiEnabled)      $streamWords[] = 'daily fixed income';
 $streamText = implode(', ', $streamWords);
@@ -88,17 +57,17 @@ $streamOxford = count($streamWords) > 2
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
 
   <!-- ── Primary SEO ── -->
-  <title><?= e($siteName) ?> — Closed <?= number_format($seatLimit) ?>-Member Philippine Poultry Network</title>
-  <meta name="description" content="<?= e($siteName) ?> is a closed <?= number_format($seatLimit) ?>-member Philippine poultry binary network. <?= $streamCount ?> income streams (<?= $streamText ?>). <?= $payoutMethodsText ?> payouts. Seats are finite — join before the network is full.">
-  <meta name="keywords" content="<?= e($siteName) ?>, Philippine poultry network, binary MLM Philippines, USDT TRC20 payout, USDT BEP20 payout, farm investment Philippines, poultry farming community, bayanihan network<?= $indirectEnabled ? ', unilevel' : '' ?>">
+  <title><?= e($siteName) ?> — Philippine Poultry Network</title>
+  <meta name="description" content="<?= e($siteName) ?> is a Philippine poultry binary network. <?= $streamCount ?> income streams (<?= $streamText ?>). <?= $payoutMethodsText ?> payouts. Members may hold multiple accounts as their network grows.">
+  <meta name="keywords" content="<?= e($siteName) ?>, Philippine poultry network, binary MLM Philippines, USDT payout, USDT TRC20, USDT BEP20, farm investment Philippines, poultry farming community, bayanihan network<?= $indirectEnabled ? ', unilevel' : '' ?>">
   <meta name="robots" content="index, follow">
   <meta name="author" content="<?= e($siteName) ?>">
   <link rel="canonical" href="<?= $base ?>/">
 
   <!-- ── Open Graph (ScamAdviser reads this) ── -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="<?= e($siteName) ?> — Closed <?= number_format($seatLimit) ?>-Member Philippine Poultry Network">
-  <meta property="og:description" content="A closed community of <?= number_format($seatLimit) ?> farmers and networkers backed by real Philippine poultry operations. <?= $streamCount ?> income streams. <?= $payoutMethodsText ?> payouts.">
+  <meta property="og:title" content="<?= e($siteName) ?> — Philippine Poultry Network">
+  <meta property="og:description" content="A community of Filipino farmers and networkers backed by real Philippine poultry operations. Members may hold multiple accounts. <?= $streamCount ?> income streams. <?= $payoutMethodsText ?> payouts.">
   <meta property="og:url" content="<?= $base ?>/">
   <meta property="og:site_name" content="<?= e($siteName) ?>">
   <meta property="og:locale" content="en_PH">
@@ -106,8 +75,8 @@ $streamOxford = count($streamWords) > 2
 
   <!-- ── Twitter Card ── -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="<?= e($siteName) ?> — Closed <?= number_format($seatLimit) ?>-Member Poultry Network">
-  <meta name="twitter:description" content="<?= number_format($seatLimit) ?> seats. Real farms. <?= $payoutMethodsText ?> payouts. Binary referral structure. Philippines.">
+  <meta name="twitter:title" content="<?= e($siteName) ?> — Philippine Poultry Network">
+  <meta name="twitter:description" content="Multiple accounts per member. Real farms. <?= $payoutMethodsText ?> payouts. Binary referral structure. Philippines.">
   <meta name="twitter:image" content="<?= $base ?>/hero-bg.jpg">
 
   <!-- ── PWA ── -->
@@ -127,7 +96,7 @@ $streamOxford = count($streamWords) > 2
       "name": "<?= e($siteName) ?>",
       "url": "<?= $base ?>",
       "logo": "<?= $base ?>/logo.png",
-      "description": "A closed <?= number_format($seatLimit) ?>-member Philippine poultry network connecting real farm investment with community-powered binary income, paying out via <?= $payoutMethodsText ?>.",
+      "description": "A Philippine poultry network connecting real farm investment with community-powered binary income, paying out via <?= $payoutMethodsText ?>. Members may hold multiple accounts as their network grows.",
       "foundingDate": "2024",
       "foundingLocation": {
         "@type": "Place",
@@ -185,7 +154,7 @@ $streamOxford = count($streamWords) > 2
           "name": "What is <?= e($siteName) ?>?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "<?= e($siteName) ?> is a closed binary referral network backed by real Philippine poultry operations. It is limited to exactly <?= number_format($seatLimit) ?> members. Each member holds one seat, earns through <?= $streamCount ?> commission streams (<?= $streamOxford ?>), and receives payouts via <?= $payoutMethodsText ?>."
+            "text": "<?= e($siteName) ?> is a binary referral network backed by real Philippine poultry operations. Each member account earns through <?= $streamCount ?> commission streams (<?= $streamOxford ?>), and receives payouts via <?= $payoutMethodsText ?>. Members may register more than one account as their network grows."
           }
         },
         {
@@ -193,7 +162,7 @@ $streamOxford = count($streamWords) > 2
           "name": "How do I join <?= e($siteName) ?>?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "You need a registration code from an existing member or from the <?= e($siteName) ?> admin. Once you have a code, register at altasfarm.com, choose your sponsor and binary position (left or right leg), and your seat is confirmed."
+            "text": "You need a registration code from an existing member or from the <?= e($siteName) ?> admin. Once you have a code, register at altasfarm.com, choose your sponsor and binary position (left or right leg), and your account is confirmed."
           }
         },
         {
@@ -235,12 +204,12 @@ $streamOxford = count($streamWords) > 2
 
         <div class="faq-item">
           <button class="faq-q" onclick="toggleFaq(this)">What is <?= e($siteName) ?>?</button>
-          <div class="faq-a"><?= e($siteName) ?> is a closed binary referral network backed by real Philippine poultry operations. Membership is strictly limited to <?= number_format($seatLimit) ?> seats. Each member holds one seat, participates in <?= $streamCount ?> commission streams (<?= $streamOxford ?>), and receives payouts via <?= $payoutMethodsText ?>. When the <?= number_format($seatLimit) ?>th seat is filled, registration closes permanently.</div>
+          <div class="faq-a"><?= e($siteName) ?> is a binary referral network backed by real Philippine poultry operations. Each member account participates in <?= $streamCount ?> commission streams (<?= $streamOxford ?>), and receives payouts via <?= $payoutMethodsText ?>. Members are welcome to register more than one account — every position earns independently and feeds the same network.</div>
         </div>
 
         <div class="faq-item">
           <button class="faq-q" onclick="toggleFaq(this)">How do I join <?= e($siteName) ?>?</button>
-          <div class="faq-a">You need a valid registration code from an existing member (your sponsor) or from the <?= e($siteName) ?> admin team. Once you have a code, register at altasfarm.com, choose your sponsor, and select your binary position (left or right leg). Your seat is confirmed immediately upon successful registration and payment.</div>
+          <div class="faq-a">You need a valid registration code from an existing member (your sponsor) or from the <?= e($siteName) ?> admin team. Once you have a code, register at altasfarm.com, choose your sponsor, and select your binary position (left or right leg). Your account is confirmed immediately upon successful registration and payment.</div>
         </div>
 
         <div class="faq-item">
@@ -253,16 +222,19 @@ $streamOxford = count($streamWords) > 2
           <div class="faq-a">
             There are <?= $streamCount ?> commission streams:
             <ul style="margin-top:.5rem;">
-              <li><strong>Binary Pairing Bonus (<?= $featuredPkg ? fmt_money($featuredPairPeso) : '₱—' ?>):</strong> Earned each time a left-right pair forms anywhere in your binary downline. Capped at <?= $featuredPkg ? number_format($featuredPairCap, 0) : '—' ?> PV per day.</li>
-              <li><strong>Direct Referral Bonus (<?= $featuredPkg ? fmt_money($featuredDirectPeso) : '₱—' ?>):</strong> Credited instantly every time someone you personally referred registers with your code.</li>
+              <li><strong>Binary Pairing Bonus (<?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?>):</strong> Earned each time a left-right pair forms anywhere in your binary downline. Capped at <?= $featuredPkg ? $featuredPkg['daily_pair_cap'] : '—' ?> pairs per day.</li>
+              <li><strong>Direct Referral Bonus (<?= $featuredPkg ? fmt_money($featuredPkg['direct_ref_bonus']) : '₱—' ?>):</strong> Credited instantly every time someone you personally referred registers with your code.</li>
               <?php if ($indirectEnabled && $featuredPkg):
                 $lvls = Package::getIndirectLevels($featuredPkg['id']);
-                $featuredPkgPv = Package::packagePv((int)$featuredPkg['id']);
+                $lvlParts = [];
+                foreach ($lvls as $lvl => $amt) {
+                  if ($amt > 0) $lvlParts[] = "Level $lvl: " . fmt_money($amt);
+                }
               ?>
-                <li><strong>Unilevel Bonus:</strong> Generational bonuses paid 10 levels deep — <?= frontend_indirect_text($lvls, $featuredPkgPv) ?> per registration in that level.</li>
+                <li><strong>Unilevel Bonus:</strong> Generational bonuses paid 10 levels deep — <?= implode(', ', $lvlParts) ?> per registration in that level.</li>
               <?php endif; ?>
               <?php if ($dfiEnabled && $featuredPkg): ?>
-                <li><strong>Daily Fixed Income (<?= fmt_money($featuredDfiAmount) ?>/day):</strong> A daily payout credited for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration, on top of network earnings.</li>
+                <li><strong>Daily Fixed Income (<?= fmt_money($featuredPkg['daily_fixed_income']) ?>/day):</strong> A fixed daily payout credited for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration, on top of network earnings.</li>
               <?php endif; ?>
             </ul>
             All commissions are credited to your e-wallet in real time on the triggering event (registration), not on a batch schedule.
@@ -280,13 +252,8 @@ $streamOxford = count($streamWords) > 2
         </div>
 
         <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">What happens when the <?= number_format($seatLimit) ?> seats are filled?</button>
-          <div class="faq-a">Registration closes permanently. There is no waitlist, no second batch, no re-opening, and no exceptions. The <?= number_format($seatLimit) ?>-member ceiling is a structural decision — not a marketing device — and it is enforced at the system level. Once the counter reaches <?= number_format($seatLimit) ?>, the registration page will display a closed status and no new codes will be issued.</div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">Can I hold more than one seat?</button>
-          <div class="faq-a">No. Each member is limited to one seat, one account, and one registration code. Creating duplicate accounts is a violation of the Terms of Service and will result in immediate suspension and forfeiture of any accumulated balance.</div>
+          <button class="faq-q" onclick="toggleFaq(this)">Can I hold more than one account?</button>
+          <div class="faq-a">Yes. The network allows a member to register multiple accounts, each placed independently in the binary structure. Every account carries its own entry fee, its own binary position, and earns through the same <?= $streamCount ?> commission streams from day one.</div>
         </div>
 
         <div class="faq-item">
@@ -325,21 +292,21 @@ $streamOxford = count($streamWords) > 2
         <h3>2. Eligibility</h3>
         <p>To register, you must: (a) be at least 18 years of age; (b) be a resident of the Philippines or a Filipino national abroad; (c) possess a valid USDT TRC20 or USDT BEP20 wallet address for receiving payouts; (d) have a valid registration code issued by an existing member or the admin team; and (e) agree to these Terms in full.</p>
 
-        <h3>3. Membership Limit</h3>
-        <p><?= e($siteName) ?> operates a hard membership cap of exactly <?= number_format($seatLimit) ?> (<?= e((new NumberFormatter('en', NumberFormatter::SPELLOUT))->format($seatLimit)) ?>) seats. When the <?= number_format($seatLimit) ?>th registration is confirmed, the platform will permanently close registration. No exceptions, waitlists, or re-openings will be considered. Each member is limited to one (1) account. Registering multiple accounts constitutes fraud and will result in immediate suspension and forfeiture of balances.</p>
+        <h3>3. Membership and Multiple Accounts</h3>
+        <p>Each entry into <?= e($siteName) ?> is a single account with its own binary position. Members are permitted to register more than one account — every account carries its own entry fee and earns independently through the same commission streams. Registration must always be made with accurate personal information; accounts created to manipulate the binary structure, generate fraudulent referrals, or otherwise abuse the earning system are subject to suspension and forfeiture of balances.</p>
 
         <h3>4. Entry Fee and Package</h3>
-        <p>There is one entry package (the Broiler Starter) at a one-time fee of ₱10,000. This fee is non-refundable upon confirmed registration and binary placement. The fee covers your platform seat, access to all earning streams, and participation in the network's poultry-backed operations.</p>
+        <p>There is one entry package (the Broiler Starter) at a one-time fee of ₱10,000. This fee is non-refundable upon confirmed registration and binary placement. The fee covers your platform account, access to all earning streams, and participation in the network's poultry-backed operations.</p>
 
         <h3>5. Commissions and Earning Structure</h3>
         <p>Members earn through <?= $streamCount ?> streams:
-          (a) Binary Pairing Bonus of <?= $featuredPkg ? fmt_money($featuredPairPeso) : '₱—' ?> per confirmed pair, capped at <?= $featuredPkg ? number_format($featuredPairCap, 0) : '—' ?> PV per calendar day;
-          (b) Direct Referral Bonus of <?= $featuredPkg ? fmt_money($featuredDirectPeso) : '₱—' ?> per personally sponsored member;
+          (a) Binary Pairing Bonus of <?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?> per confirmed pair, capped at <?= $featuredPkg ? $featuredPkg['daily_pair_cap'] : '—' ?> pairs per calendar day;
+          (b) Direct Referral Bonus of <?= $featuredPkg ? fmt_money($featuredPkg['direct_ref_bonus']) : '₱—' ?> per personally sponsored member;
           <?php if ($indirectEnabled): ?>
             (c) Unilevel Bonus as detailed in the Compensation Plan section of the website;
           <?php endif; ?>
           <?php if ($dfiEnabled && $featuredPkg): ?>
-            <?= $indirectEnabled ? '(d)' : '(c)' ?> Daily Fixed Income of <?= fmt_money($featuredDfiAmount) ?> per day for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration;
+            <?= $indirectEnabled ? '(d)' : '(c)' ?> Daily Fixed Income of <?= fmt_money($featuredPkg['daily_fixed_income']) ?> per day for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration;
           <?php endif; ?>
           Commissions are credited to your platform e-wallet in real time on the triggering event. <?= e($siteName) ?> reserves the right to verify and withhold commissions suspected of being generated through fraud, duplicate accounts, or system manipulation.</p>
 
@@ -347,16 +314,16 @@ $streamOxford = count($streamWords) > 2
         <p>All payouts are made via <?= $payoutMethodsText ?>. The minimum withdrawal amount is <?= fmt_money($minPayout) ?>. Withdrawals are processed within 24–72 business hours. <?= e($siteName) ?> is not liable for losses caused by incorrect wallet addresses or account details provided by the member. Ensure your payout details are correct before submitting a withdrawal request — blockchain transactions are irreversible.</p>
 
         <h3>7. Prohibited Conduct</h3>
-        <p>Members are prohibited from: creating duplicate accounts; using bots or automated tools to generate referrals; misrepresenting <?= e($siteName) ?>'s earning potential to prospective members; making guarantees of income on behalf of the platform; and any conduct that manipulates the binary tree structure through fake or unauthorized registrations.</p>
+        <p>Members are prohibited from: using bots or automated tools to generate referrals; misrepresenting <?= e($siteName) ?>'s earning potential to prospective members; making guarantees of income on behalf of the platform; and any conduct that manipulates the binary tree structure through fake or unauthorized registrations.</p>
 
         <h3>8. Account Suspension and Termination</h3>
         <p><?= e($siteName) ?> may suspend or terminate any account found in violation of these Terms, at its sole discretion, without prior notice. Suspended accounts forfeit any pending or unclaimed wallet balance. Terminated members are not entitled to a refund of their entry fee.</p>
 
         <h3>9. Limitation of Liability</h3>
-        <p><?= e($siteName) ?> does not guarantee any specific income or return on your entry fee. Earnings depend entirely on network activity, which is subject to the <?= number_format($seatLimit) ?>-seat ceiling and the binary structure. Participation in <?= e($siteName) ?> involves inherent financial risk. <?= e($siteName) ?> is not liable for income tax obligations arising from your earnings — members are responsible for their own tax compliance under Philippine law (NIRC) or the laws of their country of residence.</p>
+        <p><?= e($siteName) ?> does not guarantee any specific income or return on your entry fee. Earnings depend entirely on network activity and the binary structure. Participation in <?= e($siteName) ?> involves inherent financial risk. <?= e($siteName) ?> is not liable for income tax obligations arising from your earnings — members are responsible for their own tax compliance under Philippine law (NIRC) or the laws of their country of residence.</p>
 
         <div class="warn-box">
-          <p><strong>Income Disclaimer:</strong> Earnings from <?= e($siteName) ?> depend on your own activity, your network's growth, and the overall pace of registration within the <?= number_format($seatLimit) ?>-seat limit. Past performance of other members is not indicative of your potential results. Do not invest funds you cannot afford to lose.</p>
+          <p><strong>Income Disclaimer:</strong> Earnings from <?= e($siteName) ?> depend on your own activity, your network's growth, and the overall pace of registration. Past performance of other members is not indicative of your potential results. Do not invest funds you cannot afford to lose.</p>
         </div>
 
         <h3>10. Changes to Terms</h3>
@@ -413,7 +380,7 @@ $streamOxford = count($streamWords) > 2
         <p>We process your data on the basis of: (a) contractual necessity — to perform our obligations under the Terms of Service; and (b) legitimate interest — to maintain the integrity and security of the network.</p>
 
         <h3>5. Data Sharing</h3>
-        <p>We do not sell, rent, or trade your personal data to any third party. Limited data may be shared with: (a) blockchain networks for USDT transaction processing (your wallet address only, which is inherently public on the TRON or BNB Chain network); (b) service providers who assist with platform security and hosting, under strict confidentiality agreements; and (c) law enforcement or regulators, if required by Philippine law.</p>
+        <p>We do not sell, rent, or trade your personal data to any third party. Limited data may be shared with: (a) blockchain networks for USDT transaction processing (your wallet address only, which is inherently public on the TRON network); (b) service providers who assist with platform security and hosting, under strict confidentiality agreements; and (c) law enforcement or regulators, if required by Philippine law.</p>
 
         <h3>6. Data Retention</h3>
         <p>Account data is retained for the lifetime of the network and for a minimum of five (5) years after network closure, to comply with financial record-keeping obligations. You may request deletion of non-transactional data (e.g., support messages) at any time.</p>
@@ -460,7 +427,7 @@ $streamOxford = count($streamWords) > 2
         <h3>2. Nature of the Network</h3>
         <p><?= e($siteName) ?> is a direct referral network structured as a binary compensation plan. It is backed by a real poultry operation — meaning the entry fee is partially invested in Philippine broiler farming activities. The network is not a bank, not a lending institution, and not a securities issuer. It does not offer guaranteed returns.</p>
 
-        <p>The compensation structure involves referral-based commissions that are dependent on new member registrations. Because the network is hard-capped at <?= number_format($seatLimit) ?> members, the binary tree will stop generating new pairing bonuses once all seats are filled. Members who join later in the network will have fewer pairing opportunities than early members. This is a structural characteristic members must understand before joining.</p>
+        <p>The compensation structure involves referral-based commissions that are dependent on new member registrations. Because the binary structure pays on left-right pairings, registrations placed later in a leg create fewer pairing opportunities than early ones. Members who join later in a mature leg will have fewer pairing opportunities than early members. This is a structural characteristic of binary networks that members must understand before joining.</p>
 
         <div class="warn-box">
           <p><strong>Important:</strong> <?= e($siteName) ?> is not registered with the Philippine Securities and Exchange Commission (SEC) as an investment company or securities dealer. It operates as a referral-based community network, not as a registered investment vehicle. Participation is voluntary and carries financial risk.</p>
@@ -476,10 +443,10 @@ $streamOxford = count($streamWords) > 2
         <p><?= e($siteName) ?> operates in accordance with the Philippine Consumer Act (Republic Act 7394). Members have the right to honest and accurate information about the platform, its earning structure, and its limitations. Any member who believes they have been misled by a sponsor's claims may report the matter to <a href="mailto:support@altasfarm.com" style="color:var(--green-mid);">support@altasfarm.com</a>. We take misrepresentation by sponsors seriously and will investigate reported cases.</p>
 
         <h3>6. USDT / Cryptocurrency Disclosure</h3>
-        <p>All payouts on <?= e($siteName) ?> are made in USDT (Tether) on the TRON network (TRC20) or BNB Chain (BEP20). USDT is a stablecoin pegged to the US Dollar. While USDT is designed to maintain a 1:1 peg, cryptocurrency carries inherent risks including de-pegging events, blockchain network congestion, and wallet loss. <?= e($siteName) ?> is not liable for losses arising from cryptocurrency market conditions. Members are responsible for the security of their own USDT wallets.</p>
+        <p>All payouts on <?= e($siteName) ?> are made in USDT (Tether) on the TRON network (TRC20) or the BNB Smart Chain (BEP20), at the member's choice. USDT is a stablecoin pegged to the US Dollar. While USDT is designed to maintain a 1:1 peg, cryptocurrency carries inherent risks including de-pegging events, blockchain network congestion, and wallet loss. <?= e($siteName) ?> is not liable for losses arising from cryptocurrency market conditions. Members are responsible for the security of their own USDT wallets.</p>
 
         <h3>7. Income Disclaimer</h3>
-        <p>Earnings from <?= e($siteName) ?> are not guaranteed. The amount a member earns depends on their own referral activity, the activity of their network, and the pace of overall registrations within the <?= number_format($seatLimit) ?>-seat limit. <?= e($siteName) ?> does not represent, warrant, or imply that any specific income level is achievable. Do not invest funds you cannot afford to lose.</p>
+        <p>Earnings from <?= e($siteName) ?> are not guaranteed. The amount a member earns depends on their own referral activity, the activity of their network, and the overall pace of registrations. <?= e($siteName) ?> does not represent, warrant, or imply that any specific income level is achievable. Do not invest funds you cannot afford to lose.</p>
 
         <h3>8. Reporting and Contact</h3>
         <p>For compliance concerns, legal inquiries, or to report a policy violation: <a href="mailto:support@altasfarm.com" style="color:var(--green-mid);">support@altasfarm.com</a><br>
@@ -622,12 +589,10 @@ $streamOxford = count($streamWords) > 2
         <a href="#how" class="btn-outline" style="color:#fff;border-color:rgba(255,255,255,.6);">Learn How It Works</a>
       </div>
       <div class="hero-stats">
-        <?php if ($binaryEnabled && $featuredPkg): ?>
         <div>
-          <div class="hero-stat-val"><?= fmt_money($featuredPairPeso) ?></div>
+          <div class="hero-stat-val"><?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?></div>
           <div class="hero-stat-label">Per Pair Bonus</div>
         </div>
-        <?php endif; ?>
         <?php if ($indirectEnabled): ?>
           <div>
             <div class="hero-stat-val">10</div>
@@ -646,10 +611,10 @@ $streamOxford = count($streamWords) > 2
       <div style="font-family:var(--mono);font-size:2rem;font-weight:500;color:var(--gold);"><?= $featuredPkg ? fmt_money($featuredPkg['entry_fee']) : '₱—' ?></div>
       <div style="height:1px;background:rgba(255,255,255,.1);margin:1rem 0;"></div>
       <div style="font-family:var(--serif);font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:.5rem;">Pair Earned</div>
-      <div style="font-family:var(--mono);font-size:2rem;font-weight:500;color:var(--gold);"><?= $featuredPkg ? fmt_money($featuredPairPeso) : '₱—' ?></div>
+      <div style="font-family:var(--mono);font-size:2rem;font-weight:500;color:var(--gold);"><?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?></div>
       <div style="height:1px;background:rgba(255,255,255,.1);margin:1rem 0;"></div>
       <div style="font-family:var(--serif);font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:.5rem;">Daily Cap</div>
-      <div style="font-family:var(--mono);font-size:2rem;font-weight:500;color:var(--gold);"><?= $featuredPkg ? number_format($featuredPairCap, 0) . ' PV' : '—' ?></div>
+      <div style="font-family:var(--mono);font-size:2rem;font-weight:500;color:var(--gold);"><?= $featuredPkg ? $featuredPkg['daily_pair_cap'] . '×' : '—' ?></div>
     </div>
 
     <div class="hero-illustration fade-up">
@@ -692,13 +657,14 @@ $streamOxford = count($streamWords) > 2
 ════════════════════════════════════════════════════════════ -->
   <?php
   $marqueeItems = [
-    number_format($seatLimit) . ' Members Only',
+    'Multiple Accounts Per Member',
     'Real Poultry Products',
     'Instant Commissions',
-    'USDT TRC20/BEP20 Payouts',
+    'USDT TRC20 & BEP20 Payouts',
     'Philippine Farms',
     'Daily Pair Bonuses',
     'Bayanihan Network',
+    'Open Community',
     'Binary Structure',
   ];
   if ($indirectEnabled) {
@@ -729,16 +695,16 @@ $streamOxford = count($streamWords) > 2
           <div class="about-img">
             <img src="<?= $frontend ?>/about.jpg" alt="Rhode Island Red and Australorp chickens on the <?= e($siteName) ?> partner farm" loading="lazy">
           </div>
-          <div class="about-chip"><?= number_format($seatLimit) ?><small>Seats Total</small></div>
+          <div class="about-chip">Multiple<small>Accounts per Member</small></div>
         </div>
         <div class="fade-up">
           <div class="tag">Our Story</div>
           <h2 class="section-title">Small on Purpose. Solid by Design.</h2>
           <p class="section-lead">
-            Most networks grow without a ceiling — and dilute without a floor. <?= e($siteName) ?> chose a different path: cap the membership at <?= number_format($seatLimit) ?>, keep the structure flat with <?= $pkgCount === 1 ? 'one package' : 'clear package tiers' ?>, and let bayanihan do the rest. A community this size knows its people. It moves deliberately. It holds.
+            Most networks dilute as they grow. <?= e($siteName) ?> chose a different path: keep the structure flat with <?= $pkgCount === 1 ? 'one package' : 'clear package tiers' ?>, let members hold as many accounts as they choose, and let bayanihan do the rest. A community that knows its people moves deliberately. It holds.
           </p>
           <ul class="about-features">
-            <li>Hard cap of <?= number_format($seatLimit) ?> members — registration closes permanently when full</li>
+            <li>Members may hold multiple accounts — one person, as many positions as they choose</li>
             <li>Backed by real, operating Philippine poultry farms in Isabela</li>
             <li>Commissions fire the instant a new member registers</li>
             <li>One package tier — every member enters as an equal</li>
@@ -760,7 +726,7 @@ $streamOxford = count($streamWords) > 2
     <div class="container">
       <div class="tag tag-green" style="background:rgba(76,175,80,.15);color:rgba(255,255,255,.7);">Simple Process</div>
       <h2 class="section-title">How <?= e($siteName) ?> Works</h2>
-      <p class="section-lead">Easy steps from your first registration to your first withdrawal.<?= $binaryEnabled ? ' The structure is binary — your income grows as both sides of your tree fill, within a defined daily cap and' : '' ?> a community that stops at <?= number_format($seatLimit) ?>.</p>
+      <p class="section-lead">Easy steps from your first registration to your first withdrawal. The structure is binary — your income grows as both sides of your tree fill, within a defined daily cap. Members are free to register more than one account as their network grows.</p>
       <div class="steps-grid">
         <div class="step-card fade-up">
           <div class="step-num">01</div>
@@ -772,39 +738,30 @@ $streamOxford = count($streamWords) > 2
           <div class="step-num">02</div>
           <div class="step-icon">📝</div>
           <div class="step-title">Register &amp; Place</div>
-          <div class="step-desc">Create your account, choose your sponsor<?= $binaryEnabled ? ', and select your binary position — left or right leg' : '' ?>. Your seat among the <?= number_format($seatLimit) ?> is confirmed on registration.</div>
+          <div class="step-desc">Create your account, choose your sponsor, and select your binary position — left or right leg. Your position is confirmed on registration, and you can open more accounts anytime.</div>
         </div>
         <div class="step-card fade-up">
           <div class="step-num">03</div>
           <div class="step-icon">👥</div>
           <div class="step-title">Build Your Team</div>
-          <div class="step-desc">Share your referral link and bring in your network. Every direct referral earns you <?= $featuredPkg ? fmt_money($featuredDirectPeso) : '₱—' ?> — credited the moment they register.</div>
+          <div class="step-desc">Share your referral link and bring in your network. Every direct referral earns you <?= $featuredPkg ? fmt_money($featuredPkg['direct_ref_bonus']) : '₱—' ?> — credited the moment they register.</div>
         </div>
-        <?php if ($binaryEnabled): ?>
         <div class="step-card fade-up">
           <div class="step-num">04</div>
           <div class="step-icon">💸</div>
           <div class="step-title">Earn Pair Bonuses</div>
-          <div class="step-desc">When a left-right pair forms anywhere beneath you, <?= $featuredPkg ? fmt_money($featuredPairPeso) : '₱—' ?> fires to your wallet in real time. Daily pair PV is capped at <?= $featuredPkg ? number_format($featuredPairCap, 0) : '—' ?> to keep the system sustainable.</div>
+          <div class="step-desc">When a left-right pair forms anywhere beneath you, <?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?> fires to your wallet in real time. Daily pairs are capped at <?= $featuredPkg ? $featuredPkg['daily_pair_cap'] : '—' ?> to keep the system sustainable.</div>
         </div>
-        <?php endif; ?>
         <?php if ($indirectEnabled): ?>
           <div class="step-card fade-up">
             <div class="step-num">05</div>
             <div class="step-icon">🔗</div>
             <div class="step-title">Unilevel Royalties</div>
-            <div class="step-desc">Generational bonuses paid 10 levels deep through your sponsor chain. Because the network is capped at <?= number_format($seatLimit) ?>, every level is reachable — no hollow depth.</div>
+            <div class="step-desc">Generational bonuses paid 10 levels deep through your sponsor chain. Passive income that compounds as your wider network grows.</div>
           </div>
         <?php endif; ?>
         <div class="step-card fade-up">
-          <div class="step-num">
-            <?php
-              $stepNum = 4;
-              if ($binaryEnabled) $stepNum++;
-              if ($indirectEnabled) $stepNum++;
-              echo str_pad((string)$stepNum, 2, '0', STR_PAD_LEFT);
-            ?>
-          </div>
+          <div class="step-num"><?= $indirectEnabled ? '06' : '05' ?></div>
           <div class="step-icon">₮</div>
           <div class="step-title">Withdraw Earnings</div>
           <div class="step-desc">All earnings settle via <?= $payoutMethodsText ?>. Whether you are in the Philippines or abroad, your wallet receives the same way — no remittance fees, no cut, no geography.</div>
@@ -820,53 +777,51 @@ $streamOxford = count($streamWords) > 2
     <div class="container">
       <div class="plan-header">
         <div class="tag">Compensation Plan</div>
-        <h2 class="section-title"><?= $streamCount ?> Stream<?= $streamCount > 1 ? 's' : '' ?>. One Entry.</h2>
-        <p class="section-lead">Every member enters at the same level and accesses all <?= $streamCount ?> income streams from day one.<?= $binaryEnabled ? ' The binary, the' : ' The' ?> referral<?= $indirectEnabled ? ', and the unilevel' : '' ?><?= $dfiEnabled ? ($indirectEnabled ? ', plus daily fixed income' : ', plus daily fixed income') : '' ?> — none of them locked behind a higher tier.</p>
+        <h2 class="section-title">Three Streams. One Entry.</h2>
+        <p class="section-lead">Every member enters at the same level and accesses all <?= $streamCount ?> income streams from day one. The binary, the referral<?= $indirectEnabled ? ', and the unilevel' : '' ?><?= $dfiEnabled ? ($indirectEnabled ? ', plus daily fixed income' : ', plus daily fixed income') : '' ?> — none of them locked behind a higher tier.</p>
       </div>
       <div class="plan-grid">
-        <?php if ($binaryEnabled && $featuredPkg): ?>
         <div class="plan-card fade-up">
           <div class="plan-card-icon">🤝</div>
           <div class="plan-card-title">Binary Pairing Bonus</div>
-          <div class="plan-card-amount"><?= fmt_money($featuredPairPeso) ?></div>
-          <div class="plan-card-desc">Earned every time a left-right pair forms anywhere in your binary downline. Capped at <?= number_format($featuredPairCap, 0) ?> paired PV per day — a ceiling that keeps payouts consistent and the network stable.</div>
+          <div class="plan-card-amount"><?= $featuredPkg ? fmt_money($featuredPkg['pairing_bonus']) : '₱—' ?></div>
+          <div class="plan-card-desc">Earned every time a left-right pair forms anywhere in your binary downline. Capped at <?= $featuredPkg ? $featuredPkg['daily_pair_cap'] : '—' ?> pairs per day — a ceiling that keeps payouts consistent and the network stable.</div>
         </div>
-        <?php endif; ?>
         <div class="plan-card featured fade-up">
           <div class="plan-card-icon">👥</div>
           <div class="plan-card-title">Direct Referral Bonus</div>
-          <div class="plan-card-amount"><?= $featuredPkg ? fmt_money($featuredDirectPeso) : '₱—' ?></div>
-          <div class="plan-card-desc">Credited instantly every time someone you referred registers. Because the community is capped at <?= number_format($seatLimit) ?>, referral slots are finite — your network fills in before the door closes.</div>
+          <div class="plan-card-amount"><?= $featuredPkg ? fmt_money($featuredPkg['direct_ref_bonus']) : '₱—' ?></div>
+          <div class="plan-card-desc">Credited instantly every time someone you referred registers. There is no artificial ceiling — your referrals, and your own additional accounts, keep your network growing.</div>
         </div>
         <?php if ($indirectEnabled && $featuredPkg):
           $lvls = Package::getIndirectLevels($featuredPkg['id']);
-          $featuredPkgPv = Package::packagePv((int)$featuredPkg['id']);
-          $rate = (float)setting('pv_per_peso_rate', '1.0000');
-          $maxIndirectPct = !empty($lvls) ? max($lvls) : 0;
-          $maxIndirectPeso = $featuredPkgPv * ($maxIndirectPct / 100) * $rate;
+          $maxIndirect = !empty($lvls) ? max($lvls) : 0;
         ?>
           <div class="plan-card fade-up">
             <div class="plan-card-icon">🔗</div>
             <div class="plan-card-title">Unilevel Bonus</div>
-            <div class="plan-card-amount">Up to <?= number_format($maxIndirectPct, 2) ?>%</div>
-            <div class="plan-card-desc">Generational bonuses 10 levels deep through your sponsor chain (≈ <?= fmt_money($maxIndirectPeso) ?> per level at the top rate). Passive income that compounds as your wider network grows — within the <?= number_format($seatLimit) ?>-member ceiling.</div>
+            <div class="plan-card-amount">Up to <?= fmt_money($maxIndirect) ?></div>
+            <div class="plan-card-desc">Generational bonuses 10 levels deep through your sponsor chain. Passive income that compounds as your wider network grows — with no ceiling on how far it can run.</div>
           </div>
         <?php endif; ?>
         <?php if ($dfiEnabled && $featuredPkg): ?>
           <div class="plan-card fade-up">
             <div class="plan-card-icon">📅</div>
             <div class="plan-card-title">Daily Fixed Income</div>
-            <div class="plan-card-amount"><?= fmt_money($featuredDfiAmount) ?><small style="font-size:.6em;display:block;color:var(--muted);">/ day</small></div>
-            <div class="plan-card-desc">A daily payout for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration. A predictable baseline on top of your network earnings.</div>
+            <div class="plan-card-amount"><?= fmt_money($featuredPkg['daily_fixed_income']) ?><small style="font-size:.6em;display:block;color:var(--muted);">/ day</small></div>
+            <div class="plan-card-desc">A fixed daily payout for <?= $featuredPkg['daily_fixed_income_days'] ?> days after registration. A predictable baseline on top of your network earnings.</div>
           </div>
         <?php endif; ?>
       </div>
       <?php if ($indirectEnabled && $featuredPkg):
         $lvls = Package::getIndirectLevels($featuredPkg['id']);
-        $featuredPkgPv = Package::packagePv((int)$featuredPkg['id']);
+        $parts = [];
+        foreach ($lvls as $lvl => $amt) {
+          if ($amt > 0) $parts[] = "Level $lvl " . fmt_money($amt);
+        }
       ?>
         <div class="plan-note">
-          <strong>Unilevel Breakdown:</strong> <?= frontend_indirect_text($lvls, $featuredPkgPv) ?> per member registration.
+          <strong>Unilevel Breakdown:</strong> <?= implode(' · ', $parts) ?> per member registration.
         </div>
       <?php endif; ?>
     </div>
@@ -889,10 +844,10 @@ $streamOxford = count($streamWords) > 2
       </div>
 
       <div class="closed-banner fade-up">
-        <div class="closed-banner-icon">🔒</div>
+        <div class="closed-banner-icon">➕</div>
         <div class="closed-banner-text">
-          <strong>This is a closed network of <?= number_format($seatLimit) ?>.</strong>
-          <span>Once all seats are filled, registration closes permanently. There is no waitlist, no second batch, and no re-opening. The hard cap is what keeps this community undiluted.</span>
+          <strong>One community. As many accounts as you like.</strong>
+          <span>Every account is a fresh position in the binary structure — its own entry fee, its own earnings. There is no ceiling on how many accounts a member may hold.</span>
         </div>
       </div>
 
@@ -905,23 +860,16 @@ $streamOxford = count($streamWords) > 2
             </div>
             <div class="pkg-body">
               <div class="pkg-badge">🐣 <?= e($pkg['name']) ?></div>
-              <div class="pkg-title">The <?= e($siteName) ?> Seat</div>
-              <p class="pkg-desc">Your entry into the network. One seat, one package, backed by a real Philippine poultry operation. All earning streams are active from the moment you register.</p>
+              <div class="pkg-title">The <?= e($siteName) ?> Account</div>
+              <p class="pkg-desc">Your entry into the network. One account, one package, backed by a real Philippine poultry operation. All earning streams are active from the moment you register — and you can add more accounts anytime.</p>
               <ul class="pkg-features">
-                <?php if ($binaryEnabled):
-                  $binaryPv    = Package::binaryPackagePv((int)$pkg['id']);
-                  $pkgPairPeso = Package::pairingBonus($binaryPv, (int)$pkg['id']);
-                  $pkgPairCap  = (float)$pkg['daily_pair_pv_cap'];
-                  $pkgDfi      = Package::dailyFixedIncome((int)$pkg['id']);
-                ?>
                 <li>Full binary tree placement — left or right leg of your choice</li>
-                <li><?= fmt_money($pkgPairPeso) ?> per binary pair · <?= number_format($binaryPv, 0) ?> binary PV per package · capped at <?= number_format($pkgPairCap, 0) ?> PV per day</li>
-                <?php endif; ?>
-                <li><?= fmt_money(Package::directReferralBonus(Package::packagePv((int)$pkg['id']), (int)$pkg['id'])) ?> direct referral bonus per recruit</li>
+                <li><?= fmt_money($pkg['pairing_bonus']) ?> per binary pair · capped at <?= $pkg['daily_pair_cap'] ?> pairs per day</li>
+                <li><?= fmt_money($pkg['direct_ref_bonus']) ?> direct referral bonus per recruit</li>
                 <?php if ($indirectEnabled): ?><li>10-level unilevel generational bonuses</li><?php endif; ?>
-                <?php if ($dfiEnabled): ?><li><?= fmt_money($pkgDfi ?? Package::dailyFixedIncome((int)$pkg['id'])) ?> daily fixed income for <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>
+                <?php if ($dfiEnabled): ?><li><?= fmt_money($pkg['daily_fixed_income']) ?> daily fixed income for <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>
                 <li>Lifetime income cap: <?= $pkg['lifetime_cap_multiplier'] ?>× entry fee</li>
-                <li>Real-time dashboard — wallet, full history<?= $binaryEnabled ? ', binary tree' : '' ?></li>
+                <li>Real-time dashboard — binary tree, wallet, full history</li>
               </ul>
               <div class="payout-methods">
                 <span style="font-size:.75rem;color:var(--muted);margin-right:.5rem;">Payouts:</span>
@@ -932,7 +880,7 @@ $streamOxford = count($streamWords) > 2
               </div>
               <div class="pkg-price"><?= fmt_money($pkg['entry_fee']) ?> <small>one-time entry fee</small></div>
               <?php if (!$isFull): ?>
-                <a href="<?= $base ?>/?page=register" class="btn-primary" style="width:100%;font-size:.95rem;">Claim Your Seat →</a>
+                <a href="<?= $base ?>/?page=register" class="btn-primary" style="width:100%;font-size:.95rem;">Register Now →</a>
               <?php else: ?>
                 <span class="btn btn-secondary" style="width:100%;font-size:.95rem;cursor:not-allowed;opacity:.6;">🔒 Registration Closed</span>
               <?php endif; ?>
@@ -950,16 +898,10 @@ $streamOxford = count($streamWords) > 2
                 <div class="pkg-badge">🐣 <?= e($pkg['name']) ?></div>
                 <div class="pkg-price" style="font-size:1.75rem;margin:.5rem 0;"><?= fmt_money($pkg['entry_fee']) ?> <small style="font-size:.5em;">one-time</small></div>
                 <ul class="pkg-features" style="margin:1rem 0;padding-left:1.2rem;font-size:.85rem;">
-                  <?php if ($binaryEnabled):
-                    $binaryPv    = Package::binaryPackagePv((int)$pkg['id']);
-                    $pkgPairPeso = Package::pairingBonus($binaryPv, (int)$pkg['id']);
-                    $pkgPairCap  = (float)$pkg['daily_pair_pv_cap'];
-                  ?>
-                  <li><?= fmt_money($pkgPairPeso) ?> per pair · <?= number_format($binaryPv, 0) ?> binary PV/pkg · cap <?= number_format($pkgPairCap, 0) ?> PV/day</li>
-                  <?php endif; ?>
-                  <li><?= fmt_money(Package::directReferralBonus(Package::packagePv((int)$pkg['id']), (int)$pkg['id'])) ?> direct referral</li>
+                  <li><?= fmt_money($pkg['pairing_bonus']) ?> per pair · cap <?= $pkg['daily_pair_cap'] ?>/day</li>
+                  <li><?= fmt_money($pkg['direct_ref_bonus']) ?> direct referral</li>
                   <?php if ($indirectEnabled): ?><li>10-level unilevel bonuses</li><?php endif; ?>
-                  <?php if ($dfiEnabled): ?><li><?= fmt_money(Package::dailyFixedIncome((int)$pkg['id'])) ?>/day DFI · <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>
+                  <?php if ($dfiEnabled): ?><li><?= fmt_money($pkg['daily_fixed_income']) ?>/day DFI · <?= $pkg['daily_fixed_income_days'] ?> days</li><?php endif; ?>
                   <li>Lifetime cap <?= $pkg['lifetime_cap_multiplier'] ?>× fee</li>
                 </ul>
                 <div class="payout-methods" style="margin-bottom:1rem;">
@@ -969,7 +911,7 @@ $streamOxford = count($streamWords) > 2
                   <span class="badge-payout" style="background:#f0b90b20;color:#f0b90b;font-size:.7rem;padding:.2rem .5rem;border-radius:4px;">USDT BEP20</span>
                 </div>
                 <?php if (!$isFull): ?>
-                  <a href="<?= $base ?>/?page=register" class="btn-primary" style="width:100%;font-size:.9rem;">Claim Your Seat →</a>
+                  <a href="<?= $base ?>/?page=register" class="btn-primary" style="width:100%;font-size:.9rem;">Register Now →</a>
                 <?php else: ?>
                   <span class="btn btn-secondary" style="width:100%;font-size:.9rem;cursor:not-allowed;opacity:.6;">🔒 Closed</span>
                 <?php endif; ?>
@@ -978,7 +920,7 @@ $streamOxford = count($streamWords) > 2
           <?php endforeach; ?>
         </div>
       <?php endif; ?>
-      <p style="text-align:center;margin-top:2rem;font-size:.82rem;color:var(--muted);">A registration code from your sponsor is required to join. Contact your sponsor or the admin team before seats close.</p>
+      <p style="text-align:center;margin-top:2rem;font-size:.82rem;color:var(--muted);">A registration code from your sponsor is required to join. Contact your sponsor or the admin team to get started.</p>
     </div>
   </section>
 
@@ -994,7 +936,7 @@ $streamOxford = count($streamWords) > 2
         <div class="fade-up">
           <div class="tag">Why <?= e($siteName) ?></div>
           <h2 class="section-title">Constraints Are the Point</h2>
-          <p class="section-lead">The <?= number_format($seatLimit) ?>-member cap is not a marketing device — it is how the network stays intact. A smaller, deliberate community earns more per seat, knows its members, and moves with the kind of collective care that Filipinos call bayanihan.</p>
+          <p class="section-lead">There is no artificial ceiling here — <?= e($siteName) ?> stays intact through deliberate design. A community that knows its members, and lets them grow multiple accounts, moves with the kind of collective care that Filipinos call bayanihan.</p>
           <div class="why-items">
             <div class="why-item">
               <div class="why-icon">⚡</div>
@@ -1007,14 +949,14 @@ $streamOxford = count($streamWords) > 2
               <div class="why-icon">🌳</div>
               <div>
                 <div class="why-item-title">Live Binary Tree Visualization</div>
-                <div class="why-item-desc">Your dashboard shows your binary network in real time. You see exactly where each member sits and how your legs are growing toward the cap.</div>
+                <div class="why-item-desc">Your dashboard shows your binary network in real time. You see exactly where each account sits and how your legs are growing.</div>
               </div>
             </div>
             <div class="why-item">
               <div class="why-icon">₮</div>
               <div>
-                <div class="why-item-title">USDT — No Geography, No Bank</div>
-                <div class="why-item-desc">Payouts settle via <?= $payoutMethodsText ?> networks. Whether you are in the Philippines or working abroad, your wallet receives the same way — no remittance cut, no delay.</div>
+                <div class="why-item-title">USDT TRC20 & BEP20 — No Geography, No Bank</div>
+                <div class="why-item-desc">Payouts settle via <?= $payoutMethodsText ?>. Whether you are in the Philippines or working abroad, your wallet receives the same way — no remittance cut, no delay.</div>
               </div>
             </div>
             <div class="why-item">
@@ -1029,7 +971,7 @@ $streamOxford = count($streamWords) > 2
                 <div class="why-icon">📅</div>
                 <div>
                   <div class="why-item-title">Daily Fixed Income</div>
-                  <div class="why-item-desc">Earn a daily amount for up to <?= $featuredPkg['daily_fixed_income_days'] ?> days after joining — a predictable baseline of <?= fmt_money($featuredDfiAmount) ?>/day on top of your network earnings.</div>
+                  <div class="why-item-desc">Earn a fixed daily amount for up to <?= $featuredPkg['daily_fixed_income_days'] ?> days after joining — a predictable baseline of <?= fmt_money($featuredPkg['daily_fixed_income']) ?>/day on top of your network earnings.</div>
                 </div>
               </div>
             <?php endif; ?>
@@ -1060,7 +1002,7 @@ $streamOxford = count($streamWords) > 2
       <div class="testi-grid">
         <div class="testi-card fade-up">
           <div class="testi-stars">★★★★★</div>
-          <div class="testi-quote">"Gusto ko na may hangganan ang community. Hindi ako malalagyan ng libo-libong strangers. Kilala ko ang mga tao sa network ko — at mas komportable akong mag-refer ng kilala."</div>
+          <div class="testi-quote">"Pwede palang humawak ng higit sa isang account. Kapag malakas ang network mo, dagdag ka lang ng posisyon — hindi naman ito bawal, at bawat account may sariling kinikita."</div>
           <div class="testi-author">
             <div class="testi-avatar" style="background:#2d6a35;">R</div>
             <div>
@@ -1102,17 +1044,17 @@ $streamOxford = count($streamWords) > 2
     <div class="cta-inner">
       <?php if ($isFull): ?>
         <div class="tag" style="background:rgba(224,52,52,.2);color:#fca5a5;">Registration Closed</div>
-        <h2>All <?= number_format($seatLimit) ?> Seats Have Been Filled.</h2>
-        <p>The network is now complete. Registration has closed permanently and no new accounts can be created. If you are already a member, sign in to access your dashboard.</p>
+        <h2>Registration Is Currently Closed.</h2>
+        <p>New accounts cannot be created at this time. If you are already a member, sign in to access your dashboard.</p>
         <div class="cta-buttons">
           <a href="<?= $base ?>/?page=login" class="btn-gold" style="font-size:1rem;padding:1rem 2.5rem;">Sign In →</a>
         </div>
       <?php else: ?>
-        <div class="tag" style="background:rgba(212,160,23,.2);color:var(--gold-light);">Limited Seats</div>
-        <h2><?= e($siteName) ?> — <?= number_format($seatLimit) ?> Seats. Not One More.</h2>
-        <p>The network closes the moment the last seat is taken. There is no second wave, no waitlist, and no appeal. If you are reading this, seats are still open — but that changes with every registration that comes in before yours.</p>
+        <div class="tag" style="background:rgba(212,160,23,.2);color:var(--gold-light);">Multiple Accounts Welcome</div>
+        <h2><?= e($siteName) ?> — One Community. Every Account Earns.</h2>
+        <p>The network keeps growing. Register one account or several — each position stands on its own, placed in the binary structure, and earns through the same streams from day one.</p>
         <div class="cta-buttons">
-          <a href="<?= $base ?>/?page=register" class="btn-gold" style="font-size:1rem;padding:1rem 2.5rem;">🌱 Claim Your Seat Now</a>
+          <a href="<?= $base ?>/?page=register" class="btn-gold" style="font-size:1rem;padding:1rem 2.5rem;">🌱 Register Now</a>
         </div>
         <a href="<?= $base ?>/?page=login" class="cta-login">Already a member? Sign in →</a>
       <?php endif; ?>
@@ -1129,7 +1071,7 @@ $streamOxford = count($streamWords) > 2
         <!-- Brand column -->
         <div>
           <div class="footer-brand-name" itemprop="name"><?= e($siteName) ?></div>
-          <div class="footer-brand-desc" itemprop="description">A closed <?= number_format($seatLimit) ?>-member Philippine poultry network. <?= $pkgCount === 1 ? 'One package' : $pkgCount . ' packages' ?>, <?= count($payoutMethods) === 1 ? 'one payout currency' : count($payoutMethods) . ' payout methods' ?>, one community built on bayanihan.</div>
+          <div class="footer-brand-desc" itemprop="description">A Philippine poultry network where members can hold multiple accounts. <?= $pkgCount === 1 ? 'One package' : $pkgCount . ' packages' ?>, <?= count($payoutMethods) === 1 ? 'one payout currency' : count($payoutMethods) . ' payout methods' ?>, one community built on bayanihan.</div>
 
           <!-- Address (machine-readable for ScamAdviser / Schema) -->
           <address itemprop="address" itemscope itemtype="https://schema.org/PostalAddress"
@@ -1154,7 +1096,7 @@ $streamOxford = count($streamWords) > 2
           <div class="footer-col-title">Platform</div>
           <ul class="footer-links">
             <li><a href="<?= $base ?>/?page=login">Member Login</a></li>
-            <li><a href="<?= $base ?>/?page=register">Claim a Seat</a></li>
+            <li><a href="<?= $base ?>/?page=register">Register Now</a></li>
             <li><a href="#how">How It Works</a></li>
             <li><a href="#plan">Earn Plan</a></li>
           </ul>
