@@ -381,6 +381,19 @@ $routes = [
 
 $page = $_GET['page'] ?? 'login';
 
+// ── Frontend toggle ──────────────────────────────────────────────────────────
+// When .htaccess routes root URLs here with ?_show_frontend=1, decide whether
+// to serve the landing page or bypass to login based on SHOW_FRONTEND constant.
+if (isset($_GET['_show_frontend'])) {
+    unset($_GET['_show_frontend']);
+    if (defined('SHOW_FRONTEND') && SHOW_FRONTEND === 1) {
+        require __DIR__ . '/frontend/index.php';
+        exit;
+    }
+    // SHOW_FRONTEND is 0 — bypass frontend, fall through to login below
+    $page = 'login';
+}
+
 // Fall back to login for unknown pages
 $route = $routes[$page] ?? null;
 if (!$route) {

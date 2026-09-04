@@ -23,6 +23,11 @@ define('APP_URL',  'http://localhost/altas');  // No trailing slash
 define('APP_NAME', 'Altas Farm');
 define('APP_ENV',  'development');            // 'development' | 'production'
 
+// ── Frontend Toggle ──────────────────────────────────────────────────────────
+// 1 = show frontend landing page at root URL (default)
+// 0 = bypass frontend; root URL shows login page directly
+define('SHOW_FRONTEND', 0);
+
 // ── Error display ────────────────────────────────────────────────────────────
 if (APP_ENV === 'development') {
     ini_set('display_errors', 1);

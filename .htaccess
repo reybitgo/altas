@@ -45,12 +45,12 @@ Options -MultiViews
   RewriteEngine On
   RewriteBase /altas/
 
-  # ── Serve frontend landing page at the root URL (no ?page= param) ────────────
-  # Matches: /altas/  OR  /altas/index.php  (with no query string page param)
-  # Internally forwards to frontend/index.php — URL stays http://localhost/altas/
+  # ── Root URL (no ?page= param) routes through index.php with _show_frontend marker ──
+  # index.php checks SHOW_FRONTEND constant to decide whether to serve the frontend
+  # landing page or fall through to login.
   RewriteCond %{QUERY_STRING} (?:^|&)page= [NC]
   RewriteRule ^ - [S=1]
-  RewriteRule ^(index\.php)?$ frontend/index.php [QSA,L]
+  RewriteRule ^(index\.php)?$ index.php?_show_frontend=1 [QSA,L]
 
   # Allow direct access to real files and directories (assets, uploads)
   RewriteCond %{REQUEST_FILENAME} !-f
