@@ -22,7 +22,6 @@ class AdminController
             'perminact'     => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role='member' AND cap_status='perminact'")->fetchColumn(),
             'react_revenue' => (float)$pdo->query("SELECT COALESCE(SUM(amount_paid),0) FROM reactivations WHERE status='completed'")->fetchColumn(),
             'dfi_today'     => (float)$pdo->query("SELECT COALESCE(SUM(amount),0) FROM daily_fixed_income_log WHERE DATE(created_at)=CURDATE()")->fetchColumn(),
-            'pending_repeat_purchases' => (int)$pdo->query("SELECT COUNT(*) FROM repeat_purchase_orders WHERE status='pending'")->fetchColumn(),
         ];
 
         require 'views/admin/dashboard.php';
@@ -32,10 +31,10 @@ class AdminController
     {
         Auth::guard('admin');
         $page     = max(1, (int)($_GET['pg'] ?? 1));
-        $perPage  = per_page();
         $search   = trim($_GET['q']      ?? '');
         $status   = $_GET['status']      ?? '';
         $pkgId    = (int)($_GET['pkg']   ?? 0);
+        $perPage  = max(5, (int)($_GET['per_page'] ?? 10));
         $packages = Package::all();
         $result   = User::allMembers($page, $search, $status, $pkgId, $perPage);
         require 'views/admin/users.php';
@@ -51,11 +50,14 @@ class AdminController
             redirect('/?page=admin_users');
         }
 
+        $tab     = $_GET['tab'] ?? 'commissions';
+        $page    = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage = max(5, (int)($_GET['per_page'] ?? 10));
+
         $summary  = Commission::summary($id);
-        $perPage  = per_page();
-        $payouts  = Payout::forUser($id, max(1, (int)($_GET['pg_payout'] ?? 1)), $perPage);
-        $commHist = Commission::history($id, max(1, (int)($_GET['pg_comm'] ?? 1)), $perPage);
-        $ledger   = Ewallet::ledger($id, max(1, (int)($_GET['pg_ledger'] ?? 1)), $perPage);
+        $payouts  = Payout::forUser($id, $page, $perPage);
+        $commHist = Commission::history($id, $page, $perPage);
+        $ledger   = Ewallet::ledger($id, $page, $perPage);
         $pairingStatus = User::todayPairingStatus($id);
         $cdStatus = CdStatus::getActive($id);
         $cdHistory = CdStatus::history($id);
@@ -63,11 +65,30 @@ class AdminController
         // v2: Cap & DFI data for admin user view tab
         $capStatus = User::getCapStatus($id);
         $dfiStatus = DailyFixedIncome::getMemberDFIStatus($id);
-        $reactivationHistory = Reactivation::getReactivationHistory($id, max(1, (int)($_GET['pg_react'] ?? 1)), $perPage);
-        $capBlocked = Commission::capBlockedHistory($id, max(1, (int)($_GET['pg_cap'] ?? 1)), $perPage);
+        $reactivationHistory = Reactivation::getReactivationHistory($id, $page, $perPage);
+        $capBlocked = paginate(
+            "SELECT c.*, u.username AS source_username
+             FROM commissions c
+             LEFT JOIN users u ON u.id = c.source_user_id
+             WHERE c.user_id = ? AND c.cap_deduction > 0
+             ORDER BY c.created_at DESC",
+            [$id],
+            $page,
+            $perPage
+        );
 
         // Transfer history for e-wallet tab
-        $transferHistory = Ewallet::userTransferHistory($id, max(1, (int)($_GET['pg_transfer'] ?? 1)), $perPage);
+        $transferHistory = paginate(
+            "SELECT t.*, su.username AS sender_username, ru.username AS recipient_username
+             FROM ewallet_transfers t
+             JOIN users su ON su.id = t.sender_id
+             JOIN users ru ON ru.id = t.recipient_id
+             WHERE t.sender_id = ? OR t.recipient_id = ?
+             ORDER BY t.created_at DESC",
+            [$id, $id],
+            $page,
+            $perPage
+        );
 
         require 'views/admin/user_view.php';
     }
@@ -124,6 +145,47 @@ class AdminController
         redirect('/?page=admin_users');
     }
 
+    public function changePassword(): void
+    {
+        Auth::guard('admin');
+        csrf_verify();
+
+        $userId       = (int)($_POST['user_id'] ?? 0);
+        $newPassword  = $_POST['new_password'] ?? '';
+        $confirmPw    = $_POST['new_password_confirm'] ?? '';
+
+        if ($userId <= 0) {
+            flash('error', 'Invalid member ID.');
+            redirect('/?page=admin_users');
+        }
+
+        $user = User::find($userId);
+        if (!$user || $user['role'] !== 'member') {
+            flash('error', 'Member not found.');
+            redirect("/?page=admin_user_view&id={$userId}");
+        }
+
+        if (strlen($newPassword) < 8) {
+            flash('error', 'New password must be at least 8 characters.');
+            redirect("/?page=admin_user_view&id={$userId}");
+        }
+
+        if ($newPassword !== $confirmPw) {
+            flash('error', 'New passwords do not match.');
+            redirect("/?page=admin_user_view&id={$userId}");
+        }
+
+        $updated = User::updatePassword($userId, $newPassword);
+
+        if ($updated) {
+            flash('success', "Password for @{$user['username']} has been changed successfully.");
+        } else {
+            flash('error', 'Failed to update password. Please try again.');
+        }
+
+        redirect("/?page=admin_user_view&id={$userId}");
+    }
+
     /**
      * Called from payout.php JS when live TRC20 gas fee differs from DB value.
      * Updates the setting only if the rounded value actually changed (max 2 decimals).
@@ -153,12 +215,9 @@ class AdminController
         json_response(['ok' => true, 'updated' => true, 'fee' => $fee, 'previous' => $current]);
     }
 
-    /**
-     * Called from payout.php JS when live BEP20 gas fee differs from DB value.
-     * Accessible to logged-in members so the payout page can call it without admin session.
-     */
     public function updateUsdtBep20Gas(): void
     {
+        // Require JSON POST
         $raw  = file_get_contents('php://input');
         $body = json_decode($raw, true);
         $fee  = isset($body['fee']) ? round((float)$body['fee'], 4) : null;
@@ -169,6 +228,7 @@ class AdminController
 
         $current = round((float)setting('usdt_bep20_gas_fee', '0.05'), 4);
 
+        // Only write if value actually changed (avoid unnecessary DB writes)
         if (abs($fee - $current) < 0.0001) {
             json_response(['ok' => true, 'updated' => false, 'fee' => $fee]);
         }
@@ -182,9 +242,7 @@ class AdminController
     public function packages(): void
     {
         Auth::guard('admin');
-        $page     = max(1, (int)($_GET['pg'] ?? 1));
-        $perPage  = per_page();
-        $packages = Package::allPaginated($page, $perPage);
+        $packages = Package::all();
         $editPkg  = null;
         if (isset($_GET['edit'])) {
             $editPkg = Package::withLevels((int)$_GET['edit']);
@@ -199,13 +257,12 @@ class AdminController
 
         $id   = (int)($_POST['package_id'] ?? 0);
         $data = [
-            'name'              => trim($_POST['name']              ?? ''),
-            'entry_fee'         => (float)($_POST['entry_fee']      ?? 0),
-            'package_pv_rate'   => (float)($_POST['package_pv_rate'] ?? 10.00),
-            'binary_pv_pct'     => (float)($_POST['binary_pv_pct']   ?? 20.00),
-            'daily_pair_pv_cap' => (float)($_POST['daily_pair_pv_cap'] ?? 0),
-            'direct_ref_pv_pct' => (float)($_POST['direct_ref_pv_pct'] ?? 0),
-            'status'            => $_POST['status'] ?? 'active',
+            'name'             => trim($_POST['name']             ?? ''),
+            'entry_fee'        => (float)($_POST['entry_fee']      ?? 0),
+            'pairing_bonus'    => (float)($_POST['pairing_bonus']  ?? 0),
+            'daily_pair_cap'   => (int)($_POST['daily_pair_cap']   ?? 3),
+            'direct_ref_bonus' => (float)($_POST['direct_ref_bonus'] ?? 0),
+            'status'           => $_POST['status'] ?? 'active',
             'indirect_levels'  => [],
             // NEW v2 fields
             'lifetime_cap_multiplier'  => (float)($_POST['lifetime_cap_multiplier']  ?? 3.00),
@@ -213,31 +270,10 @@ class AdminController
             'reactivation_window_days' => (int)($_POST['reactivation_window_days']    ?? 15),
             'daily_fixed_income'       => (float)($_POST['daily_fixed_income']       ?? 0),
             'daily_fixed_income_days'  => (int)($_POST['daily_fixed_income_days']    ?? 90),
-            'dfi_pv_pct'               => (float)($_POST['dfi_pv_pct']               ?? 0),
-            'personal_pv_requirement'  => (float)($_POST['personal_pv_requirement']  ?? 0.00),
         ];
 
         for ($lvl = 1; $lvl <= 10; $lvl++) {
             $data['indirect_levels'][$lvl] = (float)($_POST["indirect_{$lvl}"] ?? 0);
-        }
-
-        // When binary is disabled, the binary/cap inputs are not rendered.
-        // Preserve existing values on edit so they are not silently zeroed.
-        if ($id && !isset($_POST['binary_pv_pct'])) {
-            $existing = Package::find($id);
-            if ($existing) {
-                $data['binary_pv_pct']     = (float)$existing['binary_pv_pct'];
-                $data['daily_pair_pv_cap'] = (float)$existing['daily_pair_pv_cap'];
-            }
-        }
-
-        // When indirect referrals are disabled, the 10-level inputs are not rendered.
-        // Preserve existing percentages on edit.
-        if ($id && !isset($_POST['indirect_1'])) {
-            $existingLevels = Package::getIndirectLevels($id);
-            if (!empty($existingLevels)) {
-                $data['indirect_levels'] = $existingLevels;
-            }
         }
 
         // Build back-URL so validation errors return to the correct form (edit or new)
@@ -249,28 +285,7 @@ class AdminController
             flash('error', 'Package name and entry fee are required.');
             redirect($backUrl);
         }
-        if ($data['package_pv_rate'] < 0) {
-            flash('error', 'Package PV cannot be negative.');
-            redirect($backUrl);
-        }
-        if ($data['binary_pv_pct'] < 0 || $data['binary_pv_pct'] > 1000) {
-            flash('error', 'Binary PV percentage must be between 0 and 1000.');
-            redirect($backUrl);
-        }
-        if ($data['daily_pair_pv_cap'] < 0) {
-            flash('error', 'Daily pair PV cap cannot be negative.');
-            redirect($backUrl);
-        }
-        if ($data['direct_ref_pv_pct'] < 0 || $data['direct_ref_pv_pct'] > 100) {
-            flash('error', 'Direct referral percentage must be between 0 and 100.');
-            redirect($backUrl);
-        }
-        foreach ($data['indirect_levels'] as $lvl => $pct) {
-            if ($pct < 0 || $pct > 100) {
-                flash('error', "Indirect level {$lvl} percentage must be between 0 and 100.");
-                redirect($backUrl);
-            }
-        }
+
         // Validate v2 fields
         if ($data['lifetime_cap_multiplier'] < 1) {
             flash('error', 'Lifetime cap multiplier must be at least 1.0.');
@@ -284,16 +299,8 @@ class AdminController
             flash('error', 'Daily fixed income cannot be negative.');
             redirect($backUrl);
         }
-        if ($data['dfi_pv_pct'] < 0 || $data['dfi_pv_pct'] > 100) {
-            flash('error', 'DFI PV percentage must be between 0 and 100.');
-            redirect($backUrl);
-        }
-        if ($data['daily_fixed_income_days'] < 0) {
-            flash('error', 'Max DFI days cannot be negative.');
-            redirect($backUrl);
-        }
-        if ($data['personal_pv_requirement'] < 0) {
-            flash('error', 'Personal PV requirement cannot be negative.');
+        if ($data['daily_fixed_income_days'] < 1) {
+            flash('error', 'Max DFI days must be at least 1.');
             redirect($backUrl);
         }
 
@@ -302,200 +309,15 @@ class AdminController
         redirect('/?page=admin_packages');
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    //  PRODUCTS
-    // ══════════════════════════════════════════════════════════════════════════
-
-    public function products(): void
-    {
-        Auth::guard('admin');
-        $page        = max(1, (int)($_GET['pg'] ?? 1));
-        $perPage     = per_page();
-        $products    = Product::allPaginated($page, $perPage);
-        $editProduct = null;
-        if (isset($_GET['edit'])) {
-            $editProduct = Product::withUnilevelLevels((int)$_GET['edit']);
-        }
-        require 'views/admin/products.php';
-    }
-
-    public function saveProduct(): void
-    {
-        Auth::guard('admin');
-        csrf_verify();
-
-        $id       = (int)($_POST['product_id'] ?? 0);
-        $backUrl  = $id ? '/?page=admin_products&edit=' . $id : '/?page=admin_products';
-        $existing = $id ? Product::find($id) : null;
-
-        $data = [
-            'name'             => trim($_POST['name'] ?? ''),
-            'price'            => (float)($_POST['price'] ?? 0),
-            'product_pv'       => (float)($_POST['product_pv'] ?? 0),
-            'pv_value'         => (float)($_POST['pv_value'] ?? 100.00),
-            'stock'            => max(0, (int)($_POST['stock'] ?? 0)),
-            'short_description'=> trim($_POST['short_description'] ?? ''),
-            'description'      => trim($_POST['description'] ?? ''),
-            'status'           => $_POST['status'] ?? 'active',
-            'image_url'        => $existing['image_url'] ?? null,
-        ];
-
-        $data['unilevel_levels'] = [];
-        for ($lvl = 1; $lvl <= 10; $lvl++) {
-            $data['unilevel_levels'][$lvl] = (float)($_POST["unilevel_{$lvl}"] ?? 0);
-        }
-
-        // Preserve existing levels when the section was not rendered (toggle disabled)
-        if ($id && !isset($_POST['unilevel_1'])) {
-            $existingLevels = Product::getUnilevelLevels($id);
-            if (!empty($existingLevels)) {
-                $data['unilevel_levels'] = $existingLevels;
-            }
-        }
-
-        if (!$data['name'] || $data['price'] <= 0) {
-            flash('error', 'Product name and price are required.');
-            redirect($backUrl);
-        }
-        if ($data['product_pv'] < 0) {
-            flash('error', 'Product PV cannot be negative.');
-            redirect($backUrl);
-        }
-        if ($data['pv_value'] < 0 || $data['pv_value'] > 100) {
-            flash('error', 'PV Value (%) must be between 0 and 100.');
-            redirect($backUrl);
-        }
-        foreach ($data['unilevel_levels'] as $lvl => $pct) {
-            if ($pct < 0 || $pct > 100) {
-                flash('error', "Unilevel Level {$lvl} must be between 0 and 100.");
-                redirect($backUrl);
-            }
-        }
-
-        // Handle product image upload/removal
-        $removeImage = !empty($_POST['remove_image']);
-
-        if (!empty($_FILES['image']['tmp_name'])) {
-            try {
-                $uploaded = upload_image(
-                    $_FILES['image'],
-                    'products',
-                    'product_' . ($id ?: 'new'),
-                    $removeImage ? null : ($existing['image_url'] ?? null)
-                );
-                if ($uploaded !== null) {
-                    $data['image_url'] = $uploaded;
-                }
-            } catch (Throwable $e) {
-                flash('error', $e->getMessage());
-                redirect($backUrl);
-            }
-        } elseif ($removeImage) {
-            delete_uploaded_file($existing['image_url'] ?? null);
-            $data['image_url'] = null;
-        }
-
-        Product::save($data, $id ?: null);
-        flash('success', $id ? 'Product updated.' : 'Product created.');
-        redirect('/?page=admin_products');
-    }
-
-    public function deleteProduct(): void
-    {
-        Auth::guard('admin');
-        csrf_verify();
-
-        $id = (int)($_POST['id'] ?? 0);
-        if ($id <= 0) {
-            flash('error', 'Invalid product ID.');
-            redirect('/?page=admin_products');
-        }
-
-        if (Product::delete($id)) {
-            flash('success', 'Product deleted.');
-        } else {
-            flash('error', 'Cannot delete product: it has existing repeat-purchase records.');
-        }
-        redirect('/?page=admin_products');
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    //  REPEAT PURCHASE ORDERS
-    // ══════════════════════════════════════════════════════════════════════════
-
-    public function repeatPurchaseOrders(): void
-    {
-        Auth::guard('admin');
-
-        $page    = max(1, (int)($_GET['pg'] ?? 1));
-        $status  = $_GET['status'] ?? 'pending';
-        $perPage = per_page();
-
-        $result = match ($status) {
-            'paid'     => RepeatPurchaseOrder::paid($page, $perPage),
-            'approved' => RepeatPurchaseOrder::approved($page, $perPage),
-            'all'      => RepeatPurchaseOrder::all($page, $perPage),
-            default    => RepeatPurchaseOrder::pending($page, $perPage),
-        };
-
-        $pageTitle = 'Repeat Purchase Orders';
-        require 'views/admin/repeat_purchases.php';
-    }
-
-    public function markRepeatOrderPaid(): void
-    {
-        Auth::guard('admin');
-        csrf_verify();
-
-        $orderId = (int)($_POST['id'] ?? 0);
-        try {
-            RepeatPurchaseOrder::markPaid($orderId, Auth::id());
-            flash('success', 'Order marked as paid.');
-        } catch (RuntimeException $e) {
-            flash('error', $e->getMessage());
-        }
-        redirect('/?page=admin_repeat_purchases&status=paid');
-    }
-
-    public function approveRepeatOrder(): void
-    {
-        Auth::guard('admin');
-        csrf_verify();
-
-        $orderId = (int)($_POST['id'] ?? 0);
-        try {
-            RepeatPurchaseOrder::approve($orderId, Auth::id());
-            flash('success', 'Order approved and PV distributed.');
-        } catch (RuntimeException $e) {
-            flash('error', $e->getMessage());
-        }
-        redirect('/?page=admin_repeat_purchases');
-    }
-
-    public function rejectRepeatOrder(): void
-    {
-        Auth::guard('admin');
-        csrf_verify();
-
-        $orderId = (int)($_POST['id'] ?? 0);
-        try {
-            RepeatPurchaseOrder::reject($orderId, Auth::id());
-            flash('success', 'Order rejected.');
-        } catch (RuntimeException $e) {
-            flash('error', $e->getMessage());
-        }
-        redirect('/?page=admin_repeat_purchases');
-    }
-
     // ── Registration Codes ────────────────────────────────────────────────────
 
     public function codes(): void
     {
         Auth::guard('admin');
         $page     = max(1, (int)($_GET['pg']  ?? 1));
-        $perPage  = per_page();
         $status   = $_GET['status']            ?? '';
         $pkgId    = (int)($_GET['pkg']         ?? 0);
+        $perPage  = max(5, (int)($_GET['per_page'] ?? 10));
         $packages = Package::all(true);
         $codes    = Code::all($page, $status, $pkgId, $perPage);
         $stats    = Code::stats();
@@ -537,8 +359,8 @@ class AdminController
     {
         Auth::guard('admin');
         $page    = max(1, (int)($_GET['pg']     ?? 1));
-        $perPage = per_page();
         $status  = $_GET['status']               ?? 'pending';
+        $perPage = max(5, (int)($_GET['per_page'] ?? 10));
         $result  = Payout::all($page, $status, $perPage);
         require 'views/admin/payouts.php';
     }
@@ -588,81 +410,43 @@ class AdminController
         Auth::guard('admin');
         csrf_verify();
 
-        $group = $_POST['group'] ?? '';
-
-        $groupKeys = [
-            'basics'       => ['site_name', 'site_tagline', 'contact_email', 'min_payout'],
-            'maint'        => ['maintenance_mode', 'maintenance_bypass_token', 'seat_limit'],
-            'comp_plan'    => ['binary_enabled', 'binary_repeat_enabled', 'indirect_referral_enabled', 'unilevel_product_enabled', 'default_cap_multiplier', 'pv_per_peso_rate', 'dfi_enabled'],
-            'royalty'      => ['royalty_enabled', 'royalty_pool_rate', 'royalty_min_pool', 'royalty_supervisor_rate', 'royalty_manager_rate', 'royalty_director_rate', 'royalty_chairman_rate', 'royalty_qa_directs', 'royalty_qa_personal_pv', 'royalty_qa_group_pv', 'royalty_spv_directs', 'royalty_spv_qa_legs', 'royalty_mgr_sup_legs', 'royalty_dir_mgr_legs', 'royalty_chm_dir_legs'],
-            'payments'     => ['reactivation_ewallet_enabled', 'reactivation_external_enabled', 'gcash_number', 'maya_number', 'usdt_trc20_address', 'usdt_bep20_address'],
-            'ewallet'      => ['ewallet_transfer_fee', 'ewallet_min_transfer', 'ewallet_transfer_daily_limit', 'ewallet_transfer_weekly_limit'],
-            'payouts'      => ['gcash_enabled', 'maya_enabled', 'service_fee_gcash', 'service_fee_maya', 'service_fee_usdt_trc20', 'service_fee_usdt_bep20', 'usdt_trc20_gas_fee', 'usdt_bep20_gas_fee'],
+        $allowed = [
+            'site_name',
+            'site_tagline',
+            'min_payout',
+            'contact_email',
+            'maintenance_mode',
+            'service_fee_gcash',
+            'service_fee_maya',
+            'service_fee_usdt_trc20',
+            'service_fee_usdt_bep20',
+            'usdt_trc20_gas_fee',
+            'usdt_bep20_gas_fee',
+            'gcash_enabled',
+            'maya_enabled',
+            'dfi_enabled',
+            'gcash_number',
+            'maya_number',
+            'usdt_trc20_address',
+            'usdt_bep20_address',
+            'default_cap_multiplier',
+            'reactivation_ewallet_enabled',
+            'reactivation_external_enabled',
+            'indirect_referral_enabled',
+            'ewallet_transfer_fee',
+            'ewallet_min_transfer',
+            'ewallet_transfer_daily_limit',
+            'ewallet_transfer_weekly_limit',
+            'seat_limit',
         ];
-
-        if (!isset($groupKeys[$group])) {
-            flash('error', 'Invalid settings group.');
-            redirect('/?page=admin_settings');
-            return;
-        }
-
-        $allowed = $groupKeys[$group];
-
-        // Validate rank rates sum to 100 (royalty group only)
-        if ($group === 'royalty') {
-            $rankRateKeys = ['royalty_supervisor_rate', 'royalty_manager_rate', 'royalty_director_rate', 'royalty_chairman_rate'];
-            $sum = 0;
-            foreach ($rankRateKeys as $key) {
-                $sum += (float) ($_POST[$key] ?? 0);
-            }
-            if (abs($sum - 100) > 0.01) {
-                flash('error', "Rank rates must sum to 100 (current: {$sum}). No settings saved.");
-                redirect('/?page=admin_settings#tabPane-royalty');
-                return;
-            }
-        }
-
         $pdo = db();
         $st  = $pdo->prepare("INSERT INTO settings (key_name, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
 
-        $checkboxKeys = ['gcash_enabled', 'maya_enabled', 'dfi_enabled', 'reactivation_ewallet_enabled', 'reactivation_external_enabled', 'indirect_referral_enabled', 'unilevel_product_enabled', 'binary_enabled', 'binary_repeat_enabled', 'royalty_enabled'];
-
         foreach ($allowed as $key) {
-            if (in_array($key, $checkboxKeys, true)) {
+            // Checkbox toggles: when unchecked the field is absent from POST,
+            // so we explicitly save '0' for these keys when not present.
+            if (in_array($key, ['gcash_enabled', 'maya_enabled', 'dfi_enabled', 'reactivation_ewallet_enabled', 'reactivation_external_enabled', 'indirect_referral_enabled'], true)) {
                 $value = isset($_POST[$key]) && $_POST[$key] === '1' ? '1' : '0';
-
-                if ($key === 'binary_enabled') {
-                    $currentValue = (string) db()->query("SELECT value FROM settings WHERE key_name = 'binary_enabled'")->fetchColumn();
-                    if ($value !== $currentValue) {
-                        $memberCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
-                        if ($memberCount > 0) {
-                            flash('error', 'Cannot change binary pairing: ' . $memberCount . ' member(s) already exist in the system. Run reset.php to clear all members first, then toggle binary before anyone registers.');
-                            redirect('/?page=admin_settings#tabPane-comp_plan');
-                        }
-                    }
-                }
-
-                if ($key === 'indirect_referral_enabled') {
-                    $currentValue = (string) db()->query("SELECT value FROM settings WHERE key_name = 'indirect_referral_enabled'")->fetchColumn();
-                    if ($value !== $currentValue) {
-                        $memberCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
-                        if ($memberCount > 0) {
-                            flash('error', 'Cannot change indirect referral: ' . $memberCount . ' member(s) already exist in the system. Run reset.php to clear all members first, then toggle indirect referral before anyone registers.');
-                            redirect('/?page=admin_settings#tabPane-comp_plan');
-                        }
-                    }
-                }
-
-                if ($key === 'unilevel_product_enabled') {
-                    $currentValue = (string) db()->query("SELECT value FROM settings WHERE key_name = 'unilevel_product_enabled'")->fetchColumn();
-                    if ($value !== $currentValue) {
-                        $memberCount = (int) db()->query("SELECT COUNT(*) FROM users WHERE role = 'member'")->fetchColumn();
-                        if ($memberCount > 0 && $value === '0') {
-                            flash('warning', 'Cannot disable Unilevel Product Bonus — ' . $memberCount . ' member(s) already exist. Existing bonuses already paid remain; no new bonuses will be processed.');
-                        }
-                    }
-                }
-
                 $st->execute([$key, $value]);
             } elseif (isset($_POST[$key])) {
                 $st->execute([$key, trim($_POST[$key])]);
@@ -670,7 +454,7 @@ class AdminController
         }
 
         flash('success', 'Settings saved.');
-        redirect('/?page=admin_settings#tabPane-' . $group);
+        redirect('/?page=admin_settings');
     }
 
     public function manualReset(): void
@@ -678,22 +462,21 @@ class AdminController
         Auth::guard('admin');
         csrf_verify();
 
-        $affected = db()->exec("UPDATE users SET paired_pv_today = 0 WHERE role = 'member'");
-        db()->exec("UPDATE users SET pairs_paid_today = 0 WHERE role = 'member'");
+        $affected = db()->exec("UPDATE users SET pairs_paid_today = 0 WHERE role = 'member'");
         db()->prepare("UPDATE settings SET value = ? WHERE key_name = 'last_reset'")
             ->execute([date('Y-m-d H:i:s')]);
 
-        $msg = "Daily paired-PV counter reset for {$affected} member(s).";
+        $msg = "Daily pair counter reset for {$affected} member(s).";
 
         // v3: Optional DFI trigger
-        if (setting('dfi_enabled', '1') === '1' && isset($_POST['trigger_dfi']) && $_POST['trigger_dfi'] === '1') {
+        if (isset($_POST['trigger_dfi']) && $_POST['trigger_dfi'] === '1') {
             $dfiResult = DailyFixedIncome::processDailyPayout();
             if (($dfiResult['reason'] ?? '') === 'disabled') {
                 $msg .= ' DFI is currently disabled.';
             } else {
                 $msg .= " DFI: ₱" . number_format($dfiResult['paid'], 2)
-                     . " paid to {$dfiResult['processed']} member(s),"
-                     . " {$dfiResult['skipped']} skipped.";
+                    . " paid to {$dfiResult['processed']} member(s),"
+                    . " {$dfiResult['skipped']} skipped.";
             }
         }
 
@@ -713,8 +496,8 @@ class AdminController
         ];
 
         $page    = max(1, (int)($_GET['pg'] ?? 1));
-        $perPage = per_page();
         $status  = $_GET['status'] ?? '';
+        $perPage = max(5, (int)($_GET['per_page'] ?? 10));
 
         $where = "u.role='member'";
         $params = [];
@@ -741,10 +524,6 @@ class AdminController
     public function dfiAdmin(): void
     {
         Auth::guard('admin');
-        if (setting('dfi_enabled', '1') !== '1') {
-            flash('info', 'Daily Fixed Income is disabled. Enable it in Compensation Plan settings.');
-            redirect('/?page=admin_settings#tabPane-comp_plan');
-        }
         $pdo = db();
 
         $todayDfi = (float)$pdo->query("
@@ -822,53 +601,12 @@ class AdminController
         redirect('/?page=admin_user_view&id=' . $id);
     }
 
-    public function changePassword(): void
-    {
-        Auth::guard('admin');
-        csrf_verify();
-
-        $userId      = (int)($_POST['user_id'] ?? 0);
-        $newPassword = $_POST['new_password'] ?? '';
-        $confirmPw   = $_POST['new_password_confirm'] ?? '';
-
-        if ($userId <= 0) {
-            flash('error', 'Invalid member ID.');
-            redirect('/?page=admin_users');
-        }
-
-        $user = User::find($userId);
-        if (!$user || $user['role'] !== 'member') {
-            flash('error', 'Member not found.');
-            redirect("/?page=admin_user_view&id={$userId}");
-        }
-
-        if (strlen($newPassword) < 8) {
-            flash('error', 'New password must be at least 8 characters.');
-            redirect("/?page=admin_user_view&id={$userId}");
-        }
-
-        if ($newPassword !== $confirmPw) {
-            flash('error', 'New passwords do not match.');
-            redirect("/?page=admin_user_view&id={$userId}");
-        }
-
-        $updated = User::updatePassword($userId, $newPassword);
-
-        if ($updated) {
-            flash('success', "Password for @{$user['username']} has been changed successfully.");
-        } else {
-            flash('error', 'Failed to update password. Please try again.');
-        }
-
-        redirect("/?page=admin_user_view&id={$userId}");
-    }
-
     public function reactivations(): void
     {
         Auth::guard('admin');
         $page    = max(1, (int)($_GET['pg'] ?? 1));
-        $perPage = per_page();
         $status  = $_GET['status'] ?? '';
+        $perPage = max(5, (int)($_GET['per_page'] ?? 10));
         $result  = Reactivation::all($page, $status, $perPage);
 
         $totalRevenue = Reactivation::completedTotal();
@@ -877,7 +615,7 @@ class AdminController
         // Fetch admin payment details for reactivation display
         $pdo = db();
         $adminPayment = [];
-        foreach (['gcash_number','maya_number','usdt_trc20_address','usdt_bep20_address'] as $k) {
+        foreach (['gcash_number', 'maya_number', 'usdt_trc20_address', 'usdt_bep20_address'] as $k) {
             $adminPayment[$k] = $pdo->query("SELECT value FROM settings WHERE key_name='{$k}'")->fetchColumn() ?: '';
         }
 
@@ -948,13 +686,37 @@ class AdminController
         Auth::guard('admin');
         $pdo = db();
 
-        $tab     = $_GET['tab'] ?? 'transfers';
-        $page    = max(1, (int)($_GET['pg'] ?? 1));
-        $perPage = per_page();
+        $transfers = $pdo->query("
+            SELECT t.*, su.username AS sender_username, ru.username AS recipient_username
+            FROM ewallet_transfers t
+            JOIN users su ON su.id = t.sender_id
+            JOIN users ru ON ru.id = t.recipient_id
+            ORDER BY t.created_at DESC
+            LIMIT 200
+        ")->fetchAll();
 
-        $transfers = Ewallet::transferHistory($tab === 'transfers' ? $page : 1, $perPage);
-        $topups    = Ewallet::topUpHistory($tab === 'topups' ? $page : 1, $perPage);
-        $fees      = Ewallet::feeLedger($tab === 'fees' ? $page : 1, $perPage);
+        $topups = $pdo->query("
+            SELECT tu.*, au.username AS admin_username, ru.username AS recipient_username
+            FROM ewallet_admin_topups tu
+            JOIN users au ON au.id = tu.admin_id
+            JOIN users ru ON ru.id = tu.recipient_id
+            ORDER BY tu.created_at DESC
+            LIMIT 200
+        ")->fetchAll();
+
+        // Fee credits to admin from ewallet_ledger
+        $fees = $pdo->query("
+            SELECT l.*, t.sender_id, t.recipient_id,
+                   su.username AS sender_username, ru.username AS recipient_username
+            FROM ewallet_ledger l
+            JOIN ewallet_transfers t ON t.id = l.reference_id
+            JOIN users su ON su.id = t.sender_id
+            JOIN users ru ON ru.id = t.recipient_id
+            WHERE l.ref_type = 'transfer' AND l.type = 'credit'
+              AND l.note LIKE '%fee%'
+            ORDER BY l.created_at DESC
+            LIMIT 200
+        ")->fetchAll();
 
         $stats = [
             'total_transfers' => (float) $pdo->query("SELECT COALESCE(SUM(amount),0) FROM ewallet_transfers WHERE status='completed'")->fetchColumn(),

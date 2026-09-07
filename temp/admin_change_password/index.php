@@ -24,7 +24,6 @@ require_once 'core/Commission.php';
 require_once 'core/CapEngine.php';
 require_once 'core/DailyFixedIncome.php';
 require_once 'core/Reactivation.php';
-require_once 'core/Royalty.php';
 
 // Auto-load models and controllers
 spl_autoload_register(function (string $class): void {
@@ -37,35 +36,8 @@ spl_autoload_register(function (string $class): void {
     }
 });
 
-// ── Maintenance Bypass ──
-// If ?bypass=TOKEN is present and matches the stored token, set a secure
-// cookie so the admin can browse past maintenance without the token
-// persisting in the URL (logs, history, referrers).
-$bypassToken = setting('maintenance_bypass_token', '');
-$expectedHash = $bypassToken !== '' ? hash('sha256', $bypassToken . '|altas-maint-v1') : '';
-
-if ($bypassToken !== '' && isset($_GET['bypass']) && hash_equals($expectedHash, hash('sha256', $_GET['bypass'] . '|altas-maint-v1'))) {
-    // Token matches — plant the bypass cookie and redirect to clean URL
-    setcookie('af_maint_bypass', $expectedHash, [
-        'expires'  => time() + 3600,
-        'path'     => '/',
-        'httponly' => true,
-        'samesite' => 'Strict',
-    ]);
-    // Strip bypass param from URL to keep it out of history
-    $cleanUri = strtok($_SERVER['REQUEST_URI'], '?');
-    parse_str($_SERVER['QUERY_STRING'] ?? '', $qParams);
-    unset($qParams['bypass']);
-    if (!empty($qParams)) {
-        $cleanUri .= '?' . http_build_query($qParams);
-    }
-    redirect($cleanUri);
-}
-
-$hasBypassCookie = isset($_COOKIE['af_maint_bypass']) && $expectedHash !== '' && hash_equals($expectedHash, $_COOKIE['af_maint_bypass']);
-
 // Maintenance mode
-if (setting('maintenance_mode') === '1' && !Auth::isAdmin() && !$hasBypassCookie) {
+if (setting('maintenance_mode') === '1' && !Auth::isAdmin()) {
     $name = setting('site_name', APP_NAME);
     $base = rtrim(APP_URL, '/');
     $frontend = $base . '/frontend';
@@ -306,8 +278,8 @@ $routes = [
     'api_binary_tree'    => ['MemberController', 'apiBinaryTree',   'member'],
     'payout'             => ['MemberController', 'payout',          'member'],
     'request_payout'     => ['MemberController', 'requestPayout',   'member'],
-    'update_usdt_gas'          => ['AdminController',  'updateUsdtGas',        'member'],
-    'update_usdt_bep20_gas'    => ['AdminController',  'updateUsdtBep20Gas',   'member'],
+    'update_usdt_gas'       => ['AdminController',  'updateUsdtGas',      'member'],
+    'update_usdt_bep20_gas' => ['AdminController',  'updateUsdtBep20Gas', 'member'],
 
     // NEW v2: Member cap + DFI + reactivation pages
     'cap_status'         => ['MemberController', 'capStatus',       'member'],
@@ -319,15 +291,6 @@ $routes = [
     'api_cap_status'     => ['MemberController', 'apiCapStatus',      'member'],
     'api_dfi_status'     => ['MemberController', 'apiDfiStatus',      'member'],
 
-    // Repeat-purchase products
-    'repeat_purchases'   => ['MemberController', 'repeatPurchases',   'member'],
-    'cart'               => ['MemberController', 'cart',               'member'],
-    'add_to_cart'        => ['MemberController', 'addToCart',         'member'],
-    'update_cart_item'   => ['MemberController', 'updateCartItem',    'member'],
-    'remove_cart_item'   => ['MemberController', 'removeCartItem',    'member'],
-    'checkout'           => ['MemberController', 'checkout',          'member'],
-    'place_order'        => ['MemberController', 'placeOrder',        'member'],
-
     // ── Admin ─────────────────────────────────────────
     'admin'              => ['AdminController',  'dashboard',       'admin'],
     'admin_users'        => ['AdminController',  'users',           'admin'],
@@ -335,13 +298,6 @@ $routes = [
     'admin_toggle_user'  => ['AdminController',  'toggleUser',      'admin'],
     'admin_packages'     => ['AdminController',  'packages',        'admin'],
     'admin_save_package' => ['AdminController',  'savePackage',     'admin'],
-    'admin_products'     => ['AdminController',  'products',        'admin'],
-    'admin_save_product' => ['AdminController',  'saveProduct',     'admin'],
-    'admin_delete_product' => ['AdminController',  'deleteProduct', 'admin'],
-    'admin_repeat_purchases'         => ['AdminController',  'repeatPurchaseOrders',    'admin'],
-    'admin_mark_repeat_purchases'    => ['AdminController',  'markRepeatOrderPaid',   'admin'],
-    'admin_approve_repeat_purchase'  => ['AdminController',  'approveRepeatOrder',    'admin'],
-    'admin_reject_repeat_purchase'   => ['AdminController',  'rejectRepeatOrder',     'admin'],
     'admin_codes'        => ['AdminController',  'codes',           'admin'],
     'admin_gen_codes'    => ['AdminController',  'generateCodes',   'admin'],
     'admin_export_codes' => ['AdminController',  'exportCodes',     'admin'],
@@ -358,9 +314,9 @@ $routes = [
     'admin_reactivation_action' => ['AdminController',  'reactivationAction',  'admin'],
 
     // VIP bypass toggles
+    'admin_change_password'  => ['AdminController',  'changePassword',       'admin'],
     'admin_toggle_vip'       => ['AdminController',  'toggleVipBypass',      'admin'],
     'admin_toggle_daily_cap' => ['AdminController',  'toggleDailyCapBypass', 'admin'],
-    'admin_change_password'  => ['AdminController',  'changePassword',      'admin'],
 
     // Commission-Deduct (CD) admin actions
     'admin_assign_cd'       => ['AdminController',  'assignCd',      'admin'],
@@ -368,9 +324,6 @@ $routes = [
     'admin_cancel_cd'       => ['AdminController',  'cancelCd',      'admin'],
     'admin_edit_cd_target'  => ['AdminController',  'editCdTarget',  'admin'],
     'api_cd_status'      => ['MemberController', 'apiCdStatus', 'member'],
-
-    // Royalty Bonus
-    'member_royalty'     => ['MemberController', 'royalty',        'member'],
 
     // E-Wallet Transfer & Top-Up
     'ewallet_transfer'       => ['MemberController', 'ewalletTransfer',     'any'],
@@ -381,19 +334,6 @@ $routes = [
 ];
 
 $page = $_GET['page'] ?? 'login';
-
-// ── Frontend toggle ──────────────────────────────────────────────────────────
-// When .htaccess routes root URLs here with ?_show_frontend=1, decide whether
-// to serve the landing page or bypass to login based on SHOW_FRONTEND constant.
-if (isset($_GET['_show_frontend'])) {
-    unset($_GET['_show_frontend']);
-    if (defined('SHOW_FRONTEND') && SHOW_FRONTEND === 1) {
-        require __DIR__ . '/frontend/index.php';
-        exit;
-    }
-    // SHOW_FRONTEND is 0 — bypass frontend, fall through to login below
-    $page = 'login';
-}
 
 // Fall back to login for unknown pages
 $route = $routes[$page] ?? null;
