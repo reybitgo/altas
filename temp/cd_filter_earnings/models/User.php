@@ -125,12 +125,12 @@ class User
         // 1. Walk binary tree upward → increment leg counts (pairing bonuses only if active)
         //    Pending users: do NOT increment leg counts; counts will be incremented at activation.
         if ($data['binary_parent_id'] !== null) {
-            Commission::processBinaryPlacement($newId, (int)$data['binary_parent_id'], $data['binary_position'], $status !== 'pending');
+            Commission::processBinaryPlacement($newId, $data['binary_parent_id'], $data['binary_position'], $status !== 'pending');
         }
 
         if ($status !== 'pending' && $data['sponsor_id'] !== null) {
             // 2. Direct referral bonus → sponsor
-            Commission::processDirectReferral((int)$data['sponsor_id'], $newId, $data['package_id']);
+            Commission::processDirectReferral($data['sponsor_id'], $newId, $data['package_id']);
 
             // 3. Indirect referral bonuses → up to 10 levels in sponsor chain
             if (setting('indirect_referral_enabled', '1') === '1') {
@@ -149,8 +149,9 @@ class User
     {
         $pdo = db();
 
-        // Activate the user. Pending registrations no longer increment leg PV,
-        // so we start pairing history fresh at activation.
+        // Activate the user AND flush all binary pairs that formed while pending.
+        // This prevents retroactive pairing bonuses — only pairs formed AFTER
+        // activation will earn bonuses.
         $pdo->prepare("
             UPDATE users
             SET status = 'active',
@@ -158,8 +159,6 @@ class User
                 reg_code_id = COALESCE(?, reg_code_id),
                 reg_payment_method = ?,
                 joined_at = NOW(),
-                paired_pv = 0.00,
-                flushed_pv = 0.00,
                 pairs_flushed = LEAST(left_count, right_count)
             WHERE id = ? AND status = 'pending'
         ")->execute([$packageId, $regCodeId, $paymentMethod, $userId]);
@@ -202,10 +201,12 @@ class User
     {
         $st = db()->prepare("
             SELECT u.*,
-                   p.name              AS package_name,
-                   p.daily_pair_pv_cap,
-                   sp.username         AS sponsor_username,
-                   bp.username         AS binary_parent_username
+                   p.name          AS package_name,
+                   p.pairing_bonus,
+                   p.daily_pair_cap,
+                   p.direct_ref_bonus,
+                   sp.username     AS sponsor_username,
+                   bp.username     AS binary_parent_username
             FROM   users u
             LEFT JOIN packages p ON p.id = u.package_id
             LEFT JOIN users sp   ON sp.id = u.sponsor_id
@@ -266,11 +267,6 @@ class User
         return $hash && password_verify($password, $hash);
     }
 
-    /**
-     * Determine whether a user is a "paid" member (bought via non-CD code or
-     * e-wallet). CD-sourced and pending users return false — they do not
-     * trigger commissions for their uplines.
-     */
     public static function isPaidMember(int $userId): bool
     {
         $st = db()->prepare("
@@ -304,8 +300,8 @@ class User
     }
 
     /**
-     * Get cap-aware PV pairing status for dashboard (Phase 3).
-     * Legacy count keys are kept for backward compatibility with older views.
+     * Get cap-aware pairing status for dashboard.
+     * Extends todayPairingStatus() with cap info.
      */
     public static function todayPairingStatus(int $userId): array
     {
@@ -317,12 +313,8 @@ class User
                 u.pairs_flushed,
                 u.left_count,
                 u.right_count,
-                u.paired_pv,
-                u.paired_pv_today,
-                u.flushed_pv,
-                u.left_pv,
-                u.right_pv,
-                p.daily_pair_pv_cap,
+                p.pairing_bonus,
+                p.daily_pair_cap,
                 u.lifetime_earned,
                 u.cap_status,
                 (p.entry_fee * p.lifetime_cap_multiplier) AS lifetime_cap
@@ -340,45 +332,31 @@ class User
                 'pairs_flushed'    => 0,
                 'left_count'       => 0,
                 'right_count'      => 0,
-                'paired_pv'        => 0.00,
-                'paired_pv_today'  => 0.00,
-                'flushed_pv'       => 0.00,
-                'left_pv'          => 0.00,
-                'right_pv'         => 0.00,
-                'pairing_pv_pct'   => 0.00,
-                'daily_pair_pv_cap'=> 0.00,
-                'daily_cap'        => 0.00,
-                'cap_percent'      => 0.0,
-                'cap_remaining'    => 0.00,
-                'earned_today'     => 0.00,
-                'lifetime_earned'  => 0.00,
-                'lifetime_cap'     => 0.00,
+                'pairing_bonus'    => 0,
+                'daily_cap'        => 0,
+                'cap_percent'      => 0,
+                'cap_remaining'    => 0,
+                'earned_today'     => fmt_money(0),
+                'lifetime_earned'  => 0,
+                'lifetime_cap'     => 0,
                 'cap_status'       => 'perminact',
             ];
         }
 
-        $paidToday = (float)$row['paired_pv_today'];
-        $dailyCap  = (float)$row['daily_pair_pv_cap'];
-        $pvRate    = (float)setting('pv_per_peso_rate', '1.0000');
+        $paidToday = (int)$row['pairs_paid_today'];
+        $dailyCap  = (int)$row['daily_pair_cap'];
+        $bonus     = (float)$row['pairing_bonus'];
         $capPct    = $dailyCap > 0 ? min(100, ($paidToday / $dailyCap) * 100) : 0;
-        $capRem    = max(0.00, $dailyCap - $paidToday);
-        $earnedToday = $paidToday * $pvRate;
+        $capRem    = max(0, $dailyCap - $paidToday);
+        $earnedToday = $paidToday * $bonus;
 
         return [
-            // Legacy count-based keys (deprecated)
             'pairs_paid'       => (int)$row['pairs_paid'],
-            'pairs_paid_today' => (int)$row['pairs_paid_today'],
+            'pairs_paid_today' => $paidToday,
             'pairs_flushed'    => (int)$row['pairs_flushed'],
             'left_count'       => (int)$row['left_count'],
             'right_count'      => (int)$row['right_count'],
-            // PV-based keys
-            'paired_pv'        => (float)$row['paired_pv'],
-            'paired_pv_today'  => $paidToday,
-            'flushed_pv'       => (float)$row['flushed_pv'],
-            'left_pv'          => (float)$row['left_pv'],
-            'right_pv'         => (float)$row['right_pv'],
-            'pairing_pv_pct'   => 0.00,
-            'daily_pair_pv_cap'=> $dailyCap,
+            'pairing_bonus'    => $bonus,
             'daily_cap'        => $dailyCap,
             'cap_percent'      => round($capPct, 1),
             'cap_remaining'    => $capRem,
@@ -456,8 +434,7 @@ class User
     public static function directReferrals(int $userId, int $page = 1, int $perPage = 10): array
     {
         return paginate(
-            "SELECT u.*, p.name AS package_name,
-                    p.package_pv_rate, p.entry_fee
+            "SELECT u.*, p.name AS package_name
              FROM   users u
              LEFT JOIN packages p ON p.id = u.package_id
              WHERE  u.sponsor_id = ? AND u.role = 'member'
@@ -484,14 +461,8 @@ class User
 
             $st = db()->prepare("
                 SELECT u.id, u.username, u.full_name, u.status,
-                       u.joined_at, u.personal_pv, u.group_pv,
-                       u.left_pv, u.right_pv,
-                       u.sponsor_id,
-                       sp.username AS sponsor_username,
-                       p.name AS package_name,
-                       p.package_pv_rate, p.entry_fee
+                       u.joined_at, p.name AS package_name
                 FROM   users u
-                LEFT JOIN users sp ON sp.id = u.sponsor_id
                 LEFT JOIN packages p ON p.id = u.package_id
                 WHERE  u.sponsor_id = ? AND u.role = 'member'
             ");
@@ -502,50 +473,6 @@ class User
                 if (isset($visited[$child['id']])) continue;
                 $visited[$child['id']] = true;
                 $child['level'] = $item['level'] + 1;
-                $result[] = $child;
-                $queue[]  = ['id' => $child['id'], 'level' => $child['level']];
-            }
-        }
-
-        return $result;
-    }
-
-    /**
-     * Get product unilevel genealogy (up to 10 levels) for display.
-     * Same sponsor-chain walk as indirectReferralTree, but includes
-     * total product PV per member (from users.personal_pv).
-     */
-    public static function productUnilevelTree(int $userId, int $maxLevel = 10): array
-    {
-        $result = [];
-        $queue  = [['id' => $userId, 'level' => 0]];
-        $visited = [$userId => true];
-
-        while (!empty($queue)) {
-            $item = array_shift($queue);
-            if ($item['level'] >= $maxLevel) continue;
-
-            $st = db()->prepare("
-                SELECT u.id, u.username, u.full_name, u.status,
-                       u.joined_at, u.personal_pv, u.group_pv,
-                       u.left_pv, u.right_pv,
-                       u.sponsor_id,
-                       sp.username AS sponsor_username,
-                       p.name AS package_name,
-                       p.package_pv_rate, p.entry_fee
-                FROM   users u
-                LEFT JOIN users sp ON sp.id = u.sponsor_id
-                LEFT JOIN packages p ON p.id = u.package_id
-                WHERE  u.sponsor_id = ? AND u.role = 'member'
-            ");
-            $st->execute([$item['id']]);
-            $children = $st->fetchAll();
-
-            foreach ($children as $child) {
-                if (isset($visited[$child['id']])) continue;
-                $visited[$child['id']] = true;
-                $child['level'] = $item['level'] + 1;
-                $child['total_product_pv'] = (float)$child['personal_pv'];
                 $result[] = $child;
                 $queue[]  = ['id' => $child['id'], 'level' => $child['level']];
             }

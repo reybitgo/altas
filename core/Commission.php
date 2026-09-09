@@ -36,6 +36,9 @@ class Commission
         $newUser = $newUserRow->fetch();
         if (!$newUser) return;
         $newUserIsActive = ($newUser['status'] ?? '') === 'active';
+        // CD-sourced and pending users are NOT paid members — they still build the
+        // binary tree (leg counts/PV) but do not trigger pairing payouts.
+        $newUserIsPaid = $newUserIsActive && User::isPaidMember($newUserId);
         $binaryPackagePv = Package::binaryPackagePv((int)($newUser['package_id'] ?? 0));
 
         while ($cur !== null) {
@@ -50,7 +53,7 @@ class Commission
                     ->execute([$cur]);
 
                 if ($binaryPackagePv > 0) {
-                    self::applyBinaryPv($cur, $side, $binaryPackagePv, $newUserId, 'registration');
+                    self::applyBinaryPv($cur, $side, $binaryPackagePv, $newUserId, 'registration', $newUserIsPaid);
                 }
             }
 
@@ -115,7 +118,8 @@ class Commission
         ?string $side,
         float $pvAmount,
         int $sourceUserId,
-        string $sourceType
+        string $sourceType,
+        bool $sourceIsPaid = true
     ): void {
         if ($ancestorId <= 0 || !$side || $pvAmount <= 0.00) {
             return;
@@ -133,6 +137,11 @@ class Commission
             $sourceUserId,
             $sourceType
         );
+
+        // CD-sourced / pending sources build leg PV but do NOT trigger pairing.
+        if (!$sourceIsPaid) {
+            return;
+        }
 
         // Capped/perminact members earn no pairs, but their leg PV still accumulates.
         if (!CapEngine::isActiveForPairs($ancestorId)) {
@@ -205,6 +214,11 @@ class Commission
         // Skip if sponsor is not active (e.g., pending activation)
         $sponsorStatus = db()->query("SELECT status FROM users WHERE id = {$sponsorId}")->fetchColumn();
         if ($sponsorStatus !== 'active') {
+            return;
+        }
+
+        // Skip if the new member is CD-sourced — only paid members earn direct referral
+        if (!User::isPaidMember($newUserId)) {
             return;
         }
 
@@ -285,6 +299,11 @@ class Commission
         int $packageId
     ): void {
         if (setting('indirect_referral_enabled', '1') !== '1') {
+            return;
+        }
+
+        // Skip if the new member is CD-sourced — only paid members earn indirect referral
+        if (!User::isPaidMember($newUserId)) {
             return;
         }
 
